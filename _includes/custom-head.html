@@ -1,32 +1,234 @@
 <script>
   const WEB_APP_URL =
-    'https://script.google.com/macros/s/AKfycbz13j4ymrL3VExn-yYEPsdkEMk9NB7YK5a_2F2lSgWycD_27c--p4h9Uzr5OdFBVZnIxw/exec'; // <-- Paste your URL
+    'https://script.google.com/macros/s/AKfycbz13j4ymrL3VExn-yYEPsdkEMk9NB7YK5a_2F2lSgWycD_27c--p4h9Uzr5OdFBVZnIxw/exec';
 
-  fetch(WEB_APP_URL)
-    .then((response) => response.json())
-    .then((result) => {
-      const data = result.data;
-      console.log(data);
-      // Now use the 'data' array to populate your webpage
-      // e.g., build a table, create list items, etc.
-      displayData(data);
-    })
-    .catch((error) => {
-      console.error('Error fetching data:', error);
-      // Handle errors (e.g., show a message to the user)
-    });
+  // 等待 DOM 載入完成後執行
+  document.addEventListener('DOMContentLoaded', function() {
+    fetchData();
+  });
 
-  function displayData(items) {
-    const container = document.getElementById('data-container'); // Assuming you have an element with this ID
+  function fetchData() {
+    const container = document.getElementById('data-container');
+    if (!container) {
+      console.error('找不到 data-container 元素');
+      return;
+    }
+
+    // 顯示載入中訊息
+    container.innerHTML = '<p>正在載入記帳資料...</p>';
+
+    fetch(WEB_APP_URL)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((result) => {
+        console.log('收到的資料:', result);
+        
+        if (result && result.data) {
+          displayAccountingData(result.data);
+        } else {
+          throw new Error('資料格式不正確');
+        }
+      })
+      .catch((error) => {
+        console.error('載入資料時發生錯誤:', error);
+        container.innerHTML = `
+          <div style="color: red; padding: 10px; background-color: #ffe6e6; border-radius: 5px;">
+            <h3>載入失敗</h3>
+            <p>無法載入記帳資料，請稍後再試。</p>
+            <p>錯誤訊息: ${error.message}</p>
+          </div>
+        `;
+      });
+  }
+
+  function displayAccountingData(data) {
+    const container = document.getElementById('data-container');
     if (!container) return;
 
-    container.innerHTML = ''; // Clear previous content
+    container.innerHTML = ''; // 清除載入中訊息
 
-    items.forEach((item) => {
-      const div = document.createElement('div');
-      // Example: Assuming your sheet has 'Name' and 'Description' columns
-      div.innerHTML = `<h3>${item.Name}</h3><p>${item.Description}</p>`;
-      container.appendChild(div);
+    // 創建主要標題
+    const mainTitle = document.createElement('h1');
+    mainTitle.textContent = '記帳資料總覽';
+    mainTitle.style.textAlign = 'center';
+    mainTitle.style.marginBottom = '30px';
+    mainTitle.style.color = '#2c3e50';
+    container.appendChild(mainTitle);
+
+    // 顯示當月收入
+    if (data['當月收入'] && data['當月收入'].length > 0) {
+      displaySection(container, '當月收入', data['當月收入'], 'income');
+    }
+
+    // 顯示當月支出
+    if (data['當月支出'] && data['當月支出'].length > 0) {
+      displaySection(container, '當月支出', data['當月支出'], 'expense');
+    }
+
+    // 顯示隔月預計支出
+    if (data['隔月預計支出'] && data['隔月預計支出'].length > 0) {
+      displaySection(container, '隔月預計支出', data['隔月預計支出'], 'future');
+    }
+
+    // 顯示當月支出細項
+    if (data['當月支出細項'] && data['當月支出細項'].length > 0) {
+      displayTransactionDetails(container, '當月支出細項', data['當月支出細項']);
+    }
+  }
+
+  function displaySection(container, title, items, type) {
+    const section = document.createElement('div');
+    section.className = 'accounting-section';
+    section.style.marginBottom = '30px';
+    section.style.padding = '20px';
+    section.style.borderRadius = '8px';
+    section.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+
+    // 根據類型設定背景色
+    if (type === 'income') {
+      section.style.backgroundColor = '#e8f5e8';
+      section.style.borderLeft = '4px solid #27ae60';
+    } else if (type === 'expense') {
+      section.style.backgroundColor = '#ffeaea';
+      section.style.borderLeft = '4px solid #e74c3c';
+    } else {
+      section.style.backgroundColor = '#f0f8ff';
+      section.style.borderLeft = '4px solid #3498db';
+    }
+
+    // 創建標題
+    const sectionTitle = document.createElement('h2');
+    sectionTitle.textContent = title;
+    sectionTitle.style.marginBottom = '15px';
+    sectionTitle.style.color = '#2c3e50';
+    section.appendChild(sectionTitle);
+
+    // 創建表格
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.marginTop = '10px';
+
+    // 創建表頭
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    
+    // 根據資料結構動態創建表頭
+    const headers = Object.keys(items[0] || {});
+    headers.forEach(header => {
+      const th = document.createElement('th');
+      th.textContent = header;
+      th.style.padding = '10px';
+      th.style.textAlign = 'left';
+      th.style.borderBottom = '2px solid #ddd';
+      th.style.backgroundColor = '#f8f9fa';
+      headerRow.appendChild(th);
     });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // 創建表格內容
+    const tbody = document.createElement('tbody');
+    items.forEach((item, index) => {
+      const row = document.createElement('tr');
+      row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+      
+      headers.forEach(header => {
+        const td = document.createElement('td');
+        td.textContent = item[header] || '';
+        td.style.padding = '8px 10px';
+        td.style.borderBottom = '1px solid #ddd';
+        
+        // 如果是金額欄位，加上特殊樣式
+        if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+          td.style.fontWeight = 'bold';
+          if (type === 'income') {
+            td.style.color = '#27ae60';
+          } else if (type === 'expense') {
+            td.style.color = '#e74c3c';
+          }
+        }
+        
+        row.appendChild(td);
+      });
+      
+      tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    section.appendChild(table);
+    container.appendChild(section);
+  }
+
+  function displayTransactionDetails(container, title, transactions) {
+    const section = document.createElement('div');
+    section.className = 'transaction-section';
+    section.style.marginBottom = '30px';
+    section.style.padding = '20px';
+    section.style.backgroundColor = '#f9f9f9';
+    section.style.borderRadius = '8px';
+    section.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+    section.style.borderLeft = '4px solid #9b59b6';
+
+    // 創建標題
+    const sectionTitle = document.createElement('h2');
+    sectionTitle.textContent = title;
+    sectionTitle.style.marginBottom = '15px';
+    sectionTitle.style.color = '#2c3e50';
+    section.appendChild(sectionTitle);
+
+    // 創建統計資訊
+    const totalAmount = transactions.reduce((sum, t) => sum + (parseFloat(t['實際消費金額']) || 0), 0);
+    const statsDiv = document.createElement('div');
+    statsDiv.style.marginBottom = '15px';
+    statsDiv.style.padding = '10px';
+    statsDiv.style.backgroundColor = '#ffffff';
+    statsDiv.style.borderRadius = '5px';
+    statsDiv.innerHTML = `
+      <strong>總交易筆數:</strong> ${transactions.length} 筆 | 
+      <strong>總支出金額:</strong> <span style="color: #e74c3c; font-weight: bold;">${totalAmount.toLocaleString()} 元</span>
+    `;
+    section.appendChild(statsDiv);
+
+    // 創建交易列表
+    const transactionList = document.createElement('div');
+    transactions.forEach((transaction, index) => {
+      const transactionDiv = document.createElement('div');
+      transactionDiv.style.backgroundColor = '#ffffff';
+      transactionDiv.style.marginBottom = '10px';
+      transactionDiv.style.padding = '15px';
+      transactionDiv.style.borderRadius = '5px';
+      transactionDiv.style.borderLeft = '3px solid #9b59b6';
+      transactionDiv.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+
+      // 格式化日期
+      const date = new Date(transaction['交易日期']);
+      const formattedDate = date.toLocaleDateString('zh-TW');
+
+      transactionDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+          <strong style="color: #2c3e50;">${transaction['交易項目']}</strong>
+          <span style="color: #e74c3c; font-weight: bold; font-size: 1.1em;">
+            ${parseFloat(transaction['實際消費金額'] || 0).toLocaleString()} 元
+          </span>
+        </div>
+        <div style="color: #7f8c8d; font-size: 0.9em;">
+          <span>📅 ${formattedDate}</span> | 
+          <span>🏷️ ${transaction['消費類別']}</span> | 
+          <span>💳 ${transaction['支付方式']}</span>
+          ${transaction['備註'] ? ` | <span>📝 ${transaction['備註']}</span>` : ''}
+        </div>
+      `;
+
+      transactionList.appendChild(transactionDiv);
+    });
+
+    section.appendChild(transactionList);
+    container.appendChild(section);
   }
 </script>
