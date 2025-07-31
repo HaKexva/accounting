@@ -1,8 +1,7 @@
 ---
 layout: home
+title: 記帳資料
 ---
-
-# 記帳資料
 
 <div id="data-container">
   <p>正在載入記帳資料...</p>
