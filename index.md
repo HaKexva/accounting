@@ -81,4 +81,29 @@ title: 記帳資料
     top: 0;
     z-index: 10;
   }
+  
+  /* 文字置中樣式 */
+  .text-center {
+    text-align: center;
+  }
+  
+  /* 表格內容置中 */
+  .table-center th,
+  .table-center td {
+    text-align: center;
+    vertical-align: middle;
+  }
+  
+  /* 標題置中 */
+  .title-center {
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  /* 載入文字置中 */
+  #data-container p {
+    text-align: center;
+    font-size: 16px;
+    color: #666;
+  }
 </style>
