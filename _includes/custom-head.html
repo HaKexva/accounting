@@ -112,6 +112,7 @@
     table.style.width = '100%';
     table.style.borderCollapse = 'collapse';
     table.style.marginTop = '10px';
+    table.style.tableLayout = 'auto'; // 讓表格自動調整欄位寬度
 
     // 創建表頭
     const thead = document.createElement('thead');
@@ -122,10 +123,33 @@
     headers.forEach(header => {
       const th = document.createElement('th');
       th.textContent = header;
-      th.style.padding = '10px';
+      th.style.padding = '12px 15px';
       th.style.textAlign = 'left';
       th.style.borderBottom = '2px solid #ddd';
       th.style.backgroundColor = '#f8f9fa';
+      th.style.whiteSpace = 'nowrap'; // 防止標題換行
+      th.style.minWidth = '80px'; // 最小寬度
+      
+      // 根據欄位內容設定寬度
+      if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+        th.style.width = '120px';
+        th.style.textAlign = 'right';
+      } else if (header.includes('項目')) {
+        th.style.width = '200px';
+      } else if (header.includes('細節') || header.includes('備註')) {
+        th.style.width = '300px';
+        th.style.whiteSpace = 'normal'; // 允許換行
+        th.style.wordWrap = 'break-word';
+      } else if (header.includes('日期')) {
+        th.style.width = '120px';
+      } else if (header.includes('類別')) {
+        th.style.width = '250px';
+      } else if (header.includes('方式')) {
+        th.style.width = '150px';
+      } else {
+        th.style.width = 'auto';
+      }
+      
       headerRow.appendChild(th);
     });
     
@@ -141,17 +165,37 @@
       headers.forEach(header => {
         const td = document.createElement('td');
         td.textContent = item[header] || '';
-        td.style.padding = '8px 10px';
+        td.style.padding = '10px 15px';
         td.style.borderBottom = '1px solid #ddd';
+        td.style.verticalAlign = 'top';
         
-        // 如果是金額欄位，加上特殊樣式
+        // 根據欄位類型設定樣式
         if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
           td.style.fontWeight = 'bold';
+          td.style.textAlign = 'right';
+          td.style.fontFamily = 'monospace';
           if (type === 'income') {
             td.style.color = '#27ae60';
           } else if (type === 'expense') {
             td.style.color = '#e74c3c';
           }
+        } else if (header.includes('細節') || header.includes('備註')) {
+          td.style.whiteSpace = 'normal';
+          td.style.wordWrap = 'break-word';
+          td.style.maxWidth = '300px';
+          td.style.lineHeight = '1.4';
+        } else if (header.includes('項目')) {
+          td.style.fontWeight = '500';
+          td.style.color = '#2c3e50';
+        } else if (header.includes('日期')) {
+          td.style.fontFamily = 'monospace';
+          td.style.color = '#7f8c8d';
+        } else if (header.includes('類別')) {
+          td.style.color = '#34495e';
+          td.style.fontSize = '0.95em';
+        } else if (header.includes('方式')) {
+          td.style.color = '#7f8c8d';
+          td.style.fontSize = '0.9em';
         }
         
         row.appendChild(td);

@@ -33,7 +33,20 @@ layout: home
     }
     
     th, td {
-      padding: 6px 8px !important;
+      padding: 8px 10px !important;
+    }
+    
+    /* 在小螢幕上調整欄位寬度 */
+    th[style*="width: 300px"] {
+      width: 200px !important;
+    }
+    
+    th[style*="width: 250px"] {
+      width: 150px !important;
+    }
+    
+    th[style*="width: 200px"] {
+      width: 120px !important;
     }
   }
   
@@ -43,6 +56,30 @@ layout: home
       display: block;
       overflow-x: auto;
       white-space: nowrap;
+      font-size: 12px;
     }
+    
+    th, td {
+      padding: 6px 8px !important;
+      white-space: nowrap;
+    }
+    
+    /* 強制所有欄位在小螢幕上不換行 */
+    td[style*="white-space: normal"] {
+      white-space: nowrap !important;
+      max-width: none !important;
+    }
+  }
+  
+  /* 確保表格內容不會被截斷 */
+  .accounting-section table {
+    min-width: 100%;
+  }
+  
+  /* 改善表格可讀性 */
+  .accounting-section th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 </style>
