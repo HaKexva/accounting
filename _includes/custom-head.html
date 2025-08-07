@@ -1,6 +1,6 @@
 <script>
   const WEB_APP_URL =
-    'https://script.google.com/macros/s/AKfycbz13j4ymrL3VExn-yYEPsdkEMk9NB7YK5a_2F2lSgWycD_27c--p4h9Uzr5OdFBVZnIxw/exec';
+    'https://script.google.com/macros/s/AKfycbyyboT0eMggrCY1gGYqva4cCdeDEXwjr4GBn0XFKSmc/dev';
 
   // 等待 DOM 載入完成後執行
   document.addEventListener('DOMContentLoaded', function() {
@@ -65,8 +65,8 @@
     }
 
     // 顯示當月支出
-    if (data['當月支出'] && data['當月支出'].length > 0) {
-      displaySection(container, '當月支出', data['當月支出'], 'expense');
+    if (data['當月支出預算'] && data['當月支出預算'].length > 0) {
+      displaySection(container, '當月支出預算', data['當月支出預算'], 'expense');
     }
 
     // 顯示隔月預計支出
@@ -75,8 +75,8 @@
     }
 
     // 顯示當月支出細項
-    if (data['當月支出細項'] && data['當月支出細項'].length > 0) {
-      displayTransactionDetails(container, '當月支出細項', data['當月支出細項']);
+    if (data['當月實際支出細項'] && data['當月實際支出細項'].length > 0) {
+      displayTransactionDetails(container, '當月實際支出細項', data['當月實際支出細項']);
     }
   }
 
