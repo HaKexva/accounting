@@ -1,11 +1,30 @@
 <script>
   const WEB_APP_URL =
     'https://script.google.com/macros/s/AKfycbxd_aHlwcWnxNjD-f20kpobPOT_6YtrfaPmKSbgHTMHjUL0TPONXptzw5ngD1MsQFaFPQ/exec';
+  let LAST_DATA = null;
+  let IS_EDIT_MODE = false;
 
   // 等待 DOM 載入完成後執行
   document.addEventListener('DOMContentLoaded', function() {
     fetchData();
   });
+
+  async function sendSectionUpdate(sectionTitle, headers, rows) {
+    // 後端需支援 action:updateSection，依 sectionTitle 決定更新哪個工作表或區塊
+    const payload = {
+      action: 'updateSection',
+      section: sectionTitle,
+      headers,
+      rows,
+    };
+    const resp = await fetch(WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+    return resp.json();
+  }
 
   function fetchData() {
     const container = document.getElementById('data-container');
@@ -28,7 +47,8 @@
         console.log('收到的資料:', result);
         
         if (result && result.data) {
-          displayAccountingData(result.data);
+          LAST_DATA = result.data;
+          displayAccountingData(LAST_DATA);
         } else {
           throw new Error('資料格式不正確');
         }
@@ -58,6 +78,28 @@
     mainTitle.style.marginBottom = '30px';
     mainTitle.style.color = '#2c3e50';
     container.appendChild(mainTitle);
+
+    // 工具列：編輯模式切換
+    const toolbar = document.createElement('div');
+    toolbar.style.display = 'flex';
+    toolbar.style.justifyContent = 'center';
+    toolbar.style.gap = '12px';
+    toolbar.style.marginBottom = '20px';
+
+    const editToggleBtn = document.createElement('button');
+    editToggleBtn.textContent = IS_EDIT_MODE ? '退出編輯模式' : '進入編輯模式';
+    editToggleBtn.style.padding = '8px 14px';
+    editToggleBtn.style.borderRadius = '6px';
+    editToggleBtn.style.border = '1px solid #ccc';
+    editToggleBtn.style.background = IS_EDIT_MODE ? '#ffe8e6' : '#e8f5ff';
+    editToggleBtn.style.cursor = 'pointer';
+    editToggleBtn.addEventListener('click', () => {
+      IS_EDIT_MODE = !IS_EDIT_MODE;
+      displayAccountingData(LAST_DATA || data);
+    });
+
+    toolbar.appendChild(editToggleBtn);
+    container.appendChild(toolbar);
 
     // 顯示當月收入
     if (data['當月收入'] && data['當月收入'].length > 0) {
@@ -115,6 +157,32 @@
     const contentDiv = document.createElement('div');
     contentDiv.style.display = 'block';
 
+    // 區塊控制列（僅編輯模式顯示）
+    const controlsDiv = document.createElement('div');
+    controlsDiv.style.display = IS_EDIT_MODE ? 'flex' : 'none';
+    controlsDiv.style.gap = '8px';
+    controlsDiv.style.margin = '8px 0 12px 0';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = '儲存此區塊';
+    saveBtn.style.padding = '6px 10px';
+    saveBtn.style.border = '1px solid #27ae60';
+    saveBtn.style.background = '#e8f8f0';
+    saveBtn.style.borderRadius = '6px';
+    saveBtn.style.cursor = 'pointer';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消變更';
+    cancelBtn.style.padding = '6px 10px';
+    cancelBtn.style.border = '1px solid #aaa';
+    cancelBtn.style.background = '#f1f1f1';
+    cancelBtn.style.borderRadius = '6px';
+    cancelBtn.style.cursor = 'pointer';
+
+    controlsDiv.appendChild(saveBtn);
+    controlsDiv.appendChild(cancelBtn);
+    contentDiv.appendChild(controlsDiv);
+
     // 創建表格
     const table = document.createElement('table');
     table.style.width = '100%';
@@ -170,6 +238,11 @@
         td.style.padding = '10px 15px';
         td.style.borderBottom = '1px solid #ddd';
         td.style.verticalAlign = 'top';
+        if (IS_EDIT_MODE) {
+          td.contentEditable = 'true';
+          td.style.outline = '1px dashed rgba(0,0,0,0.2)';
+          td.style.backgroundColor = 'rgba(255,255,0,0.06)';
+        }
         // 根據欄位類型設定樣式
         if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
           td.style.fontWeight = 'bold';
@@ -206,6 +279,43 @@
     contentDiv.appendChild(table);
     section.appendChild(contentDiv);
     container.appendChild(section);
+
+    // 事件：儲存/取消（僅編輯模式）
+    cancelBtn.addEventListener('click', () => {
+      displayAccountingData(LAST_DATA || data);
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      // 從表格讀回資料
+      const newRows = [];
+      const bodyRows = Array.from(tbody.querySelectorAll('tr'));
+      bodyRows.forEach((tr) => {
+        const obj = {};
+        const cells = Array.from(tr.querySelectorAll('td'));
+        headers.forEach((h, i) => {
+          obj[h] = (cells[i]?.innerText || '').trim();
+        });
+        newRows.push(obj);
+      });
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = '儲存中...';
+      try {
+        const resp = await sendSectionUpdate(title, headers, newRows);
+        if (resp && resp.data) {
+          LAST_DATA = resp.data;
+        }
+        // 重新渲染
+        displayAccountingData(LAST_DATA || data);
+        alert('已儲存成功');
+      } catch (e) {
+        console.error(e);
+        alert('儲存失敗：' + (e?.message || '未知錯誤'));
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '儲存此區塊';
+      }
+    });
 
     // 收合/展開功能
     sectionTitle.addEventListener('click', function() {
@@ -251,6 +361,32 @@
     const contentDiv = document.createElement('div');
     contentDiv.style.display = 'block';
 
+    // 區塊控制列（僅編輯模式顯示）
+    const controlsDiv = document.createElement('div');
+    controlsDiv.style.display = IS_EDIT_MODE ? 'flex' : 'none';
+    controlsDiv.style.gap = '8px';
+    controlsDiv.style.margin = '8px 0 12px 0';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = '儲存此區塊';
+    saveBtn.style.padding = '6px 10px';
+    saveBtn.style.border = '1px solid #27ae60';
+    saveBtn.style.background = '#e8f8f0';
+    saveBtn.style.borderRadius = '6px';
+    saveBtn.style.cursor = 'pointer';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消變更';
+    cancelBtn.style.padding = '6px 10px';
+    cancelBtn.style.border = '1px solid #aaa';
+    cancelBtn.style.background = '#f1f1f1';
+    cancelBtn.style.borderRadius = '6px';
+    cancelBtn.style.cursor = 'pointer';
+
+    controlsDiv.appendChild(saveBtn);
+    controlsDiv.appendChild(cancelBtn);
+    contentDiv.appendChild(controlsDiv);
+
     // 創建統計資訊
     const totalAmount = transactions.reduce((sum, t) => sum + (parseFloat(t['實際消費金額']) || 0), 0);
     const statsDiv = document.createElement('div');
@@ -266,7 +402,7 @@
 
     // 創建交易列表
     const transactionList = document.createElement('div');
-    transactions.forEach((transaction, index) => {
+    transactions.forEach((transaction) => {
       const transactionDiv = document.createElement('div');
       transactionDiv.style.backgroundColor = '#ffffff';
       transactionDiv.style.marginBottom = '10px';
@@ -274,28 +410,126 @@
       transactionDiv.style.borderRadius = '5px';
       transactionDiv.style.borderLeft = '3px solid #9b59b6';
       transactionDiv.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-      // 格式化日期
-      const date = new Date(transaction['交易日期']);
-      const formattedDate = date.toLocaleDateString('zh-TW');
-      transactionDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-          <strong style="color: #2c3e50;">${transaction['交易項目']}</strong>
-          <span style="color: #e74c3c; font-weight: bold; font-size: 1.1em;">
-            ${parseFloat(transaction['實際消費金額'] || 0).toLocaleString()} 元
-          </span>
-        </div>
-        <div style="color: #7f8c8d; font-size: 0.9em;">
-          <span>📅 ${formattedDate}</span> | 
-          <span>🏷️ ${transaction['消費類別']}</span> | 
-          <span>💳 ${transaction['支付方式']}</span>
-          ${transaction['備註'] ? ` | <span>📝 ${transaction['備註']}</span>` : ''}
-        </div>
-      `;
+
+      // 標題列（項目與金額）
+      const titleRow = document.createElement('div');
+      titleRow.style.display = 'flex';
+      titleRow.style.justifyContent = 'space-between';
+      titleRow.style.alignItems = 'center';
+      titleRow.style.marginBottom = '5px';
+
+      const nameEl = document.createElement('strong');
+      nameEl.style.color = '#2c3e50';
+      nameEl.textContent = transaction['交易項目'] || '';
+      if (IS_EDIT_MODE) nameEl.contentEditable = 'true';
+
+      const amountEl = document.createElement('span');
+      amountEl.style.color = '#e74c3c';
+      amountEl.style.fontWeight = 'bold';
+      amountEl.style.fontSize = '1.1em';
+      const amountNumber = parseFloat(transaction['實際消費金額'] || 0) || 0;
+      amountEl.textContent = IS_EDIT_MODE ? String(amountNumber) : `${amountNumber.toLocaleString()} 元`;
+      if (IS_EDIT_MODE) amountEl.contentEditable = 'true';
+
+      titleRow.appendChild(nameEl);
+      titleRow.appendChild(amountEl);
+
+      // 資訊列（日期、類別、支付、備註）
+      const metaRow = document.createElement('div');
+      metaRow.style.color = '#7f8c8d';
+      metaRow.style.fontSize = '0.9em';
+
+      const dateEl = document.createElement('span');
+      const originalDate = transaction['交易日期'] || '';
+      if (IS_EDIT_MODE) {
+        dateEl.textContent = originalDate;
+        dateEl.contentEditable = 'true';
+      } else {
+        const date = originalDate ? new Date(originalDate) : null;
+        const formattedDate = date && !isNaN(date) ? date.toLocaleDateString('zh-TW') : originalDate;
+        dateEl.textContent = `📅 ${formattedDate}`;
+      }
+
+      const catEl = document.createElement('span');
+      catEl.textContent = IS_EDIT_MODE ? (transaction['消費類別'] || '') : `🏷️ ${transaction['消費類別'] || ''}`;
+      if (IS_EDIT_MODE) catEl.contentEditable = 'true';
+
+      const payEl = document.createElement('span');
+      payEl.textContent = IS_EDIT_MODE ? (transaction['支付方式'] || '') : `💳 ${transaction['支付方式'] || ''}`;
+      if (IS_EDIT_MODE) payEl.contentEditable = 'true';
+
+      const noteEl = document.createElement('span');
+      noteEl.textContent = IS_EDIT_MODE ? (transaction['備註'] || '') : (transaction['備註'] ? `📝 ${transaction['備註']}` : '');
+      if (IS_EDIT_MODE) noteEl.contentEditable = 'true';
+
+      // 組裝 metaRow，加入分隔符號
+      metaRow.appendChild(dateEl);
+      if (!IS_EDIT_MODE) metaRow.appendChild(document.createTextNode(' | '));
+      metaRow.appendChild(catEl);
+      if (!IS_EDIT_MODE) metaRow.appendChild(document.createTextNode(' | '));
+      metaRow.appendChild(payEl);
+      if (!IS_EDIT_MODE) metaRow.appendChild(document.createTextNode(' | '));
+      if (noteEl.textContent !== '' || IS_EDIT_MODE) {
+        metaRow.appendChild(noteEl);
+      }
+
+      transactionDiv.appendChild(titleRow);
+      transactionDiv.appendChild(metaRow);
+
       transactionList.appendChild(transactionDiv);
     });
     contentDiv.appendChild(transactionList);
     section.appendChild(contentDiv);
     container.appendChild(section);
+
+    // 事件：儲存/取消（僅編輯模式）
+    cancelBtn.addEventListener('click', () => {
+      displayAccountingData(LAST_DATA);
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      // 讀回資料
+      const newRows = [];
+      const cards = Array.from(transactionList.children);
+      cards.forEach((card) => {
+        const strong = card.querySelector('strong');
+        const spans = card.querySelectorAll('span');
+        // spans: amountEl + others; 因為我們有多個 span，需精確抓取
+        const name = strong?.innerText?.trim() || '';
+        const amountText = spans[0]?.innerText?.trim() || '0';
+        // 接著是 dateEl, catEl, payEl, noteEl（可能不存在）
+        const dateText = spans[1]?.innerText?.replace(/^📅\s*/, '').trim() || spans[1]?.innerText?.trim() || '';
+        const cat = spans[2]?.innerText?.replace(/^🏷️\s*/, '').trim() || spans[2]?.innerText?.trim() || '';
+        const pay = spans[3]?.innerText?.replace(/^💳\s*/, '').trim() || spans[3]?.innerText?.trim() || '';
+        const note = (spans[4]?.innerText || '').replace(/^📝\s*/, '').trim();
+        newRows.push({
+          '交易日期': dateText,
+          '交易項目': name,
+          '消費類別': cat,
+          '支付方式': pay,
+          '實際消費金額': amountText,
+          '備註': note,
+        });
+      });
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = '儲存中...';
+      try {
+        const headers = ['交易日期','交易項目','消費類別','支付方式','實際消費金額','備註'];
+        const resp = await sendSectionUpdate(title, headers, newRows);
+        if (resp && resp.data) {
+          LAST_DATA = resp.data;
+        }
+        displayAccountingData(LAST_DATA);
+        alert('已儲存成功');
+      } catch (e) {
+        console.error(e);
+        alert('儲存失敗：' + (e?.message || '未知錯誤'));
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '儲存此區塊';
+      }
+    });
 
     // 收合/展開功能
     sectionTitle.addEventListener('click', function() {
