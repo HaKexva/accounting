@@ -2,7 +2,7 @@
   const WEB_APP_URL =
     'https://script.google.com/macros/s/AKfycbxd_aHlwcWnxNjD-f20kpobPOT_6YtrfaPmKSbgHTMHjUL0TPONXptzw5ngD1MsQFaFPQ/exec';
   let LAST_DATA = null;
-  let IS_EDIT_MODE = false;
+  let IS_EDIT_MODE = true;
 
   // 等待 DOM 載入完成後執行
   document.addEventListener('DOMContentLoaded', function() {
@@ -19,7 +19,7 @@
     };
     const resp = await fetch(WEB_APP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
     });
     if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
@@ -79,27 +79,7 @@
     mainTitle.style.color = '#2c3e50';
     container.appendChild(mainTitle);
 
-    // 工具列：編輯模式切換
-    const toolbar = document.createElement('div');
-    toolbar.style.display = 'flex';
-    toolbar.style.justifyContent = 'center';
-    toolbar.style.gap = '12px';
-    toolbar.style.marginBottom = '20px';
-
-    const editToggleBtn = document.createElement('button');
-    editToggleBtn.textContent = IS_EDIT_MODE ? '退出編輯模式' : '進入編輯模式';
-    editToggleBtn.style.padding = '8px 14px';
-    editToggleBtn.style.borderRadius = '6px';
-    editToggleBtn.style.border = '1px solid #ccc';
-    editToggleBtn.style.background = IS_EDIT_MODE ? '#ffe8e6' : '#e8f5ff';
-    editToggleBtn.style.cursor = 'pointer';
-    editToggleBtn.addEventListener('click', () => {
-      IS_EDIT_MODE = !IS_EDIT_MODE;
-      displayAccountingData(LAST_DATA || data);
-    });
-
-    toolbar.appendChild(editToggleBtn);
-    container.appendChild(toolbar);
+    // 永遠編輯模式：不顯示切換工具列
 
     // 顯示當月收入
     if (data['當月收入'] && data['當月收入'].length > 0) {
@@ -276,6 +256,49 @@
       tbody.appendChild(row);
     });
     table.appendChild(tbody);
+
+    // tfoot 總計列（自動加總、不可編輯）
+    const tfoot = document.createElement('tfoot');
+    const totalRow = document.createElement('tr');
+    headers.forEach((header, i) => {
+      const td = document.createElement('td');
+      td.style.padding = '10px 15px';
+      td.style.borderTop = '2px solid #aaa';
+      td.style.fontWeight = 'bold';
+      if (i === 0) {
+        td.textContent = '總計';
+      } else if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+        td.style.textAlign = 'right';
+        td.style.fontFamily = 'monospace';
+        td.dataset.totalFor = header;
+      } else {
+        td.textContent = '';
+      }
+      totalRow.appendChild(td);
+    });
+    tfoot.appendChild(totalRow);
+    table.appendChild(tfoot);
+
+    // 計算總計的函式
+    function recalcTotals() {
+      headers.forEach((header) => {
+        if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+          let sum = 0;
+          Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+            const idx = headers.indexOf(header);
+            const cell = tr.children[idx];
+            const num = parseFloat((cell?.innerText || '').replace(/[^\d.-]/g, '')) || 0;
+            sum += num;
+          });
+          const totalCell = totalRow.children[headers.indexOf(header)];
+          if (totalCell) totalCell.textContent = sum.toLocaleString();
+        }
+      });
+    }
+
+    // 首次計算 + 編輯即時更新
+    setTimeout(recalcTotals, 0);
+    tbody.addEventListener('input', recalcTotals);
     contentDiv.appendChild(table);
     section.appendChild(contentDiv);
     container.appendChild(section);
