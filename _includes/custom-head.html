@@ -214,14 +214,20 @@
     controlsDiv.appendChild(deleteRowBtn);
     contentDiv.appendChild(controlsDiv);
 
+    // 創建表格容器
+    const tableContainer = document.createElement('div');
+    tableContainer.style.width = '100%';
+    tableContainer.style.overflowX = 'auto';
+    tableContainer.style.border = '1px solid #ddd';
+    tableContainer.style.borderRadius = '4px';
+    
     // 創建表格
     const table = document.createElement('table');
     table.style.width = '100%';
     table.style.borderCollapse = 'collapse';
-    table.style.marginTop = '10px';
+    table.style.marginTop = '0';
     table.style.tableLayout = 'fixed'; // 固定表格佈局，避免超出
-    table.style.maxWidth = '100%';
-    table.style.overflowX = 'auto';
+    table.style.minWidth = '800px'; // 最小寬度確保可讀性
 
     // 創建表頭
     const thead = document.createElement('thead');
@@ -299,13 +305,11 @@
           td.style.color = '#2c3e50';
         } else if (header.includes('日期')) {
           td.style.fontFamily = 'monospace';
-          td.style.color = '#7f8c8d';
+          td.style.color = '#2c3e50';
         } else if (header.includes('類別')) {
-          td.style.color = '#34495e';
-          td.style.fontSize = '0.95em';
+          td.style.color = '#2c3e50';
         } else if (header.includes('方式')) {
-          td.style.color = '#7f8c8d';
-          td.style.fontSize = '0.9em';
+          td.style.color = '#2c3e50';
         }
         row.appendChild(td);
       });
@@ -359,7 +363,8 @@
     // 首次計算 + 編輯即時更新
     setTimeout(recalcTotals, 0);
     tbody.addEventListener('input', recalcTotals);
-    contentDiv.appendChild(table);
+    tableContainer.appendChild(table);
+    contentDiv.appendChild(tableContainer);
     section.appendChild(contentDiv);
     container.appendChild(section);
 
@@ -402,13 +407,11 @@
           td.style.color = '#2c3e50';
         } else if (header.includes('日期')) {
           td.style.fontFamily = 'monospace';
-          td.style.color = '#7f8c8d';
+          td.style.color = '#2c3e50';
         } else if (header.includes('類別')) {
-          td.style.color = '#34495e';
-          td.style.fontSize = '0.95em';
+          td.style.color = '#2c3e50';
         } else if (header.includes('方式')) {
-          td.style.color = '#7f8c8d';
-          td.style.fontSize = '0.9em';
+          td.style.color = '#2c3e50';
         }
         
         newRow.appendChild(td);
