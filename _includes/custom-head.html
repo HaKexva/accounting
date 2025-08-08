@@ -269,11 +269,6 @@
     // 創建表格內容
     const tbody = document.createElement('tbody');
     items.forEach((item, index) => {
-      // 跳過總計列，不顯示在表格中
-      if (item['__isTotalRow'] === 'true') {
-        return;
-      }
-      
       const row = document.createElement('tr');
       row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
       row.dataset.rowIndex = index;
@@ -454,13 +449,12 @@
         newRows.push(obj);
       });
 
-      // 加入總計列到回傳資料，但標記為總計列
+      // 加入總計列到回傳資料
       const totalObj = {};
       headers.forEach((h, i) => {
         const totalCell = totalRow.children[i];
         totalObj[h] = totalCell?.innerText || '';
       });
-      totalObj['__isTotalRow'] = 'true'; // 標記為總計列
       newRows.push(totalObj);
 
       saveBtn.disabled = true;
