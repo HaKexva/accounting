@@ -1,0 +1,506 @@
+
+const WEB_APP_URL =
+  'https://script.google.com/macros/s/AKfycbzZ7D3ZlMmWDujXCTN7xE4wbM3om5aJXkjtt9kJpGfN9wpycwXHff7P87BmvvtcrMZ11A/exec';
+let LAST_DATA = null;
+let IS_EDIT_MODE = true;
+
+// 等待 DOM 載入完成後執行
+document.addEventListener('DOMContentLoaded', function() {
+  fetchData();
+});
+
+async function sendSectionUpdate(sectionTitle, headers, rows) {
+  // 後端需支援 action:updateSection，依 sectionTitle 決定更新哪個工作表或區塊
+  const payload = {
+    action: 'updateSection',
+    section: sectionTitle,
+    headers,
+    rows,
+  };
+  try {
+    const resp = await fetch(WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+    return await resp.json();
+  } catch (err) {
+    // 後援：避免 CORS/Preflight 問題，送出 opaque 請求
+    try {
+      await fetch(WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+      // 回傳一個標記需要重新抓資料的結果
+      return { ok: true, needsRefetch: true };
+    } catch (e2) {
+      throw err;
+    }
+  }
+}
+
+function fetchData() {
+  const container = document.getElementById('data-container');
+  if (!container) {
+    console.error('找不到 data-container 元素');
+    return;
+  }
+
+  // 顯示載入中訊息
+  container.innerHTML = '<p>正在載入記帳資料...</p>';
+
+  fetch(WEB_APP_URL)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((result) => {
+      console.log('收到的資料:', result);
+
+      if (result && result.data) {
+        LAST_DATA = result.data;
+        displayAccountingData(LAST_DATA);
+      } else {
+        throw new Error('資料格式不正確');
+      }
+    })
+    .catch((error) => {
+      console.error('載入資料時發生錯誤:', error);
+      container.innerHTML = `
+        <div style="color: red; padding: 10px; background-color: #ffe6e6; border-radius: 5px;">
+          <h3>載入失敗</h3>
+          <p>無法載入記帳資料，請稍後再試。</p>
+          <p>錯誤訊息: ${error.message}</p>
+        </div>
+      `;
+    });
+}
+
+function displayAccountingData(data) {
+  const container = document.getElementById('data-container');
+  if (!container) return;
+
+  container.innerHTML = ''; // 清除載入中訊息
+
+  // 創建主要標題
+  const mainTitle = document.createElement('h1');
+  mainTitle.textContent = '記帳資料總覽';
+  mainTitle.style.textAlign = 'center';
+  mainTitle.style.marginBottom = '30px';
+  mainTitle.style.color = '#2c3e50';
+  container.appendChild(mainTitle);
+
+  // 永遠編輯模式：不顯示切換工具列
+
+  // 顯示當月收入
+  if (data['當月收入'] && data['當月收入'].length > 0) {
+    displaySection(container, '當月收入', data['當月收入'], 'income');
+  }
+
+  // 顯示當月支出
+  if (data['當月支出預算'] && data['當月支出預算'].length > 0) {
+    displaySection(container, '當月支出預算', data['當月支出預算'], 'expense');
+  }
+
+  // 顯示隔月預計支出
+  if (data['隔月預計支出'] && data['隔月預計支出'].length > 0) {
+    displaySection(container, '隔月預計支出', data['隔月預計支出'], 'future');
+  }
+
+  // 顯示當月支出細項（格式化日期為 YYYY-MM-DD 後再呈現）
+  if (data['當月實際支出細項'] && data['當月實際支出細項'].length > 0) {
+    const formatted = data['當月實際支出細項'].map(formatTransactionRow);
+    displayTransactionDetails(container, '當月實際支出細項', formatted);
+  }
+}
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function formatDateToYYYYMMDD(value) {
+  if (!value) return value;
+  // 若已為 YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (isNaN(d)) return value;
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+function formatTransactionRow(row) {
+  const copy = { ...row };
+  if (copy['交易日期']) copy['交易日期'] = formatDateToYYYYMMDD(copy['交易日期']);
+  return copy;
+}
+
+function displaySection(container, title, items, type) {
+  const section = document.createElement('div');
+  section.className = 'accounting-section';
+  section.style.marginBottom = '30px';
+  section.style.padding = '20px';
+  section.style.borderRadius = '8px';
+  section.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+
+  // 根據類型設定背景色
+  if (type === 'income') {
+    section.style.backgroundColor = '#e8f5e8';
+    section.style.borderLeft = '4px solid #27ae60';
+  } else if (type === 'expense') {
+    section.style.backgroundColor = '#ffeaea';
+    section.style.borderLeft = '4px solid #e74c3c';
+  } else {
+    section.style.backgroundColor = '#f0f8ff';
+    section.style.borderLeft = '4px solid #3498db';
+  }
+
+  // 創建可收合標題
+  const sectionTitle = document.createElement('h2');
+  sectionTitle.textContent = title + ' ▼';
+  sectionTitle.style.marginBottom = '15px';
+  sectionTitle.style.color = '#2c3e50';
+  sectionTitle.style.cursor = 'pointer';
+  sectionTitle.setAttribute('tabindex', '0');
+  sectionTitle.setAttribute('role', 'button');
+  sectionTitle.setAttribute('aria-expanded', 'true');
+  section.appendChild(sectionTitle);
+
+  // 創建內容容器
+  const contentDiv = document.createElement('div');
+  contentDiv.style.display = 'block';
+
+  // 區塊控制列（永遠顯示）
+  const controlsDiv = document.createElement('div');
+  controlsDiv.style.display = 'flex';
+  controlsDiv.style.gap = '8px';
+  controlsDiv.style.margin = '8px 0 12px 0';
+  controlsDiv.style.flexWrap = 'wrap';
+
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '儲存此區塊';
+  saveBtn.style.padding = '6px 10px';
+  saveBtn.style.border = '1px solid #27ae60';
+  saveBtn.style.background = '#e8f8f0';
+  saveBtn.style.borderRadius = '6px';
+  saveBtn.style.cursor = 'pointer';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '取消變更';
+  cancelBtn.style.padding = '6px 10px';
+  cancelBtn.style.border = '1px solid #aaa';
+  cancelBtn.style.background = '#f1f1f1';
+  cancelBtn.style.borderRadius = '6px';
+  cancelBtn.style.cursor = 'pointer';
+
+  const addRowBtn = document.createElement('button');
+  addRowBtn.textContent = '新增列';
+  addRowBtn.style.padding = '6px 10px';
+  addRowBtn.style.border = '1px solid #3498db';
+  addRowBtn.style.background = '#e3f2fd';
+  addRowBtn.style.borderRadius = '6px';
+  addRowBtn.style.cursor = 'pointer';
+
+  const deleteRowBtn = document.createElement('button');
+  deleteRowBtn.textContent = '刪除列';
+  deleteRowBtn.style.padding = '6px 10px';
+  deleteRowBtn.style.border = '1px solid #e74c3c';
+  deleteRowBtn.style.background = '#ffebee';
+  deleteRowBtn.style.borderRadius = '6px';
+  deleteRowBtn.style.cursor = 'pointer';
+
+  controlsDiv.appendChild(saveBtn);
+  controlsDiv.appendChild(cancelBtn);
+  controlsDiv.appendChild(addRowBtn);
+  controlsDiv.appendChild(deleteRowBtn);
+  contentDiv.appendChild(controlsDiv);
+
+  // 創建表格容器
+  const tableContainer = document.createElement('div');
+  tableContainer.style.width = '100%';
+  tableContainer.style.overflowX = 'auto';
+  tableContainer.style.border = '1px solid #ddd';
+  tableContainer.style.borderRadius = '4px';
+
+  // 創建表格
+  const table = document.createElement('table');
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+  table.style.marginTop = '0';
+  table.style.tableLayout = 'fixed'; // 固定表格佈局，避免超出
+  table.style.minWidth = '800px'; // 最小寬度確保可讀性
+
+  // 創建表頭
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const headers = Object.keys(items[0] || {});
+  headers.forEach(header => {
+    const th = document.createElement('th');
+    th.textContent = header;
+    th.style.padding = '12px 15px';
+    th.style.textAlign = 'left';
+    th.style.borderBottom = '2px solid #ddd';
+    th.style.backgroundColor = '#f8f9fa';
+    th.style.whiteSpace = 'nowrap'; // 防止標題換行
+    th.style.minWidth = '80px'; // 最小寬度
+    // 統一欄位寬度設定
+    if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+      th.style.width = '100px';
+      th.style.textAlign = 'right';
+    } else if (header.includes('項目')) {
+      th.style.width = '150px';
+    } else if (header.includes('細節') || header.includes('備註')) {
+      th.style.width = '200px';
+      th.style.whiteSpace = 'normal';
+      th.style.wordWrap = 'break-word';
+    } else if (header.includes('日期')) {
+      th.style.width = '100px';
+    } else if (header.includes('類別')) {
+      th.style.width = '120px';
+    } else if (header.includes('方式')) {
+      th.style.width = '100px';
+    } else {
+      th.style.width = '120px';
+    }
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // 創建表格內容
+  const tbody = document.createElement('tbody');
+  items.forEach((item, index) => {
+    const row = document.createElement('tr');
+    row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+    row.dataset.rowIndex = index;
+    headers.forEach(header => {
+      const td = document.createElement('td');
+      td.textContent = item[header] || '';
+      td.style.padding = '10px 15px';
+      td.style.borderBottom = '1px solid #ddd';
+      td.style.verticalAlign = 'top';
+      td.style.fontSize = '14px';
+      td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      if (IS_EDIT_MODE) {
+        td.contentEditable = 'true';
+        td.style.outline = '1px dashed rgba(0,0,0,0.2)';
+        td.style.backgroundColor = 'rgba(255,255,0,0.06)';
+      }
+      // 根據欄位類型設定樣式
+      if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+        td.style.fontWeight = 'bold';
+        td.style.textAlign = 'right';
+        td.style.fontFamily = 'monospace';
+        if (type === 'income') {
+          td.style.color = '#27ae60';
+        } else if (type === 'expense') {
+          td.style.color = '#e74c3c';
+        }
+      } else if (header.includes('細節') || header.includes('備註')) {
+        td.style.whiteSpace = 'normal';
+        td.style.wordWrap = 'break-word';
+        td.style.maxWidth = '200px';
+        td.style.lineHeight = '1.4';
+      } else if (header.includes('項目')) {
+        td.style.fontWeight = '500';
+        td.style.color = '#2c3e50';
+      } else if (header.includes('日期')) {
+        td.style.fontFamily = 'monospace';
+        td.style.color = '#2c3e50';
+      } else if (header.includes('類別')) {
+        td.style.color = '#2c3e50';
+      } else if (header.includes('方式')) {
+        td.style.color = '#2c3e50';
+      }
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+
+  // tfoot 總計列（自動加總、不可編輯）
+  const tfoot = document.createElement('tfoot');
+  const totalRow = document.createElement('tr');
+  totalRow.style.backgroundColor = '#f8f9fa';
+  totalRow.style.fontWeight = 'bold';
+  headers.forEach((header, i) => {
+    const td = document.createElement('td');
+    td.style.padding = '10px 15px';
+    td.style.borderTop = '2px solid #aaa';
+    td.style.fontWeight = 'bold';
+    td.style.fontSize = '14px';
+    td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    if (i === 0) {
+      td.textContent = '總計';
+    } else if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+      td.style.textAlign = 'right';
+      td.style.fontFamily = 'monospace';
+      td.dataset.totalFor = header;
+    } else {
+      td.textContent = '';
+    }
+    totalRow.appendChild(td);
+  });
+  tfoot.appendChild(totalRow);
+  table.appendChild(tfoot);
+
+  // 計算總計的函式
+  function recalcTotals() {
+    headers.forEach((header) => {
+      if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+        let sum = 0;
+        Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+          const idx = headers.indexOf(header);
+          const cell = tr.children[idx];
+          const num = parseFloat((cell?.innerText || '').replace(/[^\d.-]/g, '')) || 0;
+          sum += num;
+        });
+        const totalCell = totalRow.children[headers.indexOf(header)];
+        if (totalCell) totalCell.textContent = sum.toLocaleString();
+      }
+    });
+  }
+
+  // 首次計算 + 編輯即時更新
+  setTimeout(recalcTotals, 0);
+  tbody.addEventListener('input', recalcTotals);
+  tableContainer.appendChild(table);
+  contentDiv.appendChild(tableContainer);
+  section.appendChild(contentDiv);
+  container.appendChild(section);
+
+  // 新增列功能
+  addRowBtn.addEventListener('click', () => {
+    const newRow = document.createElement('tr');
+    const rowIndex = tbody.children.length;
+    newRow.style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa';
+    newRow.dataset.rowIndex = rowIndex;
+
+    headers.forEach(header => {
+      const td = document.createElement('td');
+      td.textContent = '';
+      td.style.padding = '10px 15px';
+      td.style.borderBottom = '1px solid #ddd';
+      td.style.verticalAlign = 'top';
+      td.style.fontSize = '14px';
+      td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      td.contentEditable = 'true';
+      td.style.outline = '1px dashed rgba(0,0,0,0.2)';
+      td.style.backgroundColor = 'rgba(255,255,0,0.06)';
+
+      // 套用欄位樣式
+      if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+        td.style.fontWeight = 'bold';
+        td.style.textAlign = 'right';
+        td.style.fontFamily = 'monospace';
+        if (type === 'income') {
+          td.style.color = '#27ae60';
+        } else if (type === 'expense') {
+          td.style.color = '#e74c3c';
+        }
+      } else if (header.includes('細節') || header.includes('備註')) {
+        td.style.whiteSpace = 'normal';
+        td.style.wordWrap = 'break-word';
+        td.style.maxWidth = '200px';
+        td.style.lineHeight = '1.4';
+      } else if (header.includes('項目')) {
+        td.style.fontWeight = '500';
+        td.style.color = '#2c3e50';
+      } else if (header.includes('日期')) {
+        td.style.fontFamily = 'monospace';
+        td.style.color = '#2c3e50';
+      } else if (header.includes('類別')) {
+        td.style.color = '#2c3e50';
+      } else if (header.includes('方式')) {
+        td.style.color = '#2c3e50';
+      }
+
+      newRow.appendChild(td);
+    });
+
+    tbody.appendChild(newRow);
+    recalcTotals();
+  });
+
+  // 刪除列功能
+  deleteRowBtn.addEventListener('click', () => {
+    const rows = tbody.querySelectorAll('tr');
+    if (rows.length > 0) {
+      const lastRow = rows[rows.length - 1];
+      lastRow.remove();
+      recalcTotals();
+    }
+  });
+
+  // 事件：儲存/取消（僅編輯模式）
+  cancelBtn.addEventListener('click', () => {
+    displayAccountingData(LAST_DATA || data);
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    // 從表格讀回資料
+    const newRows = [];
+    const bodyRows = Array.from(tbody.querySelectorAll('tr'));
+    bodyRows.forEach((tr) => {
+      const obj = {};
+      const cells = Array.from(tr.querySelectorAll('td'));
+      headers.forEach((h, i) => {
+        obj[h] = (cells[i]?.innerText || '').trim();
+      });
+      newRows.push(obj);
+    });
+
+    // 加入總計列到回傳資料
+    const totalObj = {};
+    headers.forEach((h, i) => {
+      const totalCell = totalRow.children[i];
+      totalObj[h] = totalCell?.innerText || '';
+    });
+    newRows.push(totalObj);
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = '儲存中...';
+    try {
+      const resp = await sendSectionUpdate(title, headers, newRows);
+      if (resp && resp.data) {
+        LAST_DATA = resp.data;
+        displayAccountingData(LAST_DATA);
+        alert('已儲存成功');
+      } else if (resp && resp.needsRefetch) {
+        await fetchData();
+        alert('已送出，資料已重新載入');
+      } else {
+        await fetchData();
+        alert('已送出');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('儲存失敗：' + (e?.message || '未知錯誤'));
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '儲存此區塊';
+    }
+  });
+
+  // 收合/展開功能
+  sectionTitle.addEventListener('click', function() {
+    if (contentDiv.style.display === 'none') {
+      contentDiv.style.display = 'block';
+      sectionTitle.textContent = title + ' ▼';
+      sectionTitle.setAttribute('aria-expanded', 'true');
+    } else {
+      contentDiv.style.display = 'none';
+      sectionTitle.textContent = title + ' ▲';
+      sectionTitle.setAttribute('aria-expanded', 'false');
+    }
+  });
+  sectionTitle.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      sectionTitle.click();
+    }
+  });
+}
+
+function displayTransactionDetails(container, title, transactions) {
+  // 與其他區塊一致，以表格呈現與編輯
+  displaySection(container, title, transactions, 'expense');
+}
