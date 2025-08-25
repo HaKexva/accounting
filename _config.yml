@@ -2,6 +2,10 @@ title: Accounting
 email: ray120424@gmail.com
 description: >-
   An accounting website
+baseurl: "/accounting"
+url: ""
 theme: minima
 plugins:
   - jekyll-feed
+header_pages:
+  - 預算表.md
