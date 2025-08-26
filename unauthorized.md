@@ -16,7 +16,7 @@ title: 未授權 - Accounting System
 
 請提供您的 Google 帳號郵箱地址
 
-[返回登入頁面](/login.html/)
+[返回登入頁面](/accounting)
 
 <script>
   // Clear any existing session

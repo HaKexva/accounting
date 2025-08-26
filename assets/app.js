@@ -4,16 +4,35 @@ const WEB_APP_URL =
 let LAST_DATA = null;
 let IS_EDIT_MODE = true;
 
+// New: per-section configuration
+const SECTION_CONFIG = {
+  '當月收入': { editable: true },
+  '當月支出預算': { editable: false, hasForm: true, formTitle: '新增預算（當月支出）' },
+  '隔月預計支出': { editable: true },
+  '當月實際支出細項': { editable: true, targetSection: '當月實際支出資料庫' },
+};
+
+// debounce helper for autosave
+function debounce(fn, wait) {
+  let t;
+  return function(...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), wait);
+  };
+}
+
 // 等待 DOM 載入完成後執行
 document.addEventListener('DOMContentLoaded', function() {
   fetchData();
 });
 
 async function sendSectionUpdate(sectionTitle, headers, rows) {
-  // 後端需支援 action:updateSection，依 sectionTitle 決定更新哪個工作表或區塊
+  // pick target section if remapped
+  const cfg = SECTION_CONFIG[sectionTitle] || {};
+  const target = cfg.targetSection || sectionTitle;
   const payload = {
     action: 'updateSection',
-    section: sectionTitle,
+    section: target,
     headers,
     rows,
   };
@@ -22,6 +41,7 @@ async function sendSectionUpdate(sectionTitle, headers, rows) {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
+      keepalive: true,
     });
     if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
     return await resp.json();
@@ -33,8 +53,8 @@ async function sendSectionUpdate(sectionTitle, headers, rows) {
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
+        keepalive: true,
       });
-      // 回傳一個標記需要重新抓資料的結果
       return { ok: true, needsRefetch: true };
     } catch (e2) {
       throw err;
@@ -49,7 +69,6 @@ function fetchData() {
     return;
   }
 
-  // 顯示載入中訊息
   container.innerHTML = '<p>正在載入記帳資料...</p>';
 
   fetch(WEB_APP_URL)
@@ -60,8 +79,6 @@ function fetchData() {
       return response.json();
     })
     .then((result) => {
-      console.log('收到的資料:', result);
-
       if (result && result.data) {
         LAST_DATA = result.data;
         displayAccountingData(LAST_DATA);
@@ -85,9 +102,8 @@ function displayAccountingData(data) {
   const container = document.getElementById('data-container');
   if (!container) return;
 
-  container.innerHTML = ''; // 清除載入中訊息
+  container.innerHTML = '';
 
-  // 創建主要標題
   const mainTitle = document.createElement('h1');
   mainTitle.textContent = '記帳資料總覽';
   mainTitle.style.textAlign = 'center';
@@ -95,24 +111,19 @@ function displayAccountingData(data) {
   mainTitle.style.color = '#2c3e50';
   container.appendChild(mainTitle);
 
-  // 永遠編輯模式：不顯示切換工具列
-
   // 顯示當月收入
   if (data['當月收入'] && data['當月收入'].length > 0) {
     displaySection(container, '當月收入', data['當月收入'], 'income');
   }
-
   // 顯示當月支出
   if (data['當月支出預算'] && data['當月支出預算'].length > 0) {
     displaySection(container, '當月支出預算', data['當月支出預算'], 'expense');
   }
-
   // 顯示隔月預計支出
   if (data['隔月預計支出'] && data['隔月預計支出'].length > 0) {
     displaySection(container, '隔月預計支出', data['隔月預計支出'], 'future');
   }
-
-  // 顯示當月支出細項（格式化日期為 YYYY-MM-DD 後再呈現）
+  // 顯示當月支出細項
   if (data['當月實際支出細項'] && data['當月實際支出細項'].length > 0) {
     const formatted = data['當月實際支出細項'].map(formatTransactionRow);
     displayTransactionDetails(container, '當月實際支出細項', formatted);
@@ -122,7 +133,6 @@ function displayAccountingData(data) {
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 function formatDateToYYYYMMDD(value) {
   if (!value) return value;
-  // 若已為 YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const d = new Date(value);
   if (isNaN(d)) return value;
@@ -135,6 +145,8 @@ function formatTransactionRow(row) {
 }
 
 function displaySection(container, title, items, type) {
+  const cfg = SECTION_CONFIG[title] || { editable: true };
+
   const section = document.createElement('div');
   section.className = 'accounting-section';
   section.style.marginBottom = '30px';
@@ -142,7 +154,6 @@ function displaySection(container, title, items, type) {
   section.style.borderRadius = '8px';
   section.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
 
-  // 根據類型設定背景色
   if (type === 'income') {
     section.style.backgroundColor = '#e8f5e8';
     section.style.borderLeft = '4px solid #27ae60';
@@ -154,7 +165,6 @@ function displaySection(container, title, items, type) {
     section.style.borderLeft = '4px solid #3498db';
   }
 
-  // 創建可收合標題
   const sectionTitle = document.createElement('h2');
   sectionTitle.textContent = title + ' ▼';
   sectionTitle.style.marginBottom = '15px';
@@ -165,32 +175,31 @@ function displaySection(container, title, items, type) {
   sectionTitle.setAttribute('aria-expanded', 'true');
   section.appendChild(sectionTitle);
 
-  // 創建內容容器
   const contentDiv = document.createElement('div');
   contentDiv.style.display = 'block';
 
-  // 區塊控制列（永遠顯示）
+  // 工具列
   const controlsDiv = document.createElement('div');
   controlsDiv.style.display = 'flex';
   controlsDiv.style.gap = '8px';
   controlsDiv.style.margin = '8px 0 12px 0';
   controlsDiv.style.flexWrap = 'wrap';
 
-  const saveBtn = document.createElement('button');
-  saveBtn.textContent = '儲存此區塊';
-  saveBtn.style.padding = '6px 10px';
-  saveBtn.style.border = '1px solid #27ae60';
-  saveBtn.style.background = '#e8f8f0';
-  saveBtn.style.borderRadius = '6px';
-  saveBtn.style.cursor = 'pointer';
+  const undoBtn = document.createElement('button');
+  undoBtn.textContent = 'Undo';
+  undoBtn.style.padding = '6px 10px';
+  undoBtn.style.border = '1px solid #aaa';
+  undoBtn.style.background = '#f1f1f1';
+  undoBtn.style.borderRadius = '6px';
+  undoBtn.style.cursor = 'pointer';
 
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = '取消變更';
-  cancelBtn.style.padding = '6px 10px';
-  cancelBtn.style.border = '1px solid #aaa';
-  cancelBtn.style.background = '#f1f1f1';
-  cancelBtn.style.borderRadius = '6px';
-  cancelBtn.style.cursor = 'pointer';
+  const redoBtn = document.createElement('button');
+  redoBtn.textContent = 'Redo';
+  redoBtn.style.padding = '6px 10px';
+  redoBtn.style.border = '1px solid #3498db';
+  redoBtn.style.background = '#e3f2fd';
+  redoBtn.style.borderRadius = '6px';
+  redoBtn.style.cursor = 'pointer';
 
   const addRowBtn = document.createElement('button');
   addRowBtn.textContent = '新增列';
@@ -208,28 +217,113 @@ function displaySection(container, title, items, type) {
   deleteRowBtn.style.borderRadius = '6px';
   deleteRowBtn.style.cursor = 'pointer';
 
-  controlsDiv.appendChild(saveBtn);
-  controlsDiv.appendChild(cancelBtn);
-  controlsDiv.appendChild(addRowBtn);
-  controlsDiv.appendChild(deleteRowBtn);
+  const autosaveHint = document.createElement('span');
+  autosaveHint.textContent = '';
+  autosaveHint.style.alignSelf = 'center';
+  autosaveHint.style.color = '#666';
+
+  // 只有可編輯區塊顯示增刪、取消、儲存
+  if (cfg.editable) {
+    controlsDiv.appendChild(undoBtn);
+    controlsDiv.appendChild(redoBtn);
+    controlsDiv.appendChild(addRowBtn);
+    controlsDiv.appendChild(deleteRowBtn);
+    controlsDiv.appendChild(autosaveHint);
+  }
   contentDiv.appendChild(controlsDiv);
 
-  // 創建表格容器
+  // 新增：表單（當月支出預算）
+  if (cfg.hasForm) {
+    const formDiv = document.createElement('div');
+    formDiv.style.margin = '10px 0 16px 0';
+    formDiv.style.padding = '12px';
+    formDiv.style.background = '#fffdf5';
+    formDiv.style.border = '1px solid #f1e0b8';
+    formDiv.style.borderRadius = '6px';
+
+    const formTitle = document.createElement('div');
+    formTitle.textContent = cfg.formTitle || '新增資料';
+    formTitle.style.fontWeight = 'bold';
+    formTitle.style.marginBottom = '8px';
+    formDiv.appendChild(formTitle);
+
+    const headers = Object.keys(items[0] || {});
+    const inputEls = {};
+    const fieldsRow = document.createElement('div');
+    fieldsRow.style.display = 'flex';
+    fieldsRow.style.gap = '8px';
+    fieldsRow.style.flexWrap = 'wrap';
+
+    headers.forEach(h => {
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.minWidth = '140px';
+      const label = document.createElement('label');
+      label.textContent = h;
+      label.style.fontSize = '12px';
+      label.style.color = '#555';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.style.padding = '6px 8px';
+      input.style.border = '1px solid #ccc';
+      input.style.borderRadius = '4px';
+      inputEls[h] = input;
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      fieldsRow.appendChild(wrap);
+    });
+    formDiv.appendChild(fieldsRow);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.textContent = '新增至預算';
+    submitBtn.style.marginTop = '10px';
+    submitBtn.style.padding = '6px 10px';
+    submitBtn.style.border = '1px solid #27ae60';
+    submitBtn.style.background = '#e8f8f0';
+    submitBtn.style.borderRadius = '6px';
+    submitBtn.style.cursor = 'pointer';
+    formDiv.appendChild(submitBtn);
+
+    submitBtn.addEventListener('click', async () => {
+      const obj = {};
+      Object.keys(inputEls).forEach(h => { obj[h] = inputEls[h].value.trim(); });
+      const newRows = items.concat([obj]);
+      submitBtn.disabled = true;
+      submitBtn.textContent = '送出中...';
+      try {
+        const resp = await sendSectionUpdate(title, Object.keys(items[0] || obj), newRows);
+        if (resp && resp.data) {
+          LAST_DATA = resp.data;
+          displayAccountingData(LAST_DATA);
+        } else {
+          await fetchData();
+        }
+      } catch (e) {
+        alert('送出失敗：' + (e?.message || '未知錯誤'));
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '新增至預算';
+      }
+    });
+
+    contentDiv.appendChild(formDiv);
+  }
+
+  // 表格容器
   const tableContainer = document.createElement('div');
   tableContainer.style.width = '100%';
   tableContainer.style.overflowX = 'auto';
   tableContainer.style.border = '1px solid #ddd';
   tableContainer.style.borderRadius = '4px';
 
-  // 創建表格
   const table = document.createElement('table');
   table.style.width = '100%';
   table.style.borderCollapse = 'collapse';
   table.style.marginTop = '0';
-  table.style.tableLayout = 'fixed'; // 固定表格佈局，避免超出
-  table.style.minWidth = '800px'; // 最小寬度確保可讀性
+  table.style.tableLayout = 'fixed';
+  table.style.minWidth = '800px';
 
-  // 創建表頭
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
   const headers = Object.keys(items[0] || {});
@@ -240,18 +334,14 @@ function displaySection(container, title, items, type) {
     th.style.textAlign = 'left';
     th.style.borderBottom = '2px solid #ddd';
     th.style.backgroundColor = '#f8f9fa';
-    th.style.whiteSpace = 'nowrap'; // 防止標題換行
-    th.style.minWidth = '80px'; // 最小寬度
-    // 統一欄位寬度設定
+    th.style.whiteSpace = 'nowrap';
+    th.style.minWidth = '80px';
     if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
-      th.style.width = '100px';
-      th.style.textAlign = 'right';
+      th.style.width = '100px'; th.style.textAlign = 'right';
     } else if (header.includes('項目')) {
       th.style.width = '150px';
     } else if (header.includes('細節') || header.includes('備註')) {
-      th.style.width = '200px';
-      th.style.whiteSpace = 'normal';
-      th.style.wordWrap = 'break-word';
+      th.style.width = '200px'; th.style.whiteSpace = 'normal'; th.style.wordWrap = 'break-word';
     } else if (header.includes('日期')) {
       th.style.width = '100px';
     } else if (header.includes('類別')) {
@@ -266,7 +356,6 @@ function displaySection(container, title, items, type) {
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  // 創建表格內容
   const tbody = document.createElement('tbody');
   items.forEach((item, index) => {
     const row = document.createElement('tr');
@@ -280,12 +369,11 @@ function displaySection(container, title, items, type) {
       td.style.verticalAlign = 'top';
       td.style.fontSize = '14px';
       td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      if (IS_EDIT_MODE) {
+      if (cfg.editable && IS_EDIT_MODE) {
         td.contentEditable = 'true';
         td.style.outline = '1px dashed rgba(0,0,0,0.2)';
         td.style.backgroundColor = 'rgba(255,255,0,0.06)';
       }
-      // 根據欄位類型設定樣式
       if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
         td.style.fontWeight = 'bold';
         td.style.textAlign = 'right';
@@ -306,10 +394,6 @@ function displaySection(container, title, items, type) {
       } else if (header.includes('日期')) {
         td.style.fontFamily = 'monospace';
         td.style.color = '#2c3e50';
-      } else if (header.includes('類別')) {
-        td.style.color = '#2c3e50';
-      } else if (header.includes('方式')) {
-        td.style.color = '#2c3e50';
       }
       row.appendChild(td);
     });
@@ -317,7 +401,6 @@ function displaySection(container, title, items, type) {
   });
   table.appendChild(tbody);
 
-  // tfoot 總計列（自動加總、不可編輯）
   const tfoot = document.createElement('tfoot');
   const totalRow = document.createElement('tr');
   totalRow.style.backgroundColor = '#f8f9fa';
@@ -343,7 +426,6 @@ function displaySection(container, title, items, type) {
   tfoot.appendChild(totalRow);
   table.appendChild(tfoot);
 
-  // 計算總計的函式
   function recalcTotals() {
     headers.forEach((header) => {
       if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
@@ -359,22 +441,155 @@ function displaySection(container, title, items, type) {
       }
     });
   }
-
-  // 首次計算 + 編輯即時更新
   setTimeout(recalcTotals, 0);
   tbody.addEventListener('input', recalcTotals);
+
+  // History (Undo/Redo)
+  let historyStack = [];
+  let futureStack = [];
+  let lastSnapshot = getSnapshot();
+
+  function getSnapshot() {
+    const rows = [];
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+      const obj = {};
+      const cells = Array.from(tr.querySelectorAll('td'));
+      headers.forEach((h, i) => {
+        obj[h] = (cells[i]?.innerText || '').trim();
+      });
+      rows.push(obj);
+    });
+    return rows;
+  }
+  function applySnapshot(snapshot) {
+    // Rebuild tbody to match snapshot length
+    tbody.innerHTML = '';
+    snapshot.forEach((rowObj, idx) => {
+      const tr = document.createElement('tr');
+      tr.style.backgroundColor = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
+      tr.dataset.rowIndex = idx;
+      headers.forEach(h => {
+        const td = document.createElement('td');
+        td.textContent = rowObj[h] || '';
+        td.style.padding = '10px 15px';
+        td.style.borderBottom = '1px solid #ddd';
+        td.style.verticalAlign = 'top';
+        td.style.fontSize = '14px';
+        td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        if (cfg.editable && IS_EDIT_MODE) {
+          td.contentEditable = 'true';
+          td.style.outline = '1px dashed rgba(0,0,0,0.2)';
+          td.style.backgroundColor = 'rgba(255,255,0,0.06)';
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    recalcTotals();
+  }
+
+  // Input: push previous state to history, clear future, autosave
+  if (cfg.editable) {
+    tbody.addEventListener('input', () => {
+      historyStack.push(lastSnapshot);
+      futureStack = [];
+      lastSnapshot = getSnapshot();
+    });
+
+    undoBtn.addEventListener('click', () => {
+      if (historyStack.length === 0) return;
+      const current = getSnapshot();
+      const prev = historyStack.pop();
+      futureStack.push(current);
+      applySnapshot(prev);
+      lastSnapshot = getSnapshot();
+      autosaveHint.textContent = '自動儲存中...';
+      debouncedAutosave();
+    });
+
+    redoBtn.addEventListener('click', () => {
+      if (futureStack.length === 0) return;
+      const current = getSnapshot();
+      const next = futureStack.pop();
+      historyStack.push(current);
+      applySnapshot(next);
+      lastSnapshot = getSnapshot();
+      autosaveHint.textContent = '自動儲存中...';
+      debouncedAutosave();
+    });
+  }
+
   tableContainer.appendChild(table);
   contentDiv.appendChild(tableContainer);
+
+  // Mobile-friendly: card view toggle for narrow screens
+  if (window.innerWidth < 768) {
+    const toggle = document.createElement('button');
+    toggle.textContent = '切換卡片/表格視圖';
+    toggle.style.margin = '10px 0';
+    toggle.style.padding = '6px 10px';
+    toggle.style.border = '1px solid #3498db';
+    toggle.style.background = '#e3f2fd';
+    toggle.style.borderRadius = '6px';
+    toggle.style.cursor = 'pointer';
+    let isCard = false;
+    toggle.addEventListener('click', () => {
+      isCard = !isCard;
+      if (isCard) {
+        tableContainer.style.display = 'none';
+        renderCards();
+      } else {
+        tableContainer.style.display = 'block';
+        if (cardsDiv) cardsDiv.remove();
+      }
+    });
+    contentDiv.appendChild(toggle);
+
+    var cardsDiv = null;
+    function renderCards() {
+      if (cardsDiv) cardsDiv.remove();
+      cardsDiv = document.createElement('div');
+      cardsDiv.style.display = 'grid';
+      cardsDiv.style.gridTemplateColumns = '1fr';
+      cardsDiv.style.gap = '8px';
+      items.forEach((item) => {
+        const card = document.createElement('div');
+        card.style.border = '1px solid #ddd';
+        card.style.borderRadius = '6px';
+        card.style.background = '#fff';
+        card.style.padding = '10px';
+        headers.forEach(h => {
+          const row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.justifyContent = 'space-between';
+          row.style.gap = '8px';
+          const k = document.createElement('div');
+          k.textContent = h;
+          k.style.color = '#666';
+          k.style.fontSize = '12px';
+          const v = document.createElement('div');
+          v.textContent = item[h] || '';
+          v.style.fontWeight = (h.includes('金額') || h.includes('預算')) ? 'bold' : 'normal';
+          row.appendChild(k);
+          row.appendChild(v);
+          card.appendChild(row);
+        });
+        cardsDiv.appendChild(card);
+      });
+      contentDiv.appendChild(cardsDiv);
+    }
+  }
+
   section.appendChild(contentDiv);
   container.appendChild(section);
 
-  // 新增列功能
+  // 事件：新增列
   addRowBtn.addEventListener('click', () => {
+    if (!cfg.editable) return;
     const newRow = document.createElement('tr');
     const rowIndex = tbody.children.length;
     newRow.style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa';
     newRow.dataset.rowIndex = rowIndex;
-
     headers.forEach(header => {
       const td = document.createElement('td');
       td.textContent = '';
@@ -386,102 +601,48 @@ function displaySection(container, title, items, type) {
       td.contentEditable = 'true';
       td.style.outline = '1px dashed rgba(0,0,0,0.2)';
       td.style.backgroundColor = 'rgba(255,255,0,0.06)';
-
-      // 套用欄位樣式
-      if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
-        td.style.fontWeight = 'bold';
-        td.style.textAlign = 'right';
-        td.style.fontFamily = 'monospace';
-        if (type === 'income') {
-          td.style.color = '#27ae60';
-        } else if (type === 'expense') {
-          td.style.color = '#e74c3c';
-        }
-      } else if (header.includes('細節') || header.includes('備註')) {
-        td.style.whiteSpace = 'normal';
-        td.style.wordWrap = 'break-word';
-        td.style.maxWidth = '200px';
-        td.style.lineHeight = '1.4';
-      } else if (header.includes('項目')) {
-        td.style.fontWeight = '500';
-        td.style.color = '#2c3e50';
-      } else if (header.includes('日期')) {
-        td.style.fontFamily = 'monospace';
-        td.style.color = '#2c3e50';
-      } else if (header.includes('類別')) {
-        td.style.color = '#2c3e50';
-      } else if (header.includes('方式')) {
-        td.style.color = '#2c3e50';
-      }
-
       newRow.appendChild(td);
     });
-
+    // push history before modifying DOM snapshot reference
+    historyStack.push(lastSnapshot);
+    futureStack = [];
     tbody.appendChild(newRow);
     recalcTotals();
+    lastSnapshot = getSnapshot();
   });
 
-  // 刪除列功能
+  // 事件：刪除列
   deleteRowBtn.addEventListener('click', () => {
+    if (!cfg.editable) return;
     const rows = tbody.querySelectorAll('tr');
     if (rows.length > 0) {
+      historyStack.push(lastSnapshot);
+      futureStack = [];
       const lastRow = rows[rows.length - 1];
       lastRow.remove();
       recalcTotals();
+      lastSnapshot = getSnapshot();
     }
   });
 
-  // 事件：儲存/取消（僅編輯模式）
-  cancelBtn.addEventListener('click', () => {
-    displayAccountingData(LAST_DATA || data);
-  });
-
-  saveBtn.addEventListener('click', async () => {
-    // 從表格讀回資料
-    const newRows = [];
-    const bodyRows = Array.from(tbody.querySelectorAll('tr'));
-    bodyRows.forEach((tr) => {
-      const obj = {};
-      const cells = Array.from(tr.querySelectorAll('td'));
-      headers.forEach((h, i) => {
-        obj[h] = (cells[i]?.innerText || '').trim();
-      });
-      newRows.push(obj);
+  // Autosave on idle (1.5s debounce)
+  const debouncedAutosave = debounce(() => {
+    autosaveHint.textContent = '自動儲存中...';
+    // reuse sendSectionUpdate using current snapshot
+    const rows = getSnapshot();
+    sendSectionUpdate(title, headers, rows).then(() => {
+      autosaveHint.textContent = '已自動儲存';
+      setTimeout(() => (autosaveHint.textContent = ''), 1500);
+    }).catch(() => {
+      autosaveHint.textContent = '自動儲存失敗';
+      setTimeout(() => (autosaveHint.textContent = ''), 2000);
     });
+  }, 1500);
+  if (cfg.editable) {
+    tbody.addEventListener('input', debouncedAutosave);
+  }
 
-    // 加入總計列到回傳資料
-    const totalObj = {};
-    headers.forEach((h, i) => {
-      const totalCell = totalRow.children[i];
-      totalObj[h] = totalCell?.innerText || '';
-    });
-    newRows.push(totalObj);
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = '儲存中...';
-    try {
-      const resp = await sendSectionUpdate(title, headers, newRows);
-      if (resp && resp.data) {
-        LAST_DATA = resp.data;
-        displayAccountingData(LAST_DATA);
-        alert('已儲存成功');
-      } else if (resp && resp.needsRefetch) {
-        await fetchData();
-        alert('已送出，資料已重新載入');
-      } else {
-        await fetchData();
-        alert('已送出');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('儲存失敗：' + (e?.message || '未知錯誤'));
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = '儲存此區塊';
-    }
-  });
-
-  // 收合/展開功能
+  // 收合/展開
   sectionTitle.addEventListener('click', function() {
     if (contentDiv.style.display === 'none') {
       contentDiv.style.display = 'block';
@@ -501,6 +662,5 @@ function displaySection(container, title, items, type) {
 }
 
 function displayTransactionDetails(container, title, transactions) {
-  // 與其他區塊一致，以表格呈現與編輯
   displaySection(container, title, transactions, 'expense');
 }
