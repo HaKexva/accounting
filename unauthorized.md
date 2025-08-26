@@ -2,7 +2,7 @@
 layout: default
 title: 未授權 - Accounting System
 ---
-## 未授權的帳號
+# 未授權的帳號
 
 很抱歉，您的 Google 帳號未被授權訪問此記帳系統。
 
@@ -10,7 +10,7 @@ title: 未授權 - Accounting System
 
 
 
-需要訪問權限？
+### 需要訪問權限？
 
 請聯繫系統管理員－－Email: ray120424@gmail.com
 
