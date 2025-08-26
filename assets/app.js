@@ -7,7 +7,7 @@ let IS_EDIT_MODE = true;
 // New: per-section configuration
 const SECTION_CONFIG = {
   '當月收入': { editable: true },
-  '當月支出預算': { editable: false, hasForm: true, formTitle: '新增預算（當月支出）' },
+  '當月支出預算': { editable: false },
   '隔月預計支出': { editable: true },
   '當月實際支出細項': { editable: true, targetSection: '當月實際支出資料庫' },
 };
@@ -232,83 +232,7 @@ function displaySection(container, title, items, type) {
   }
   contentDiv.appendChild(controlsDiv);
 
-  // 新增：表單（當月支出預算）
-  if (cfg.hasForm) {
-    const formDiv = document.createElement('div');
-    formDiv.style.margin = '10px 0 16px 0';
-    formDiv.style.padding = '12px';
-    formDiv.style.background = '#fffdf5';
-    formDiv.style.border = '1px solid #f1e0b8';
-    formDiv.style.borderRadius = '6px';
-
-    const formTitle = document.createElement('div');
-    formTitle.textContent = cfg.formTitle || '新增資料';
-    formTitle.style.fontWeight = 'bold';
-    formTitle.style.marginBottom = '8px';
-    formDiv.appendChild(formTitle);
-
-    const headers = Object.keys(items[0] || {});
-    const inputEls = {};
-    const fieldsRow = document.createElement('div');
-    fieldsRow.style.display = 'flex';
-    fieldsRow.style.gap = '8px';
-    fieldsRow.style.flexWrap = 'wrap';
-
-    headers.forEach(h => {
-      const wrap = document.createElement('div');
-      wrap.style.display = 'flex';
-      wrap.style.flexDirection = 'column';
-      wrap.style.minWidth = '140px';
-      const label = document.createElement('label');
-      label.textContent = h;
-      label.style.fontSize = '12px';
-      label.style.color = '#555';
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.style.padding = '6px 8px';
-      input.style.border = '1px solid #ccc';
-      input.style.borderRadius = '4px';
-      inputEls[h] = input;
-      wrap.appendChild(label);
-      wrap.appendChild(input);
-      fieldsRow.appendChild(wrap);
-    });
-    formDiv.appendChild(fieldsRow);
-
-    const submitBtn = document.createElement('button');
-    submitBtn.textContent = '新增至預算';
-    submitBtn.style.marginTop = '10px';
-    submitBtn.style.padding = '6px 10px';
-    submitBtn.style.border = '1px solid #27ae60';
-    submitBtn.style.background = '#e8f8f0';
-    submitBtn.style.borderRadius = '6px';
-    submitBtn.style.cursor = 'pointer';
-    formDiv.appendChild(submitBtn);
-
-    submitBtn.addEventListener('click', async () => {
-      const obj = {};
-      Object.keys(inputEls).forEach(h => { obj[h] = inputEls[h].value.trim(); });
-      const newRows = items.concat([obj]);
-      submitBtn.disabled = true;
-      submitBtn.textContent = '送出中...';
-      try {
-        const resp = await sendSectionUpdate(title, Object.keys(items[0] || obj), newRows);
-        if (resp && resp.data) {
-          LAST_DATA = resp.data;
-          displayAccountingData(LAST_DATA);
-        } else {
-          await fetchData();
-        }
-      } catch (e) {
-        alert('送出失敗：' + (e?.message || '未知錯誤'));
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '新增至預算';
-      }
-    });
-
-    contentDiv.appendChild(formDiv);
-  }
+  // 當月支出預算：移除表單呈現，僅顯示紀錄區（唯讀）
 
   // 表格容器
   const tableContainer = document.createElement('div');
