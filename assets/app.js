@@ -9,7 +9,7 @@ const SECTION_CONFIG = {
   '當月收入': { editable: true },
   '當月支出預算': { editable: true },
   '隔月預計支出': { editable: true },
-  '當月實際支出細項': { editable: true, targetSection: '當月實際支出資料庫' },
+
 };
 
 // debounce helper for autosave
@@ -123,25 +123,6 @@ function displayAccountingData(data) {
   if (data['隔月預計支出'] && data['隔月預計支出'].length > 0) {
     displaySection(container, '隔月預計支出', data['隔月預計支出'], 'future');
   }
-  // 顯示當月支出細項
-  if (data['當月實際支出細項'] && data['當月實際支出細項'].length > 0) {
-    const formatted = data['當月實際支出細項'].map(formatTransactionRow);
-    displayTransactionDetails(container, '當月實際支出細項', formatted);
-  }
-}
-
-function pad2(n) { return n < 10 ? '0' + n : '' + n; }
-function formatDateToYYYYMMDD(value) {
-  if (!value) return value;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const d = new Date(value);
-  if (isNaN(d)) return value;
-  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
-}
-function formatTransactionRow(row) {
-  const copy = { ...row };
-  if (copy['交易日期']) copy['交易日期'] = formatDateToYYYYMMDD(copy['交易日期']);
-  return copy;
 }
 
 function displaySection(container, title, items, type) {
@@ -585,6 +566,4 @@ function displaySection(container, title, items, type) {
   });
 }
 
-function displayTransactionDetails(container, title, transactions) {
-  displaySection(container, title, transactions, 'expense');
-}
+
