@@ -7,7 +7,7 @@ let IS_EDIT_MODE = true;
 // New: per-section configuration
 const SECTION_CONFIG = {
   '當月收入': { editable: true },
-  '當月支出預算': { editable: false },
+  '當月支出預算': { editable: true },
   '隔月預計支出': { editable: true },
   '當月實際支出細項': { editable: true, targetSection: '當月實際支出資料庫' },
 };
