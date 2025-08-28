@@ -222,12 +222,13 @@ function displaySection(container, title, items, type) {
   tableContainer.style.border = '1px solid #ddd';
   tableContainer.style.borderRadius = '4px';
   
-  // 手機端觸控優化
+  // 手機端觸控優化 - 將在表格容器添加到DOM後執行
+  let touchHint = null;
   if (window.innerWidth < 768) {
     tableContainer.className = 'table-container';
     
-    // 添加觸控滾動提示
-    const touchHint = document.createElement('div');
+    // 創建觸控滾動提示，但暫時不添加到DOM
+    touchHint = document.createElement('div');
     touchHint.style.cssText = `
       text-align: center;
       color: #666;
@@ -239,41 +240,6 @@ function displaySection(container, title, items, type) {
       display: none;
     `;
     touchHint.textContent = '👆 雙指縮放或左右滑動查看更多內容';
-    tableContainer.parentNode.insertBefore(touchHint, tableContainer);
-    
-    // 檢測觸控滾動
-    let isScrolling = false;
-    tableContainer.addEventListener('scroll', () => {
-      if (!isScrolling) {
-        isScrolling = true;
-        touchHint.style.display = 'block';
-        setTimeout(() => {
-          touchHint.style.display = 'none';
-          isScrolling = false;
-        }, 2000);
-      }
-    });
-    
-    // 添加觸控手勢支援
-    let startX = 0;
-    let startY = 0;
-    
-    tableContainer.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    });
-    
-    tableContainer.addEventListener('touchmove', (e) => {
-      if (!startX || !startY) return;
-      
-      const deltaX = e.touches[0].clientX - startX;
-      const deltaY = e.touches[0].clientY - startY;
-      
-      // 水平滑動優先
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        e.preventDefault();
-      }
-    });
   }
 
   const table = document.createElement('table');
@@ -480,6 +446,52 @@ function displaySection(container, title, items, type) {
 
   tableContainer.appendChild(table);
   contentDiv.appendChild(tableContainer);
+
+  // 手機端觸控優化 - 在表格容器添加到DOM後執行
+  if (window.innerWidth < 768 && touchHint) {
+    try {
+      // 確保表格容器已經有父節點
+      if (tableContainer.parentNode) {
+        tableContainer.parentNode.insertBefore(touchHint, tableContainer);
+        
+        // 檢測觸控滾動
+        let isScrolling = false;
+        tableContainer.addEventListener('scroll', () => {
+          if (!isScrolling) {
+            isScrolling = true;
+            touchHint.style.display = 'block';
+            setTimeout(() => {
+              touchHint.style.display = 'none';
+              isScrolling = false;
+            }, 2000);
+          }
+        });
+        
+        // 添加觸控手勢支援
+        let startX = 0;
+        let startY = 0;
+        
+        tableContainer.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        });
+        
+        tableContainer.addEventListener('touchmove', (e) => {
+          if (!startX || !startY) return;
+          
+          const deltaX = e.touches[0].clientX - startX;
+          const deltaY = e.touches[0].clientY - startY;
+          
+          // 水平滑動優先
+          if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            e.preventDefault();
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('觸控優化功能載入失敗:', error);
+    }
+  }
 
   // Mobile-friendly: card view toggle for narrow screens
   if (window.innerWidth < 768) {
