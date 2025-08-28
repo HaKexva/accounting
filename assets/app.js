@@ -221,6 +221,60 @@ function displaySection(container, title, items, type) {
   tableContainer.style.overflowX = 'auto';
   tableContainer.style.border = '1px solid #ddd';
   tableContainer.style.borderRadius = '4px';
+  
+  // 手機端觸控優化
+  if (window.innerWidth < 768) {
+    tableContainer.className = 'table-container';
+    
+    // 添加觸控滾動提示
+    const touchHint = document.createElement('div');
+    touchHint.style.cssText = `
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+      margin: 8px 0;
+      padding: 6px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      display: none;
+    `;
+    touchHint.textContent = '👆 雙指縮放或左右滑動查看更多內容';
+    tableContainer.parentNode.insertBefore(touchHint, tableContainer);
+    
+    // 檢測觸控滾動
+    let isScrolling = false;
+    tableContainer.addEventListener('scroll', () => {
+      if (!isScrolling) {
+        isScrolling = true;
+        touchHint.style.display = 'block';
+        setTimeout(() => {
+          touchHint.style.display = 'none';
+          isScrolling = false;
+        }, 2000);
+      }
+    });
+    
+    // 添加觸控手勢支援
+    let startX = 0;
+    let startY = 0;
+    
+    tableContainer.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    });
+    
+    tableContainer.addEventListener('touchmove', (e) => {
+      if (!startX || !startY) return;
+      
+      const deltaX = e.touches[0].clientX - startX;
+      const deltaY = e.touches[0].clientY - startY;
+      
+      // 水平滑動優先
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        e.preventDefault();
+      }
+    });
+  }
 
   const table = document.createElement('table');
   table.style.width = '100%';
@@ -454,35 +508,62 @@ function displaySection(container, title, items, type) {
     function renderCards() {
       if (cardsDiv) cardsDiv.remove();
       cardsDiv = document.createElement('div');
-      cardsDiv.style.display = 'grid';
-      cardsDiv.style.gridTemplateColumns = '1fr';
-      cardsDiv.style.gap = '8px';
-      items.forEach((item) => {
+      cardsDiv.className = 'card-view';
+      
+      items.forEach((item, index) => {
         const card = document.createElement('div');
-        card.style.border = '1px solid #ddd';
-        card.style.borderRadius = '6px';
-        card.style.background = '#fff';
-        card.style.padding = '10px';
+        card.className = 'card';
+        
         headers.forEach(h => {
           const row = document.createElement('div');
-          row.style.display = 'flex';
-          row.style.justifyContent = 'space-between';
-          row.style.gap = '8px';
+          row.className = 'card-row';
+          
           const k = document.createElement('div');
+          k.className = 'card-label';
           k.textContent = h;
-          k.style.color = '#666';
-          k.style.fontSize = '12px';
+          
           const v = document.createElement('div');
+          v.className = 'card-value';
           v.textContent = item[h] || '';
-          v.style.fontWeight = (h.includes('金額') || h.includes('預算')) ? 'bold' : 'normal';
+          
+          // 為金額欄位添加特殊樣式
+          if (h.includes('金額') || h.includes('預算') || h.includes('實際消費金額')) {
+            v.classList.add('amount');
+            if (type === 'income') {
+              v.classList.add('income');
+            } else if (type === 'expense') {
+              v.classList.add('expense');
+            }
+          }
+          
           row.appendChild(k);
           row.appendChild(v);
           card.appendChild(row);
         });
+        
+        // 為卡片添加點擊效果
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => {
+          // 高亮選中的卡片
+          cardsDiv.querySelectorAll('.card').forEach(c => c.style.border = '1px solid #ddd');
+          card.style.border = '2px solid #3498db';
+          card.style.boxShadow = '0 4px 12px rgba(52, 152, 219, 0.3)';
+        });
+        
         cardsDiv.appendChild(card);
       });
+      
       contentDiv.appendChild(cardsDiv);
     }
+    
+    // 監聽視窗大小變化，自動切換視圖
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 768 && isCard) {
+        isCard = false;
+        tableContainer.style.display = 'block';
+        if (cardsDiv) cardsDiv.remove();
+      }
+    });
   }
 
   section.appendChild(contentDiv);
