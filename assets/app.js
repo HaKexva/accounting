@@ -183,7 +183,7 @@ function displaySection(container, title, items, type) {
   redoBtn.style.cursor = 'pointer';
 
   const addRowBtn = document.createElement('button');
-  addRowBtn.textContent = '新增列';
+  addRowBtn.textContent = '新增預算';
   addRowBtn.style.padding = '6px 10px';
   addRowBtn.style.border = '1px solid #3498db';
   addRowBtn.style.background = '#e3f2fd';
@@ -493,90 +493,67 @@ function displaySection(container, title, items, type) {
     }
   }
 
-  // Mobile-friendly: card view toggle for narrow screens
-  if (window.innerWidth < 768) {
-    const toggle = document.createElement('button');
-    toggle.textContent = '切換卡片/表格視圖';
-    toggle.style.margin = '10px 0';
-    toggle.style.padding = '6px 10px';
-    toggle.style.border = '1px solid #3498db';
-    toggle.style.background = '#e3f2fd';
-    toggle.style.borderRadius = '6px';
-    toggle.style.cursor = 'pointer';
-    let isCard = false;
-    toggle.addEventListener('click', () => {
-      isCard = !isCard;
-      if (isCard) {
-        tableContainer.style.display = 'none';
-        renderCards();
-      } else {
-        tableContainer.style.display = 'block';
-        if (cardsDiv) cardsDiv.remove();
-      }
-    });
-    contentDiv.appendChild(toggle);
+  // 一律使用卡片視圖：隱藏表格容器並建立卡片視圖（與表格資料同步）
+  tableContainer.style.display = 'none';
 
-    var cardsDiv = null;
-    function renderCards() {
-      if (cardsDiv) cardsDiv.remove();
-      cardsDiv = document.createElement('div');
-      cardsDiv.className = 'card-view';
-      
-      items.forEach((item, index) => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        
-        headers.forEach(h => {
-          const row = document.createElement('div');
-          row.className = 'card-row';
-          
-          const k = document.createElement('div');
-          k.className = 'card-label';
-          k.textContent = h;
-          
-          const v = document.createElement('div');
-          v.className = 'card-value';
-          v.textContent = item[h] || '';
-          
-          // 為金額欄位添加特殊樣式
-          if (h.includes('金額') || h.includes('預算') || h.includes('實際消費金額')) {
-            v.classList.add('amount');
-            if (type === 'income') {
-              v.classList.add('income');
-            } else if (type === 'expense') {
-              v.classList.add('expense');
+  let cardsDiv = null;
+  function renderCardsFromSnapshot() {
+    if (cardsDiv) cardsDiv.remove();
+    cardsDiv = document.createElement('div');
+    cardsDiv.className = 'card-view';
+
+    const snapshot = getSnapshot();
+    snapshot.forEach((rowObj, rowIndex) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      headers.forEach((h) => {
+        const row = document.createElement('div');
+        row.className = 'card-row';
+
+        const k = document.createElement('div');
+        k.className = 'card-label';
+        k.textContent = h;
+
+        const v = document.createElement('div');
+        v.className = 'card-value';
+        v.textContent = rowObj[h] || '';
+
+        // 允許編輯並同步回表格
+        if (cfg.editable && IS_EDIT_MODE) {
+          v.contentEditable = 'true';
+          v.style.outline = '1px dashed rgba(0,0,0,0.2)';
+          v.style.backgroundColor = 'rgba(255,255,0,0.06)';
+          v.addEventListener('input', () => {
+            const cellIndex = headers.indexOf(h);
+            const targetTr = tbody.querySelectorAll('tr')[rowIndex];
+            if (targetTr && targetTr.children[cellIndex]) {
+              targetTr.children[cellIndex].innerText = v.innerText;
+              // 觸發表格的 input 事件，以沿用計算合計與自動儲存
+              targetTr.children[cellIndex].dispatchEvent(new Event('input', { bubbles: true }));
             }
-          }
-          
-          row.appendChild(k);
-          row.appendChild(v);
-          card.appendChild(row);
-        });
-        
-        // 為卡片添加點擊效果
-        card.style.cursor = 'pointer';
-        card.addEventListener('click', () => {
-          // 高亮選中的卡片
-          cardsDiv.querySelectorAll('.card').forEach(c => c.style.border = '1px solid #ddd');
-          card.style.border = '2px solid #3498db';
-          card.style.boxShadow = '0 4px 12px rgba(52, 152, 219, 0.3)';
-        });
-        
-        cardsDiv.appendChild(card);
+          });
+        }
+
+        if (h.includes('金額') || h.includes('預算') || h.includes('實際消費金額')) {
+          v.classList.add('amount');
+          if (type === 'income') v.classList.add('income');
+          if (type === 'expense') v.classList.add('expense');
+        }
+
+        row.appendChild(k);
+        row.appendChild(v);
+        card.appendChild(row);
       });
-      
-      contentDiv.appendChild(cardsDiv);
-    }
-    
-    // 監聽視窗大小變化，自動切換視圖
-    window.addEventListener('resize', () => {
-      if (window.innerWidth >= 768 && isCard) {
-        isCard = false;
-        tableContainer.style.display = 'block';
-        if (cardsDiv) cardsDiv.remove();
-      }
+
+      cardsDiv.appendChild(card);
     });
+
+    contentDiv.appendChild(cardsDiv);
   }
+
+  // 初次渲染卡片
+  renderCardsFromSnapshot();
 
   section.appendChild(contentDiv);
   container.appendChild(section);
