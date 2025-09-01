@@ -44,7 +44,7 @@ async function sendSectionUpdate(sectionTitle, headers, rows) {
   try {
     const resp = await fetch(WEB_APP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       keepalive: true,
     });
@@ -56,7 +56,7 @@ async function sendSectionUpdate(sectionTitle, headers, rows) {
       await fetch(WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         keepalive: true,
       });
