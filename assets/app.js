@@ -1,5 +1,5 @@
 const WEB_APP_URL =
-  'https://script.google.com/macros/s/AKfycbzhZFd6x0towW3mAns2bAqqFUhDpIrRxEsnpooDTWoc4tGGdzlTj87xvBL5QW1h8PN1ag/exec';
+  'https://script.google.com/macros/s/AKfycbyyboT0eMggrCY1gGYqva4cCdeDEXwjr4GBn0XFKSmc/dev';
 let LAST_DATA = null;
 let IS_EDIT_MODE = true;
 
