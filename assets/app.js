@@ -187,21 +187,21 @@ function displaySection(container, title, items, type) {
   redoBtn.style.borderRadius = '6px';
   redoBtn.style.cursor = 'pointer';
 
-  const addRowBtn = document.createElement('button');
-  addRowBtn.textContent = '新增預算';
-  addRowBtn.style.padding = '6px 10px';
-  addRowBtn.style.border = '1px solid #3498db';
-  addRowBtn.style.background = '#e3f2fd';
-  addRowBtn.style.borderRadius = '6px';
-  addRowBtn.style.cursor = 'pointer';
+  const addBudgetBtn = document.createElement('button');
+  addBudgetBtn.textContent = '新增預算';
+  addBudgetBtn.style.padding = '6px 10px';
+  addBudgetBtn.style.border = '1px solid #3498db';
+  addBudgetBtn.style.background = '#e3f2fd';
+  addBudgetBtn.style.borderRadius = '6px';
+  addBudgetBtn.style.cursor = 'pointer';
 
-  const deleteRowBtn = document.createElement('button');
-  deleteRowBtn.textContent = '刪除列';
-  deleteRowBtn.style.padding = '6px 10px';
-  deleteRowBtn.style.border = '1px solid #e74c3c';
-  deleteRowBtn.style.background = '#ffebee';
-  deleteRowBtn.style.borderRadius = '6px';
-  deleteRowBtn.style.cursor = 'pointer';
+  const deleteBudgetBtn = document.createElement('button');
+  deleteBudgetBtn.textContent = '刪除預算';
+  deleteBudgetBtn.style.padding = '6px 10px';
+  deleteBudgetBtn.style.border = '1px solid #e74c3c';
+  deleteBudgetBtn.style.background = '#ffebee';
+  deleteBudgetBtn.style.borderRadius = '6px';
+  deleteBudgetBtn.style.cursor = 'pointer';
 
   const autosaveHint = document.createElement('span');
   autosaveHint.textContent = '';
@@ -212,8 +212,8 @@ function displaySection(container, title, items, type) {
   if (cfg.editable) {
     controlsDiv.appendChild(undoBtn);
     controlsDiv.appendChild(redoBtn);
-    controlsDiv.appendChild(addRowBtn);
-    controlsDiv.appendChild(deleteRowBtn);
+    controlsDiv.appendChild(addBudgetBtn);
+    controlsDiv.appendChild(deleteBudgetBtn);
     controlsDiv.appendChild(autosaveHint);
   }
   contentDiv.appendChild(controlsDiv);
@@ -269,18 +269,12 @@ function displaySection(container, title, items, type) {
     th.style.backgroundColor = '#f8f9fa';
     th.style.whiteSpace = 'nowrap';
     th.style.minWidth = '80px';
-    if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+    if (header.includes('金額') || header.includes('預算')) {
       th.style.width = '100px'; th.style.textAlign = 'right';
     } else if (header.includes('項目')) {
       th.style.width = '150px';
     } else if (header.includes('細節') || header.includes('備註')) {
       th.style.width = '200px'; th.style.whiteSpace = 'normal'; th.style.wordWrap = 'break-word';
-    } else if (header.includes('日期')) {
-      th.style.width = '100px';
-    } else if (header.includes('類別')) {
-      th.style.width = '120px';
-    } else if (header.includes('方式')) {
-      th.style.width = '100px';
     } else {
       th.style.width = '120px';
     }
@@ -307,7 +301,7 @@ function displaySection(container, title, items, type) {
         td.style.outline = '1px dashed rgba(0,0,0,0.2)';
         td.style.backgroundColor = 'rgba(255,255,0,0.06)';
       }
-      if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+      if (header.includes('金額') || header.includes('預算')) {
         td.style.fontWeight = 'bold';
         td.style.textAlign = 'right';
         td.style.fontFamily = 'monospace';
@@ -321,12 +315,6 @@ function displaySection(container, title, items, type) {
         td.style.wordWrap = 'break-word';
         td.style.maxWidth = '200px';
         td.style.lineHeight = '1.4';
-      } else if (header.includes('項目')) {
-        td.style.fontWeight = '500';
-        td.style.color = '#2c3e50';
-      } else if (header.includes('日期')) {
-        td.style.fontFamily = 'monospace';
-        td.style.color = '#2c3e50';
       }
       row.appendChild(td);
     });
@@ -347,7 +335,7 @@ function displaySection(container, title, items, type) {
     td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     if (i === 0) {
       td.textContent = '總計';
-    } else if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+    } else if (header.includes('金額') || header.includes('預算')) {
       td.style.textAlign = 'right';
       td.style.fontFamily = 'monospace';
       td.dataset.totalFor = header;
@@ -361,7 +349,7 @@ function displaySection(container, title, items, type) {
 
   function recalcTotals() {
     headers.forEach((header) => {
-      if (header.includes('金額') || header.includes('預算') || header.includes('實際消費金額')) {
+      if (header.includes('金額') || header.includes('預算')) {
         let sum = 0;
         Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
           const idx = headers.indexOf(header);
@@ -543,7 +531,7 @@ function displaySection(container, title, items, type) {
           });
         }
 
-        if (h.includes('金額') || h.includes('預算') || h.includes('實際消費金額')) {
+        if (h.includes('金額') || h.includes('預算')) {
           v.classList.add('amount');
           if (type === 'income') v.classList.add('income');
           if (type === 'expense') v.classList.add('expense');
@@ -567,7 +555,7 @@ function displaySection(container, title, items, type) {
   container.appendChild(section);
 
   // 事件：新增列
-  addRowBtn.addEventListener('click', () => {
+  addBudgetBtn.addEventListener('click', () => {
     if (!cfg.editable) return;
     const newRow = document.createElement('tr');
     const rowIndex = tbody.children.length;
