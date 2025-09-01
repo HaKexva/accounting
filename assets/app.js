@@ -1,6 +1,5 @@
-
 const WEB_APP_URL =
-  'https://script.google.com/macros/s/AKfycbzZ7D3ZlMmWDujXCTN7xE4wbM3om5aJXkjtt9kJpGfN9wpycwXHff7P87BmvvtcrMZ11A/exec';
+  'https://script.google.com/macros/s/AKfycbyyboT0eMggrCY1gGYqva4cCdeDEXwjr4GBn0XFKSmc/dev';
 let LAST_DATA = null;
 let IS_EDIT_MODE = true;
 
@@ -9,8 +8,14 @@ const SECTION_CONFIG = {
   '當月收入': { editable: true },
   '當月支出預算': { editable: true },
   '隔月預計支出': { editable: true },
-
 };
+
+const SECTION_HEADERS = {
+  '當月收入': ['項目', '金額', '備註'],
+  '當月支出預算': ['項目', '細節', '預算', '備註'],
+  '隔月預計支出': ['項目', '金額', '備註'],
+};
+
 
 // debounce helper for autosave
 function debounce(fn, wait) {
@@ -251,7 +256,10 @@ function displaySection(container, title, items, type) {
 
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
-  const headers = Object.keys(items[0] || {});
+  const headers = (items.length > 0)
+  ? Object.keys(items[0])
+  : (SECTION_HEADERS[title] || []);
+
   headers.forEach(header => {
     const th = document.createElement('th');
     th.textContent = header;
@@ -565,7 +573,8 @@ function displaySection(container, title, items, type) {
     const rowIndex = tbody.children.length;
     newRow.style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa';
     newRow.dataset.rowIndex = rowIndex;
-    headers.forEach(header => {
+    const headersForSection = SECTION_HEADERS[title] || headers;
+    headersForSection.forEach(header => {
       const td = document.createElement('td');
       td.textContent = '';
       td.style.padding = '10px 15px';
@@ -578,6 +587,7 @@ function displaySection(container, title, items, type) {
       td.style.backgroundColor = 'rgba(255,255,0,0.06)';
       newRow.appendChild(td);
     });
+
     // push history before modifying DOM snapshot reference
     historyStack.push(lastSnapshot);
     futureStack = [];
