@@ -585,7 +585,7 @@ function displaySection(container, title, items, type) {
   });
 
   // 事件：刪除列
-  deleteRowBtn.addEventListener('click', () => {
+  deleteBudgetBtn.addEventListener('click', () => {
     if (!cfg.editable) return;
     const rows = tbody.querySelectorAll('tr');
     if (rows.length > 0) {
