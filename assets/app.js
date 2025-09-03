@@ -261,7 +261,6 @@ function displaySection(container, title, items, type) {
   let contentRows = []
   items.forEach((item, index) => {
     const row = [];
-    row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
     row.dataset.rowIndex = index;
     headers.forEach(header => {
       const cell = {};
