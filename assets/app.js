@@ -258,7 +258,6 @@ function displaySection(container, title, items, type) {
   // thead.appendChild(headerRow);
 
 
-  
   // const tbody = document.createElement('tbody');
   let contentRows = []
   items.forEach((item) => {
@@ -345,7 +344,7 @@ function displaySection(container, title, items, type) {
     const rows = [];
     contentRows.forEach(row => {
       const obj = {};
-      const cells = Array.from(row.querySelectorAll('td'));
+      const cells = row;
       headers.forEach((h, i) => {
         obj[h] = (cells[i]?.innerText || '').trim();
       });
@@ -356,7 +355,7 @@ function displaySection(container, title, items, type) {
   function applySnapshot(snapshot) {
     // Rebuild tbody to match snapshot length
     contentRows = [];
-    snapshot.forEach((rowObj, idx) => {
+    snapshot.forEach((rowObj) => {
       const row = [];
       headers.forEach(h => {
         const cell = {};
@@ -371,7 +370,7 @@ function displaySection(container, title, items, type) {
           outline: '1px dashed rgba(0,0,0,0.2)',
           backgroundColor: 'rgba(255,255,0,0.06)',
         };  
-        row.appendChild(cell);
+        row.push(cell);
       });
       contentRows.push(row);
     });
@@ -473,11 +472,11 @@ function displaySection(container, title, items, type) {
         const row = document.createElement('div');
         row.className = 'card-row';
 
-        const k = document.createElement('div');
+        const k = {};
         k.className = 'card-label';
         k.textContent = h;
 
-        const v = document.createElement('div');
+        const v = {};
         v.className = 'card-value';
         v.textContent = rowObj[h] || '';
 
@@ -488,7 +487,7 @@ function displaySection(container, title, items, type) {
         v.addEventListener('input', () => {
           const cellIndex = headers.indexOf(h);
           const targetRow = contentRows[rowIndex];
-          if (targetRow && targetRow.children[cellIndex]) {
+          if (targetRow && targetRow[cellIndex]) {
             // Redo the input event since we no longer have table structure
           }
         });
@@ -499,7 +498,7 @@ function displaySection(container, title, items, type) {
           if (type === 'expense') v.classList.add('expense');
         }
 
-        row.appendChild(k);
+        row.push(k);
         row.appendChild(v);
         card.appendChild(row);
       });
