@@ -229,110 +229,112 @@ function displaySection(container, title, items, type) {
     cardContainer.className = 'card-container';
   }
 
-  const thead = document.createElement('thead');
-  const headerRow = document.createElement('tr');
+  // const thead = document.createElement('thead');
+  // const headerRow = document.createElement('tr');
   const headers = (items.length > 0)
   ? Object.keys(items[0])
   : (SECTION_HEADERS[title]);
 
-  headers.forEach(header => {
-    const th = document.createElement('th');
-    th.textContent = header;
-    th.style.padding = '12px 15px';
-    th.style.textAlign = 'left';
-    th.style.borderBottom = '2px solid #ddd';
-    th.style.backgroundColor = '#f8f9fa';
-    th.style.whiteSpace = 'nowrap';
-    th.style.minWidth = '80px';
-    if (header.includes('金額') || header.includes('預算')) {
-      th.style.width = '100px'; th.style.textAlign = 'right';
-    } else if (header.includes('項目')) {
-      th.style.width = '150px';
-    } else if (header.includes('細節') || header.includes('備註')) {
-      th.style.width = '200px'; th.style.whiteSpace = 'normal';
-    } else {
-      th.style.width = '120px';
-    }
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
+  // headers.forEach(header => {
+  //   const th = document.createElement('th');
+  //   th.textContent = header;
+  //   th.style.padding = '12px 15px';
+  //   th.style.textAlign = 'left';
+  //   th.style.borderBottom = '2px solid #ddd';
+  //   th.style.backgroundColor = '#f8f9fa';
+  //   th.style.whiteSpace = 'nowrap';
+  //   th.style.minWidth = '80px';
+  //   if (header.includes('金額') || header.includes('預算')) {
+  //     th.style.width = '100px'; th.style.textAlign = 'right';
+  //   } else if (header.includes('項目')) {
+  //     th.style.width = '150px';
+  //   } else if (header.includes('細節') || header.includes('備註')) {
+  //     th.style.width = '200px'; th.style.whiteSpace = 'normal';
+  //   } else {
+  //     th.style.width = '120px';
+  //   }
+  //   headerRow.appendChild(th);
+  // });
+  // thead.appendChild(headerRow);
 
-  const tbody = document.createElement('tbody');
+  // const tbody = document.createElement('tbody');
+  let contentRows = []
   items.forEach((item, index) => {
-    const row = document.createElement('tr');
+    const row = [];
     row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
     row.dataset.rowIndex = index;
     headers.forEach(header => {
-      const td = document.createElement('td');
-      td.textContent = item[header] || '';
-      td.style.padding = '10px 15px';
-      td.style.borderBottom = '1px solid #ddd';
-      td.style.verticalAlign = 'top';
-      td.style.fontSize = '14px';
-      td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      td.contentEditable = 'true';
-      td.style.outline = '1px dashed rgba(0,0,0,0.2)';
-      td.style.backgroundColor = 'rgba(255,255,0,0.06)';
+      const cell = {};
+      cell['textContent'] = item[header] || '';
+      cell['style'] = {
+        padding: '10px 15px',
+        borderBottom: '1px solid #ddd',
+        verticalAlign: 'top',
+        fontSize: '14px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        contentEditable: 'true',
+        outline: '1px dashed rgba(0,0,0,0.2)',
+        backgroundColor: 'rgba(255,255,0,0.06)',
+      };
       if (header.includes('金額') || header.includes('預算')) {
-        td.style.fontWeight = 'bold';
-        td.style.textAlign = 'right';
-        td.style.fontFamily = 'monospace';
+        cell['style']['fontWeight'] = 'bold';
+        cell['style']['textAlign'] = 'right';
+        cell['style']['fontFamily'] = 'monospace';
         if (type === 'income') {
-          td.style.color = '#27ae60';
+          cell['style']['color'] = '#27ae60';
         } else if (type === 'expense') {
-          td.style.color = '#e74c3c';
+          cell['style']['color'] = '#e74c3c';
         }
       } else if (header.includes('細節') || header.includes('備註')) {
-        td.style.whiteSpace = 'normal';
-        td.style.maxWidth = '200px';
-        td.style.lineHeight = '1.4';
+        cell['style']['whiteSpace'] = 'normal';
+        cell['style']['maxWidth'] = '200px';
+        cell['style']['lineHeight'] = '1.4';
       }
-      row.appendChild(td);
+      row.appendChild(cell);
     });
-    tbody.appendChild(row);
+    contentRows.push(row);
   });
 
-  const tfoot = document.createElement('tfoot');
-  const totalRow = document.createElement('tr');
-  totalRow.style.backgroundColor = '#f8f9fa';
-  totalRow.style.fontWeight = 'bold';
-  headers.forEach((header, i) => {
-    const td = document.createElement('td');
-    td.style.padding = '10px 15px';
-    td.style.borderTop = '2px solid #aaa';
-    td.style.fontWeight = 'bold';
-    td.style.fontSize = '14px';
-    td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    if (i === 0) {
-      td.textContent = '總計';
-    } else if (header.includes('金額') || header.includes('預算')) {
-      td.style.textAlign = 'right';
-      td.style.fontFamily = 'monospace';
-      td.dataset.totalFor = header;
-    } else {
-      td.textContent = '';
-    }
-    totalRow.appendChild(td);
-  });
-  tfoot.appendChild(totalRow);
+  // const tfoot = document.createElement('tfoot');
+  // const totalRow = document.createElement('tr');
+  // totalRow.style.backgroundColor = '#f8f9fa';
+  // totalRow.style.fontWeight = 'bold';
+  // headers.forEach((header, i) => {
+  //   const td = document.createElement('td');
+  //   td.style.padding = '10px 15px';
+  //   td.style.borderTop = '2px solid #aaa';
+  //   td.style.fontWeight = 'bold';
+  //   td.style.fontSize = '14px';
+  //   td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  //   if (i === 0) {
+  //     td.textContent = '總計';
+  //   } else if (header.includes('金額') || header.includes('預算')) {
+  //     td.style.textAlign = 'right';
+  //     td.style.fontFamily = 'monospace';
+  //     td.dataset.totalFor = header;
+  //   } else {
+  //     td.textContent = '';
+  //   }
+  //   totalRow.appendChild(td);
+  // });
+  // tfoot.appendChild(totalRow);
 
-  function recalcTotals() {
-    headers.forEach((header) => {
-      if (header.includes('金額') || header.includes('預算')) {
-        let sum = 0;
-        Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
-          const idx = headers.indexOf(header);
-          const cell = tr.children[idx];
-          const num = parseFloat((cell?.innerText || '').replace(/[^\d.-]/g, '')) || 0;
-          sum += num;
-        });
-        const totalCell = totalRow.children[headers.indexOf(header)];
-        if (totalCell) totalCell.textContent = sum.toLocaleString();
-      }
-    });
-  }
-  setTimeout(recalcTotals, 0);
-  tbody.addEventListener('input', recalcTotals);
+  // function recalcTotals() {
+  //   headers.forEach((header) => {
+  //     if (header.includes('金額') || header.includes('預算')) {
+  //       let sum = 0;
+  //       contentRows.forEach(row => {
+  //         const idx = headers.indexOf(header);
+  //         const cell = row[idx];
+  //         const num = parseFloat((cell?.innerText || '').replace(/[^\d.-]/g, '')) || 0;
+  //         sum += num;
+  //       });
+  //       // const totalCell = totalRow.children[headers.indexOf(header)];
+  //       // if (totalCell) totalCell.textContent = sum.toLocaleString();
+  //     }
+  //   });
+  // }
+  // setTimeout(recalcTotals, 0);
 
   // History (Undo/Redo)
   let historyStack = [];
@@ -341,9 +343,9 @@ function displaySection(container, title, items, type) {
 
   function getSnapshot() {
     const rows = [];
-    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+    contentRows.forEach(row => {
       const obj = {};
-      const cells = Array.from(tr.querySelectorAll('td'));
+      const cells = Array.from(row.querySelectorAll('td'));
       headers.forEach((h, i) => {
         obj[h] = (cells[i]?.innerText || '').trim();
       });
@@ -353,31 +355,31 @@ function displaySection(container, title, items, type) {
   }
   function applySnapshot(snapshot) {
     // Rebuild tbody to match snapshot length
-    tbody.innerHTML = '';
+    contentRows = [];
     snapshot.forEach((rowObj, idx) => {
-      const tr = document.createElement('tr');
-      tr.style.backgroundColor = idx % 2 === 0 ? '#ffffff' : '#f8f9fa';
-      tr.dataset.rowIndex = idx;
+      const row = [];
       headers.forEach(h => {
-        const td = document.createElement('td');
-        td.textContent = rowObj[h] || '';
-        td.style.padding = '10px 15px';
-        td.style.borderBottom = '1px solid #ddd';
-        td.style.verticalAlign = 'top';
-        td.style.fontSize = '14px';
-        td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        td.contentEditable = 'true';
-        td.style.outline = '1px dashed rgba(0,0,0,0.2)';
-        td.style.backgroundColor = 'rgba(255,255,0,0.06)';
-        tr.appendChild(td);
+        const cell = {};
+        cell['textContent'] = rowObj[h] || '';
+        cell['style'] = {
+          padding: '10px 15px',
+          borderBottom: '1px solid #ddd',
+          verticalAlign: 'top',
+          fontSize: '14px',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          contentEditable: 'true',
+          outline: '1px dashed rgba(0,0,0,0.2)',
+          backgroundColor: 'rgba(255,255,0,0.06)',
+        };  
+        row.appendChild(cell);
       });
-      tbody.appendChild(tr);
+      contentRows.push(row);
     });
-    recalcTotals();
+    // recalcTotals();
   }
 
   // Input: push previous state to history, clear future, autosave
-  tbody.addEventListener('input', () => {
+  cardContainer.addEventListener('input', () => {
     historyStack.push(lastSnapshot);
     futureStack = [];
     lastSnapshot = getSnapshot();
@@ -485,11 +487,9 @@ function displaySection(container, title, items, type) {
         v.style.backgroundColor = 'rgba(255,255,0,0.06)';
         v.addEventListener('input', () => {
           const cellIndex = headers.indexOf(h);
-          const targetTr = tbody.querySelectorAll('tr')[rowIndex];
-          if (targetTr && targetTr.children[cellIndex]) {
-            targetTr.children[cellIndex].innerText = v.innerText;
-            // 觸發表格的 input 事件，以沿用計算合計與自動儲存
-            targetTr.children[cellIndex].dispatchEvent(new Event('input', { bubbles: true }));
+          const targetRow = contentRows[rowIndex];
+          if (targetRow && targetRow.children[cellIndex]) {
+            // Redo the input event since we no longer have table structure
           }
         });
 
@@ -518,42 +518,41 @@ function displaySection(container, title, items, type) {
 
   // 事件：新增列
   addBudgetBtn.addEventListener('click', () => {
-  const newRow = document.createElement('tr');
-  const rowIndex = tbody.children.length;
-  newRow.style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa';
-  newRow.dataset.rowIndex = rowIndex;
-  const headersForSection = SECTION_HEADERS[title];
+  const newRow = [];
+  const headersForSection = SECTION_HEADERS[title] || headers;
   headersForSection.forEach(header => {
-    const td = document.createElement('td');
-    td.textContent = '';
-    td.style.padding = '10px 15px';
-    td.style.borderBottom = '1px solid #ddd';
-    td.style.verticalAlign = 'top';
-    td.style.fontSize = '14px';
-    td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    td.contentEditable = 'true';
-    td.style.outline = '1px dashed rgba(0,0,0,0.2)';
-    td.style.backgroundColor = 'rgba(255,255,0,0.06)';
-    newRow.appendChild(td);
+    const cell = {};
+    cell['textContent'] = '';
+    cell['style'] = {
+      padding: '10px 15px',
+      borderBottom: '1px solid #ddd',
+      verticalAlign: 'top',
+      fontSize: '14px',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      contentEditable: 'true',
+      outline: '1px dashed rgba(0,0,0,0.2)',
+      backgroundColor: 'rgba(255,255,0,0.06)',
+    };
+    newRow.push(cell);
   });
 
     // push history before modifying DOM snapshot reference
     historyStack.push(lastSnapshot);
     futureStack = [];
-    tbody.appendChild(newRow);
-    recalcTotals();
     lastSnapshot = getSnapshot();
   });
 
   // 事件：刪除列
   deleteBudgetBtn.addEventListener('click', () => {
-    const rows = tbody.querySelectorAll('tr');
+    const rows = contentRows;
     if (rows.length > 0) {
       historyStack.push(lastSnapshot);
       futureStack = [];
       const lastRow = rows[rows.length - 1];
-      lastRow.remove();
-      recalcTotals();
+      lastRow.forEach(cell => {
+        cell.remove();
+      });
+      // recalcTotals();
       lastSnapshot = getSnapshot();
     }
   });
@@ -571,7 +570,7 @@ function displaySection(container, title, items, type) {
       setTimeout(() => (autosaveHint.textContent = ''), 2000);
     });
   }, 1500);
-  tbody.addEventListener('input', debouncedAutosave);
+  cardContainer.addEventListener('input', debouncedAutosave);
 
   // 收合/展開
   sectionTitle.addEventListener('click', function() {
