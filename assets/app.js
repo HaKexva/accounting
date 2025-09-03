@@ -1,13 +1,12 @@
 const WEB_APP_URL =
   'https://script.google.com/macros/s/AKfycbzhZFd6x0towW3mAns2bAqqFUhDpIrRxEsnpooDTWoc4tGGdzlTj87xvBL5QW1h8PN1ag/exec';
 let LAST_DATA = null;
-let IS_EDIT_MODE = true;
 
 // New: per-section configuration
 const SECTION_CONFIG = {
-  '當月收入': { editable: true },
-  '當月支出預算': { editable: true },
-  '隔月預計支出': { editable: true },
+  '當月收入': {},
+  '當月支出預算': {},
+  '隔月預計支出': {},
 };
 
 const SECTION_HEADERS = {
@@ -231,20 +230,6 @@ function displaySection(container, title, items, type) {
   let touchHint = null;
   if (window.innerWidth < 768) {
     tableContainer.className = 'table-container';
-    
-    // 創建觸控滾動提示，但暫時不添加到DOM
-    touchHint = document.createElement('div');
-    touchHint.style.cssText = `
-      text-align: center;
-      color: #666;
-      font-size: 12px;
-      margin: 8px 0;
-      padding: 6px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      display: none;
-    `;
-    touchHint.textContent = '👆 雙指縮放或左右滑動查看更多內容';
   }
 
   const table = document.createElement('table');
@@ -296,11 +281,9 @@ function displaySection(container, title, items, type) {
       td.style.verticalAlign = 'top';
       td.style.fontSize = '14px';
       td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      if (cfg.editable && IS_EDIT_MODE) {
-        td.contentEditable = 'true';
-        td.style.outline = '1px dashed rgba(0,0,0,0.2)';
-        td.style.backgroundColor = 'rgba(255,255,0,0.06)';
-      }
+      td.contentEditable = 'true';
+      td.style.outline = '1px dashed rgba(0,0,0,0.2)';
+      td.style.backgroundColor = 'rgba(255,255,0,0.06)';
       if (header.includes('金額') || header.includes('預算')) {
         td.style.fontWeight = 'bold';
         td.style.textAlign = 'right';
@@ -397,11 +380,9 @@ function displaySection(container, title, items, type) {
         td.style.verticalAlign = 'top';
         td.style.fontSize = '14px';
         td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        if (cfg.editable && IS_EDIT_MODE) {
-          td.contentEditable = 'true';
-          td.style.outline = '1px dashed rgba(0,0,0,0.2)';
-          td.style.backgroundColor = 'rgba(255,255,0,0.06)';
-        }
+        td.contentEditable = 'true';
+        td.style.outline = '1px dashed rgba(0,0,0,0.2)';
+        td.style.backgroundColor = 'rgba(255,255,0,0.06)';
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -410,35 +391,33 @@ function displaySection(container, title, items, type) {
   }
 
   // Input: push previous state to history, clear future, autosave
-  if (cfg.editable) {
-    tbody.addEventListener('input', () => {
-      historyStack.push(lastSnapshot);
-      futureStack = [];
-      lastSnapshot = getSnapshot();
-    });
+  tbody.addEventListener('input', () => {
+    historyStack.push(lastSnapshot);
+    futureStack = [];
+    lastSnapshot = getSnapshot();
+  });
 
-    undoBtn.addEventListener('click', () => {
-      if (historyStack.length === 0) return;
-      const current = getSnapshot();
-      const prev = historyStack.pop();
-      futureStack.push(current);
-      applySnapshot(prev);
-      lastSnapshot = getSnapshot();
-      autosaveHint.textContent = '自動儲存中...';
-      debouncedAutosave();
-    });
+  undoBtn.addEventListener('click', () => {
+    if (historyStack.length === 0) return;
+    const current = getSnapshot();
+    const prev = historyStack.pop();
+    futureStack.push(current);
+    applySnapshot(prev);
+    lastSnapshot = getSnapshot();
+    autosaveHint.textContent = '自動儲存中...';
+    debouncedAutosave();
+  });
 
-    redoBtn.addEventListener('click', () => {
-      if (futureStack.length === 0) return;
-      const current = getSnapshot();
-      const next = futureStack.pop();
-      historyStack.push(current);
-      applySnapshot(next);
-      lastSnapshot = getSnapshot();
-      autosaveHint.textContent = '自動儲存中...';
-      debouncedAutosave();
-    });
-  }
+  redoBtn.addEventListener('click', () => {
+    if (futureStack.length === 0) return;
+    const current = getSnapshot();
+    const next = futureStack.pop();
+    historyStack.push(current);
+    applySnapshot(next);
+    lastSnapshot = getSnapshot();
+    autosaveHint.textContent = '自動儲存中...';
+    debouncedAutosave();
+  });
 
   tableContainer.appendChild(table);
   contentDiv.appendChild(tableContainer);
@@ -516,20 +495,18 @@ function displaySection(container, title, items, type) {
         v.textContent = rowObj[h] || '';
 
         // 允許編輯並同步回表格
-        if (cfg.editable && IS_EDIT_MODE) {
-          v.contentEditable = 'true';
-          v.style.outline = '1px dashed rgba(0,0,0,0.2)';
-          v.style.backgroundColor = 'rgba(255,255,0,0.06)';
-          v.addEventListener('input', () => {
-            const cellIndex = headers.indexOf(h);
-            const targetTr = tbody.querySelectorAll('tr')[rowIndex];
-            if (targetTr && targetTr.children[cellIndex]) {
-              targetTr.children[cellIndex].innerText = v.innerText;
-              // 觸發表格的 input 事件，以沿用計算合計與自動儲存
-              targetTr.children[cellIndex].dispatchEvent(new Event('input', { bubbles: true }));
-            }
-          });
-        }
+        v.contentEditable = 'true';
+        v.style.outline = '1px dashed rgba(0,0,0,0.2)';
+        v.style.backgroundColor = 'rgba(255,255,0,0.06)';
+        v.addEventListener('input', () => {
+          const cellIndex = headers.indexOf(h);
+          const targetTr = tbody.querySelectorAll('tr')[rowIndex];
+          if (targetTr && targetTr.children[cellIndex]) {
+            targetTr.children[cellIndex].innerText = v.innerText;
+            // 觸發表格的 input 事件，以沿用計算合計與自動儲存
+            targetTr.children[cellIndex].dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        });
 
         if (h.includes('金額') || h.includes('預算')) {
           v.classList.add('amount');
@@ -556,25 +533,24 @@ function displaySection(container, title, items, type) {
 
   // 事件：新增列
   addBudgetBtn.addEventListener('click', () => {
-    if (!cfg.editable) return;
-    const newRow = document.createElement('tr');
-    const rowIndex = tbody.children.length;
-    newRow.style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa';
-    newRow.dataset.rowIndex = rowIndex;
-    const headersForSection = SECTION_HEADERS[title] || headers;
-    headersForSection.forEach(header => {
-      const td = document.createElement('td');
-      td.textContent = '';
-      td.style.padding = '10px 15px';
-      td.style.borderBottom = '1px solid #ddd';
-      td.style.verticalAlign = 'top';
-      td.style.fontSize = '14px';
-      td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      td.contentEditable = 'true';
-      td.style.outline = '1px dashed rgba(0,0,0,0.2)';
-      td.style.backgroundColor = 'rgba(255,255,0,0.06)';
-      newRow.appendChild(td);
-    });
+  const newRow = document.createElement('tr');
+  const rowIndex = tbody.children.length;
+  newRow.style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa';
+  newRow.dataset.rowIndex = rowIndex;
+  const headersForSection = SECTION_HEADERS[title] || headers;
+  headersForSection.forEach(header => {
+    const td = document.createElement('td');
+    td.textContent = '';
+    td.style.padding = '10px 15px';
+    td.style.borderBottom = '1px solid #ddd';
+    td.style.verticalAlign = 'top';
+    td.style.fontSize = '14px';
+    td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    td.contentEditable = 'true';
+    td.style.outline = '1px dashed rgba(0,0,0,0.2)';
+    td.style.backgroundColor = 'rgba(255,255,0,0.06)';
+    newRow.appendChild(td);
+  });
 
     // push history before modifying DOM snapshot reference
     historyStack.push(lastSnapshot);
@@ -586,7 +562,6 @@ function displaySection(container, title, items, type) {
 
   // 事件：刪除列
   deleteBudgetBtn.addEventListener('click', () => {
-    if (!cfg.editable) return;
     const rows = tbody.querySelectorAll('tr');
     if (rows.length > 0) {
       historyStack.push(lastSnapshot);
@@ -611,9 +586,7 @@ function displaySection(container, title, items, type) {
       setTimeout(() => (autosaveHint.textContent = ''), 2000);
     });
   }, 1500);
-  if (cfg.editable) {
-    tbody.addEventListener('input', debouncedAutosave);
-  }
+  tbody.addEventListener('input', debouncedAutosave);
 
   // 收合/展開
   sectionTitle.addEventListener('click', function() {
