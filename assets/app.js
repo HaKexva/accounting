@@ -257,6 +257,7 @@ function displaySection(container, title, items, type) {
   // });
   // thead.appendChild(headerRow);
 
+  
   // const tbody = document.createElement('tbody');
   let contentRows = []
   items.forEach((item, index) => {
