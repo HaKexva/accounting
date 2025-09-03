@@ -257,12 +257,11 @@ function displaySection(container, title, items, type) {
   // });
   // thead.appendChild(headerRow);
 
-  
+
   // const tbody = document.createElement('tbody');
   let contentRows = []
-  items.forEach((item, index) => {
+  items.forEach((item) => {
     const row = [];
-    row.dataset.rowIndex = index;
     headers.forEach(header => {
       const cell = {};
       cell['textContent'] = item[header] || '';
@@ -290,7 +289,7 @@ function displaySection(container, title, items, type) {
         cell['style']['maxWidth'] = '200px';
         cell['style']['lineHeight'] = '1.4';
       }
-      row.appendChild(cell);
+      row.push(cell);
     });
     contentRows.push(row);
   });
