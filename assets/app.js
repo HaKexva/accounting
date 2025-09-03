@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function sendSectionUpdate(sectionTitle, headers, rows) {
   // pick target section if remapped
-  const cfg = SECTION_CONFIG[sectionTitle] || {};
+  const cfg = SECTION_CONFIG[sectionTitle];
   const target = cfg.targetSection || sectionTitle;
   const payload = {
     action: 'updateSection',
@@ -130,7 +130,7 @@ function displayAccountingData(data) {
 }
 
 function displaySection(container, title, items, type) {
-  const cfg = SECTION_CONFIG[title] || { editable: true };
+  const cfg = SECTION_CONFIG[title];
 
   const section = document.createElement('div');
   section.className = 'accounting-section';
@@ -208,42 +208,32 @@ function displaySection(container, title, items, type) {
   autosaveHint.style.color = '#666';
 
   // 只有可編輯區塊顯示增刪、取消、儲存
-  if (cfg.editable) {
-    controlsDiv.appendChild(undoBtn);
-    controlsDiv.appendChild(redoBtn);
-    controlsDiv.appendChild(addBudgetBtn);
-    controlsDiv.appendChild(deleteBudgetBtn);
-    controlsDiv.appendChild(autosaveHint);
-  }
+  controlsDiv.appendChild(undoBtn);
+  controlsDiv.appendChild(redoBtn);
+  controlsDiv.appendChild(addBudgetBtn);
+  controlsDiv.appendChild(deleteBudgetBtn);
+  controlsDiv.appendChild(autosaveHint);
   contentDiv.appendChild(controlsDiv);
 
-  // 當月支出預算：移除表單呈現，僅顯示紀錄區（唯讀）
 
   // 表格容器
-  const tableContainer = document.createElement('div');
-  tableContainer.style.width = '100%';
-  tableContainer.style.overflowX = 'auto';
-  tableContainer.style.border = '1px solid #ddd';
-  tableContainer.style.borderRadius = '4px';
+  const cardContainer = document.createElement('div');
+  cardContainer.style.width = '100%';
+  cardContainer.style.overflowX = 'auto';
+  cardContainer.style.border = '1px solid #ddd';
+  cardContainer.style.borderRadius = '4px';
   
   // 手機端觸控優化 - 將在表格容器添加到DOM後執行
   let touchHint = null;
   if (window.innerWidth < 768) {
-    tableContainer.className = 'table-container';
+    cardContainer.className = 'card-container';
   }
-
-  const table = document.createElement('table');
-  table.style.width = '100%';
-  table.style.borderCollapse = 'collapse';
-  table.style.marginTop = '0';
-  table.style.tableLayout = 'fixed';
-  table.style.minWidth = '800px';
 
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
   const headers = (items.length > 0)
   ? Object.keys(items[0])
-  : (SECTION_HEADERS[title] || []);
+  : (SECTION_HEADERS[title]);
 
   headers.forEach(header => {
     const th = document.createElement('th');
@@ -259,14 +249,13 @@ function displaySection(container, title, items, type) {
     } else if (header.includes('項目')) {
       th.style.width = '150px';
     } else if (header.includes('細節') || header.includes('備註')) {
-      th.style.width = '200px'; th.style.whiteSpace = 'normal'; th.style.wordWrap = 'break-word';
+      th.style.width = '200px'; th.style.whiteSpace = 'normal';
     } else {
       th.style.width = '120px';
     }
     headerRow.appendChild(th);
   });
   thead.appendChild(headerRow);
-  table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
   items.forEach((item, index) => {
@@ -295,7 +284,6 @@ function displaySection(container, title, items, type) {
         }
       } else if (header.includes('細節') || header.includes('備註')) {
         td.style.whiteSpace = 'normal';
-        td.style.wordWrap = 'break-word';
         td.style.maxWidth = '200px';
         td.style.lineHeight = '1.4';
       }
@@ -303,7 +291,6 @@ function displaySection(container, title, items, type) {
     });
     tbody.appendChild(row);
   });
-  table.appendChild(tbody);
 
   const tfoot = document.createElement('tfoot');
   const totalRow = document.createElement('tr');
@@ -328,7 +315,6 @@ function displaySection(container, title, items, type) {
     totalRow.appendChild(td);
   });
   tfoot.appendChild(totalRow);
-  table.appendChild(tfoot);
 
   function recalcTotals() {
     headers.forEach((header) => {
@@ -419,19 +405,18 @@ function displaySection(container, title, items, type) {
     debouncedAutosave();
   });
 
-  tableContainer.appendChild(table);
-  contentDiv.appendChild(tableContainer);
+  contentDiv.appendChild(cardContainer);
 
   // 手機端觸控優化 - 在表格容器添加到DOM後執行
   if (window.innerWidth < 768 && touchHint) {
     try {
       // 確保表格容器已經有父節點
-      if (tableContainer.parentNode) {
-        tableContainer.parentNode.insertBefore(touchHint, tableContainer);
+      if (cardContainer.parentNode) {
+        cardContainer.parentNode.insertBefore(touchHint, cardContainer);
         
         // 檢測觸控滾動
         let isScrolling = false;
-        tableContainer.addEventListener('scroll', () => {
+        cardContainer.addEventListener('scroll', () => {
           if (!isScrolling) {
             isScrolling = true;
             touchHint.style.display = 'block';
@@ -446,12 +431,12 @@ function displaySection(container, title, items, type) {
         let startX = 0;
         let startY = 0;
         
-        tableContainer.addEventListener('touchstart', (e) => {
+        cardContainer.addEventListener('touchstart', (e) => {
           startX = e.touches[0].clientX;
           startY = e.touches[0].clientY;
         });
         
-        tableContainer.addEventListener('touchmove', (e) => {
+        cardContainer.addEventListener('touchmove', (e) => {
           if (!startX || !startY) return;
           
           const deltaX = e.touches[0].clientX - startX;
@@ -469,7 +454,7 @@ function displaySection(container, title, items, type) {
   }
 
   // 一律使用卡片視圖：隱藏表格容器並建立卡片視圖（與表格資料同步）
-  tableContainer.style.display = 'none';
+  cardContainer.style.display = 'none';
 
   let cardsDiv = null;
   function renderCardsFromSnapshot() {
@@ -537,7 +522,7 @@ function displaySection(container, title, items, type) {
   const rowIndex = tbody.children.length;
   newRow.style.backgroundColor = rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa';
   newRow.dataset.rowIndex = rowIndex;
-  const headersForSection = SECTION_HEADERS[title] || headers;
+  const headersForSection = SECTION_HEADERS[title];
   headersForSection.forEach(header => {
     const td = document.createElement('td');
     td.textContent = '';
