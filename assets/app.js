@@ -587,3 +587,5 @@ function displaySection(container, title, items, type) {
 //     }
 //   });
 }
+
+
