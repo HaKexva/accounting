@@ -482,8 +482,6 @@ function displaySection(container, title, items, type) {
 
         // 允許編輯並同步回表格
         v.contentEditable = 'true';
-        v.style.outline = '1px dashed rgba(0,0,0,0.2)';
-        v.style.backgroundColor = 'rgba(255,255,0,0.06)';
         v.addEventListener('input', () => {
           const cellIndex = headers.indexOf(h);
           const targetRow = contentRows[rowIndex];
@@ -499,7 +497,7 @@ function displaySection(container, title, items, type) {
         }
 
         row.push(k);
-        row.appendChild(v);
+        row.push(v);
         card.appendChild(row);
       });
 
