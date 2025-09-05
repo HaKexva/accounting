@@ -130,104 +130,80 @@ function displayAccountingData(data) {
 }
 
 function displaySection(container, title, items, type) {
-//   const cfg = SECTION_CONFIG[title];
+  const cfg = SECTION_CONFIG[title];
 
-//   const section = document.createElement('div');
-//   section.className = 'accounting-section';
-//   section.style.marginBottom = '30px';
-//   section.style.padding = '20px';
-//   section.style.borderRadius = '8px';
-//   section.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+  const section = document.createElement('div');
+  section.className = 'accounting-section';
+  section.style.marginBottom = '30px';
+  section.style.padding = '20px';
+  section.style.borderRadius = '8px';
+  section.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
 
-//   if (type === 'income') {
-//     section.style.backgroundColor = '#e8f5e8';
-//     section.style.borderLeft = '4px solid #27ae60';
-//   } else if (type === 'expense') {
-//     section.style.backgroundColor = '#ffeaea';
-//     section.style.borderLeft = '4px solid #e74c3c';
-//   } else {
-//     section.style.backgroundColor = '#f0f8ff';
-//     section.style.borderLeft = '4px solid #3498db';
-//   }
+  if (type === 'income') {
+    section.style.backgroundColor = '#e8f5e8';
+    section.style.borderLeft = '4px solid #27ae60';
+  } else if (type === 'expense') {
+    section.style.backgroundColor = '#ffeaea';
+    section.style.borderLeft = '4px solid #e74c3c';
+  } else {
+    section.style.backgroundColor = '#f0f8ff';
+    section.style.borderLeft = '4px solid #3498db';
+  }
 
-//   const sectionTitle = document.createElement('h2');
-//   sectionTitle.textContent = title + ' ▼';
-//   sectionTitle.style.marginBottom = '15px';
-//   sectionTitle.style.color = '#2c3e50';
-//   sectionTitle.style.cursor = 'pointer';
-//   sectionTitle.setAttribute('tabindex', '0');
-//   sectionTitle.setAttribute('role', 'button');
-//   sectionTitle.setAttribute('aria-expanded', 'true');
-//   section.appendChild(sectionTitle);
+  const sectionTitle = document.createElement('h2');
+  sectionTitle.textContent = title + ' ▼';
+  sectionTitle.style.marginBottom = '15px';
+  sectionTitle.style.color = '#2c3e50';
+  sectionTitle.style.cursor = 'pointer';
+  sectionTitle.setAttribute('tabindex', '0');
+  sectionTitle.setAttribute('role', 'button');
+  sectionTitle.setAttribute('aria-expanded', 'true');
+  section.appendChild(sectionTitle);
 
-//   const contentDiv = document.createElement('div');
-//   contentDiv.style.display = 'block';
+  const contentDiv = document.createElement('div');
+  contentDiv.style.display = 'block';
 
-//   // 工具列
-//   const controlsDiv = document.createElement('div');
-//   controlsDiv.style.display = 'flex';
-//   controlsDiv.style.gap = '8px';
-//   controlsDiv.style.margin = '8px 0 12px 0';
-//   controlsDiv.style.flexWrap = 'wrap';
+  // 工具列
+  const controlsDiv = document.createElement('div');
+  controlsDiv.style.display = 'flex';
+  controlsDiv.style.gap = '8px';
+  controlsDiv.style.margin = '8px 0 12px 0';
+  controlsDiv.style.flexWrap = 'wrap';
 
-//   const undoBtn = document.createElement('button');
-//   undoBtn.textContent = 'Undo';
-//   undoBtn.style.padding = '6px 10px';
-//   undoBtn.style.border = '1px solid #aaa';
-//   undoBtn.style.background = '#f1f1f1';
-//   undoBtn.style.borderRadius = '6px';
-//   undoBtn.style.cursor = 'pointer';
+  const undoBtn = document.createElement('button');
+  undoBtn.textContent = 'Undo';
+  undoBtn.style.padding = '6px 10px';
+  undoBtn.style.border = '1px solid #aaa';
+  undoBtn.style.background = '#f1f1f1';
+  undoBtn.style.borderRadius = '6px';
+  undoBtn.style.cursor = 'pointer';
 
-//   const redoBtn = document.createElement('button');
-//   redoBtn.textContent = 'Redo';
-//   redoBtn.style.padding = '6px 10px';
-//   redoBtn.style.border = '1px solid #3498db';
-//   redoBtn.style.background = '#e3f2fd';
-//   redoBtn.style.borderRadius = '6px';
-//   redoBtn.style.cursor = 'pointer';
+  const redoBtn = document.createElement('button');
+  redoBtn.textContent = 'Redo';
+  redoBtn.style.padding = '6px 10px';
+  redoBtn.style.border = '1px solid #3498db';
+  redoBtn.style.background = '#e3f2fd';
+  redoBtn.style.borderRadius = '6px';
+  redoBtn.style.cursor = 'pointer';
 
-//   const addBudgetBtn = document.createElement('button');
-//   addBudgetBtn.textContent = '新增預算';
-//   addBudgetBtn.style.padding = '6px 10px';
-//   addBudgetBtn.style.border = '1px solid #3498db';
-//   addBudgetBtn.style.background = '#e3f2fd';
-//   addBudgetBtn.style.borderRadius = '6px';
-//   addBudgetBtn.style.cursor = 'pointer';
+  const autosaveHint = document.createElement('span');
+  autosaveHint.textContent = '';
+  autosaveHint.style.alignSelf = 'center';
+  autosaveHint.style.color = '#666';
 
-//   const deleteBudgetBtn = document.createElement('button');
-//   deleteBudgetBtn.textContent = '刪除預算';
-//   deleteBudgetBtn.style.padding = '6px 10px';
-//   deleteBudgetBtn.style.border = '1px solid #e74c3c';
-//   deleteBudgetBtn.style.background = '#ffebee';
-//   deleteBudgetBtn.style.borderRadius = '6px';
-//   deleteBudgetBtn.style.cursor = 'pointer';
-
-//   const autosaveHint = document.createElement('span');
-//   autosaveHint.textContent = '';
-//   autosaveHint.style.alignSelf = 'center';
-//   autosaveHint.style.color = '#666';
-
-//   // 只有可編輯區塊顯示增刪、取消、儲存
-//   controlsDiv.appendChild(undoBtn);
-//   controlsDiv.appendChild(redoBtn);
-//   controlsDiv.appendChild(addBudgetBtn);
-//   controlsDiv.appendChild(deleteBudgetBtn);
-//   controlsDiv.appendChild(autosaveHint);
-//   contentDiv.appendChild(controlsDiv);
+  // 只有可編輯區塊顯示增刪、取消、儲存
+  controlsDiv.appendChild(undoBtn);
+  controlsDiv.appendChild(redoBtn);
+  controlsDiv.appendChild(autosaveHint);
+  contentDiv.appendChild(controlsDiv);
 
 
-//   // 表格容器
-//   const cardContainer = document.createElement('div');
-//   cardContainer.style.width = '100%';
-//   cardContainer.style.overflowX = 'auto';
-//   cardContainer.style.border = '1px solid #ddd';
-//   cardContainer.style.borderRadius = '4px';
-  
-//   // 手機端觸控優化 - 將在表格容器添加到DOM後執行
-//   let touchHint = null;
-//   if (window.innerWidth < 768) {
-//     cardContainer.className = 'card-container';
-//   }
+   // 卡片容器
+   const cardContainer = document.createElement('div');
+   cardContainer.style.width = '100%';
+   cardContainer.style.overflowX = 'auto';
+   cardContainer.style.border = '1px solid #ddd';
+   cardContainer.style.borderRadius = '4px';
 
 //   // const thead = document.createElement('thead');
 //   // const headerRow = document.createElement('tr');
