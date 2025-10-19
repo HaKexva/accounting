@@ -205,36 +205,36 @@ function displaySection(container, title, items, type) {
    cardContainer.style.border = '1px solid #ddd';
    cardContainer.style.borderRadius = '4px';
 
-//   // const thead = document.createElement('thead');
-//   // const headerRow = document.createElement('tr');
+//   const thead = document.createElement('thead');
+//   const headerRow = document.createElement('tr');
 //   const headers = (items.length > 0)
 //   ? Object.keys(items[0])
 //   : (SECTION_HEADERS[title]);
 
-//   // headers.forEach(header => {
-//   //   const th = document.createElement('th');
-//   //   th.textContent = header;
-//   //   th.style.padding = '12px 15px';
-//   //   th.style.textAlign = 'left';
-//   //   th.style.borderBottom = '2px solid #ddd';
-//   //   th.style.backgroundColor = '#f8f9fa';
-//   //   th.style.whiteSpace = 'nowrap';
-//   //   th.style.minWidth = '80px';
-//   //   if (header.includes('金額') || header.includes('預算')) {
-//   //     th.style.width = '100px'; th.style.textAlign = 'right';
-//   //   } else if (header.includes('項目')) {
-//   //     th.style.width = '150px';
-//   //   } else if (header.includes('細節') || header.includes('備註')) {
-//   //     th.style.width = '200px'; th.style.whiteSpace = 'normal';
-//   //   } else {
-//   //     th.style.width = '120px';
-//   //   }
-//   //   headerRow.appendChild(th);
-//   // });
-//   // thead.appendChild(headerRow);
+//   headers.forEach(header => {
+//   const th = document.createElement('th');
+//   th.textContent = header;
+//   th.style.padding = '12px 15px';
+//   th.style.textAlign = 'left';
+//   th.style.borderBottom = '2px solid #ddd';
+//   th.style.backgroundColor = '#f8f9fa';
+//   th.style.whiteSpace = 'nowrap';
+//   th.style.minWidth = '80px';
+//   if (header.includes('金額') || header.includes('預算')) {
+//     th.style.width = '100px'; th.style.textAlign = 'right';
+//   } else if (header.includes('項目')) {
+//     th.style.width = '150px';
+//   } else if (header.includes('細節') || header.includes('備註')) {
+//     th.style.width = '200px'; th.style.whiteSpace = 'normal';
+//   } else {
+//     th.style.width = '120px';
+//   }
+//   headerRow.appendChild(th);
+//  });
+// thead.appendChild(headerRow);
 
 
-//   // const tbody = document.createElement('tbody');
+//  const tbody = document.createElement('tbody');
 //   let contentRows = []
 //   items.forEach((item) => {
 //     const row = [];
@@ -270,48 +270,47 @@ function displaySection(container, title, items, type) {
 //     contentRows.push(row);
 //   });
 
-//   // const tfoot = document.createElement('tfoot');
-//   // const totalRow = document.createElement('tr');
-//   // totalRow.style.backgroundColor = '#f8f9fa';
-//   // totalRow.style.fontWeight = 'bold';
-//   // headers.forEach((header, i) => {
-//   //   const td = document.createElement('td');
-//   //   td.style.padding = '10px 15px';
-//   //   td.style.borderTop = '2px solid #aaa';
-//   //   td.style.fontWeight = 'bold';
-//   //   td.style.fontSize = '14px';
-//   //   td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-//   //   if (i === 0) {
-//   //     td.textContent = '總計';
-//   //   } else if (header.includes('金額') || header.includes('預算')) {
-//   //     td.style.textAlign = 'right';
-//   //     td.style.fontFamily = 'monospace';
-//   //     td.dataset.totalFor = header;
-//   //   } else {
-//   //     td.textContent = '';
-//   //   }
-//   //   totalRow.appendChild(td);
-//   // });
-//   // tfoot.appendChild(totalRow);
+// const tfoot = document.createElement('tfoot');
+// const totalRow = document.createElement('tr');
+// totalRow.style.backgroundColor = '#f8f9fa';
+// totalRow.style.fontWeight = 'bold';
+// headers.forEach((header, i) => {
+//   const td = document.createElement('td');
+//   td.style.padding = '10px 15px';
+//   td.style.borderTop = '2px solid #aaa';
+//   td.style.fontWeight = 'bold';
+//   td.style.fontSize = '14px';
+//   td.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+//   if (i === 0) {
+//     td.textContent = '總計';
+//   } else if (header.includes('金額') || header.includes('預算')) {
+//     td.style.textAlign = 'right';
+//     td.style.fontFamily = 'monospace';
+//     td.dataset.totalFor = header;
+//   } else {
+//     td.textContent = '';
+//   }
+//   totalRow.appendChild(td);
+// });
+// tfoot.appendChild(totalRow);
 
-//   // function recalcTotals() {
-//   //   headers.forEach((header) => {
-//   //     if (header.includes('金額') || header.includes('預算')) {
-//   //       let sum = 0;
-//   //       contentRows.forEach(row => {
-//   //         const idx = headers.indexOf(header);
-//   //         const cell = row[idx];
-//   //         const num = parseFloat((cell?.innerText || '').replace(/[^\d.-]/g, '')) || 0;
-//   //         sum += num;
-//   //       });
-//   //       // const totalCell = totalRow.children[headers.indexOf(header)];
-//   //       // if (totalCell) totalCell.textContent = sum.toLocaleString();
-//   //     }
-//   //   });
-//   // }
-//   // setTimeout(recalcTotals, 0);
+// function recalcTotals() {
+//   headers.forEach((header) => {
+//     if (header.includes('金額') || header.includes('預算')) {
+//       let sum = 0;
+//       contentRows.forEach(row => {
+//         const idx = headers.indexOf(header);
+//         const cell = row[idx];
+//         const num = parseFloat((cell?.innerText || '').replace(/[^\d.-]/g, '')) || 0;
+//         sum += num;
+//       });
+//       // const totalCell = totalRow.children[headers.indexOf(header)];
+//       // if (totalCell) totalCell.textContent = sum.toLocaleString();
+//     }
+//   });
+// }
+// setTimeout(recalcTotals, 0);
 
-//   // History (Undo/Redo)
 //   let historyStack = [];
 //   let futureStack = [];
 //   let lastSnapshot = getSnapshot();
@@ -350,88 +349,39 @@ function displaySection(container, title, items, type) {
 //       });
 //       contentRows.push(row);
 //     });
-//     // recalcTotals();
+//    recalcTotals();
 //   }
 
-//   // Input: push previous state to history, clear future, autosave
-//   cardContainer.addEventListener('input', () => {
-//     historyStack.push(lastSnapshot);
-//     futureStack = [];
-//     lastSnapshot = getSnapshot();
-//   });
+  cardContainer.addEventListener('input', () => {
+    historyStack.push(lastSnapshot);
+    futureStack = [];
+    lastSnapshot = getSnapshot();
+  });
 
-//   undoBtn.addEventListener('click', () => {
-//     if (historyStack.length === 0) return;
-//     const current = getSnapshot();
-//     const prev = historyStack.pop();
-//     futureStack.push(current);
-//     applySnapshot(prev);
-//     lastSnapshot = getSnapshot();
-//     autosaveHint.textContent = '自動儲存中...';
-//     debouncedAutosave();
-//   });
+  undoBtn.addEventListener('click', () => {
+    if (historyStack.length === 0) return;
+    const current = getSnapshot();
+    const prev = historyStack.pop();
+    futureStack.push(current);
+    applySnapshot(prev);
+    lastSnapshot = getSnapshot();
+    autosaveHint.textContent = '自動儲存中...';
+    debouncedAutosave();
+  });
 
-//   redoBtn.addEventListener('click', () => {
-//     if (futureStack.length === 0) return;
-//     const current = getSnapshot();
-//     const next = futureStack.pop();
-//     historyStack.push(current);
-//     applySnapshot(next);
-//     lastSnapshot = getSnapshot();
-//     autosaveHint.textContent = '自動儲存中...';
-//     debouncedAutosave();
-//   });
+  redoBtn.addEventListener('click', () => {
+    if (futureStack.length === 0) return;
+    const current = getSnapshot();
+    const next = futureStack.pop();
+    historyStack.push(current);
+    applySnapshot(next);
+    lastSnapshot = getSnapshot();
+    autosaveHint.textContent = '自動儲存中...';
+    debouncedAutosave();
+  });
 
 //   contentDiv.appendChild(cardContainer);
 
-//   // 手機端觸控優化 - 在表格容器添加到DOM後執行
-//   if (window.innerWidth < 768 && touchHint) {
-//     try {
-//       // 確保表格容器已經有父節點
-//       if (cardContainer.parentNode) {
-//         cardContainer.parentNode.insertBefore(touchHint, cardContainer);
-        
-//         // 檢測觸控滾動
-//         let isScrolling = false;
-//         cardContainer.addEventListener('scroll', () => {
-//           if (!isScrolling) {
-//             isScrolling = true;
-//             touchHint.style.display = 'block';
-//             setTimeout(() => {
-//               touchHint.style.display = 'none';
-//               isScrolling = false;
-//             }, 2000);
-//           }
-//         });
-        
-//         // 添加觸控手勢支援
-//         let startX = 0;
-//         let startY = 0;
-        
-//         cardContainer.addEventListener('touchstart', (e) => {
-//           startX = e.touches[0].clientX;
-//           startY = e.touches[0].clientY;
-//         });
-        
-//         cardContainer.addEventListener('touchmove', (e) => {
-//           if (!startX || !startY) return;
-          
-//           const deltaX = e.touches[0].clientX - startX;
-//           const deltaY = e.touches[0].clientY - startY;
-          
-//           // 水平滑動優先
-//           if (Math.abs(deltaX) > Math.abs(deltaY)) {
-//             e.preventDefault();
-//           }
-//         });
-//       }
-//     } catch (error) {
-//       console.warn('觸控優化功能載入失敗:', error);
-//     }
-//   }
-
-//   // 一律使用卡片視圖：隱藏表格容器並建立卡片視圖（與表格資料同步）
-//   cardContainer.style.display = 'none';
 
 //   let cardsDiv = null;
 //   function renderCardsFromSnapshot() {
@@ -483,85 +433,42 @@ function displaySection(container, title, items, type) {
 //     contentDiv.appendChild(cardsDiv);
 //   }
 
-//   // 初次渲染卡片
-//   renderCardsFromSnapshot();
 
-//   section.appendChild(contentDiv);
-//   container.appendChild(section);
+  renderCardsFromSnapshot();
 
-//   // 事件：新增列
-//   addBudgetBtn.addEventListener('click', () => {
-//   const newRow = [];
-//   const headersForSection = SECTION_HEADERS[title] || headers;
-//   headersForSection.forEach(header => {
-//     const cell = {};
-//     cell['textContent'] = '';
-//     cell['style'] = {
-//       padding: '10px 15px',
-//       borderBottom: '1px solid #ddd',
-//       verticalAlign: 'top',
-//       fontSize: '14px',
-//       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-//       contentEditable: 'true',
-//       outline: '1px dashed rgba(0,0,0,0.2)',
-//       backgroundColor: 'rgba(255,255,0,0.06)',
-//     };
-//     newRow.push(cell);
-//   });
+  section.appendChild(contentDiv);
+  container.appendChild(section);
 
-//     // push history before modifying DOM snapshot reference
-//     historyStack.push(lastSnapshot);
-//     futureStack = [];
-//     lastSnapshot = getSnapshot();
-//   });
 
-//   // 事件：刪除列
-//   deleteBudgetBtn.addEventListener('click', () => {
-//     const rows = contentRows;
-//     if (rows.length > 0) {
-//       historyStack.push(lastSnapshot);
-//       futureStack = [];
-//       const lastRow = rows[rows.length - 1];
-//       lastRow.forEach(cell => {
-//         cell.remove();
-//       });
-//       // recalcTotals();
-//       lastSnapshot = getSnapshot();
-//     }
-//   });
+  const debouncedAutosave = debounce(() => {
+    autosaveHint.textContent = '自動儲存中...';
+    // reuse sendSectionUpdate using current snapshot
+    const rows = getSnapshot();
+    sendSectionUpdate(title, headers, rows).then(() => {
+      autosaveHint.textContent = '已自動儲存';
+      setTimeout(() => (autosaveHint.textContent = ''), 1500);
+    }).catch(() => {
+      autosaveHint.textContent = '自動儲存失敗';
+      setTimeout(() => (autosaveHint.textContent = ''), 2000);
+    });
+  }, 1500);
+  cardContainer.addEventListener('input', debouncedAutosave);
 
-//   // Autosave on idle (1.5s debounce)
-//   const debouncedAutosave = debounce(() => {
-//     autosaveHint.textContent = '自動儲存中...';
-//     // reuse sendSectionUpdate using current snapshot
-//     const rows = getSnapshot();
-//     sendSectionUpdate(title, headers, rows).then(() => {
-//       autosaveHint.textContent = '已自動儲存';
-//       setTimeout(() => (autosaveHint.textContent = ''), 1500);
-//     }).catch(() => {
-//       autosaveHint.textContent = '自動儲存失敗';
-//       setTimeout(() => (autosaveHint.textContent = ''), 2000);
-//     });
-//   }, 1500);
-//   cardContainer.addEventListener('input', debouncedAutosave);
-
-//   // 收合/展開
-//   sectionTitle.addEventListener('click', function() {
-//     if (contentDiv.style.display === 'none') {
-//       contentDiv.style.display = 'block';
-//       sectionTitle.textContent = title + ' ▼';
-//       sectionTitle.setAttribute('aria-expanded', 'true');
-//     } else {
-//       contentDiv.style.display = 'none';
-//       sectionTitle.textContent = title + ' ▲';
-//       sectionTitle.setAttribute('aria-expanded', 'false');
-//     }
-//   });
-//   sectionTitle.addEventListener('keydown', function(e) {
-//     if (e.key === 'Enter' || e.key === ' ') {
-//       sectionTitle.click();
-//     }
-//   });
+  sectionTitle.addEventListener('click', function() {
+    if (contentDiv.style.display === 'none') {
+      contentDiv.style.display = 'block';
+      sectionTitle.textContent = title + ' ▼';
+      sectionTitle.setAttribute('aria-expanded', 'true');
+    } else {
+      contentDiv.style.display = 'none';
+      sectionTitle.textContent = title + ' ▲';
+      sectionTitle.setAttribute('aria-expanded', 'false');
+    }
+  });
+  sectionTitle.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      sectionTitle.click();
+    }
+  });
 }
-
 
