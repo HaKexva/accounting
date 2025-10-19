@@ -35,7 +35,6 @@ const createBtn = document.createElement('button');
 
 
 
-
 // const WEB_APP_URL =
 //   'https://script.google.com/macros/s/AKfycby857iH5s40pc-1qNWqhn-76r0ZJCDlhzA9e4nG98htCtcHumCtGEEWa4CW5FpU_6nDTg/exec';
 // let LAST_DATA = null;
