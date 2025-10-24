@@ -30,6 +30,10 @@ class AuthManager {
   // Initialize Google Sign-In
   async init() {
     if (this.isInitialized) return;
+    if (this.isLocalhost()) {
+      this.isInitialized = true;
+      return;
+    }
     
     return new Promise((resolve) => {
       if (typeof google !== 'undefined' && google.accounts) {
@@ -46,6 +50,11 @@ class AuthManager {
         setTimeout(() => this.init().then(resolve), 100);
       }
     });
+  }
+
+  // Check if the current page is localhost
+  isLocalhost() {
+    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   }
 
   // Handle Google Sign-In response
@@ -137,6 +146,9 @@ class AuthManager {
 
   // Check if current page requires authentication
   isProtectedPage() {
+    if (this.isLocalhost()) {
+      return false;
+    }
     const currentPath = window.location.pathname;
     return !AUTH_CONFIG.PUBLIC_PAGES.some(page => 
       currentPath === page || currentPath.endsWith(page)
@@ -145,6 +157,9 @@ class AuthManager {
 
   // Render sign-in button
   renderSignInButton(elementId = 'buttonDiv') {
+    if (this.isLocalhost()) {
+      return;
+    }
     const element = document.getElementById(elementId);
     if (element && typeof google !== 'undefined' && google.accounts) {
       google.accounts.id.renderButton(element, {
