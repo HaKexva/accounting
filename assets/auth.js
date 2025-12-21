@@ -222,11 +222,24 @@ async function protectPage() {
   return true;
 }
 
+// 讓 Accounting 標誌連結到首頁
+function setupHomeLink() {
+  const siteTitle = document.querySelector('.site-title');
+  if (siteTitle) {
+    siteTitle.style.cursor = 'pointer';
+    siteTitle.href = '/accounting/';
+  }
+}
+
 // Auto-protect pages on load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', protectPage);
+  document.addEventListener('DOMContentLoaded', () => {
+    protectPage();
+    setupHomeLink();
+  });
 } else {
   protectPage();
+  setupHomeLink();
 }
 
 // Export for use in other scripts
