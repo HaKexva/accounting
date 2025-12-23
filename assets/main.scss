@@ -12,6 +12,35 @@
   padding-left: 30px;
 }
 
+/* 讓頁首(header)永遠浮在最上層，避免被內容或懸浮區遮住 */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+}
+
+/* 統一導航列（索引列）的字體大小 */
+.site-title,
+.site-title a {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.site-nav .page-link {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* 統一各頁面的主標題（頁首標題）大小與樣式 */
+.post-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 // Login page styles
 #buttonDiv {
   display: flex;

@@ -21,12 +21,16 @@ title: ""
     font-family: 'Noto Sans TC', 'PingFang TC', sans-serif;
     font-size: 4rem;
     font-weight: 900;
-    color: #2c3e50;
+    color: #000000;
     text-align: center;
     margin: 0;
     padding: 0;
     letter-spacing: 0.3em;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .home-title:hover {
+    color: #000000;
   }
   
   .buttons-container {
@@ -55,51 +59,58 @@ title: ""
     border: none;
     letter-spacing: 0.1em;
     box-sizing: border-box;
+    color: #fff !important;
   }
   
   .home-btn:hover {
-    transform: translateY(-5px);
+    transform: translateY(-5px) scale(1.02);
     box-shadow: 0 15px 35px rgba(0,0,0,0.2);
     text-decoration: none;
+    color: #fff !important;
   }
   
   .home-btn:active {
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(0.98);
+    color: #fff !important;
   }
   
   .btn-expense {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-    color: white;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+    color: #fff !important;
   }
   
-  .btn-expense:hover {
-    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
-    color: white;
+  .btn-expense:hover,
+  .btn-expense:active {
+    background: linear-gradient(135deg, #2980b9 0%, #1f6fa8 100%) !important;
+    color: #fff !important;
   }
   
   .btn-budget {
-    background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
-    color: white;
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%) !important;
+    color: #fff !important;
   }
   
-  .btn-budget:hover {
-    background: linear-gradient(135deg, #1e8449 0%, #196f3d 100%);
-    color: white;
+  .btn-budget:hover,
+  .btn-budget:active {
+    background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%) !important;
+    color: #fff !important;
   }
   
   .btn-settings {
-    background: linear-gradient(135deg, #7f8c8d 0%, #616a6b 100%);
-    color: white;
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+    color: #fff !important;
   }
   
-  .btn-settings:hover {
-    background: linear-gradient(135deg, #616a6b 0%, #515a5a 100%);
-    color: white;
+  .btn-settings:hover,
+  .btn-settings:active {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
+    color: #fff !important;
   }
   
   .btn-icon {
     margin-right: 15px;
     font-size: 2rem;
+    color: #fff !important;
   }
   
   /* 隱藏預設的頁面標題 */
@@ -117,11 +128,34 @@ title: ""
     .home-btn {
       padding: 40px 20px;
       font-size: 1.5rem;
+      color: #fff !important;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .home-btn:active {
+      transform: translateY(-2px) scale(0.98) !important;
+      color: #fff !important;
+    }
+    
+    .btn-expense:active {
+      background: linear-gradient(135deg, #2980b9 0%, #1f6fa8 100%) !important;
+      color: #fff !important;
+    }
+    
+    .btn-budget:active {
+      background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%) !important;
+      color: #fff !important;
+    }
+    
+    .btn-settings:active {
+      background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
+      color: #fff !important;
     }
     
     .btn-icon {
       font-size: 1.8rem;
       margin-right: 12px;
+      color: #fff !important;
     }
   }
 </style>

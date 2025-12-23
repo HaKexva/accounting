@@ -209,10 +209,10 @@ async function protectPage() {
     const userInfoEl = document.getElementById('user-info');
     if (userInfoEl) {
       userInfoEl.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-          <img src="${session.picture}" alt="${session.name}" style="width: 32px; height: 32px; border-radius: 50%;">
-          <span>${session.name}</span>
-          <button onclick="authManager.signOut()" style="margin-left: auto; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">登出</button>
+        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: #f5f5f5; border-radius: 6px; font-size: 12px; max-width: 200px;">
+          <img src="${session.picture}" alt="${session.name}" style="width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;">
+          <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${session.name}</span>
+          <button onclick="authManager.signOut()" style="margin-left: auto; padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; flex-shrink: 0;">登出</button>
         </div>
       `;
     }
@@ -246,3 +246,4 @@ if (document.readyState === 'loading') {
 // Export for use in other scripts
 window.authManager = authManager;
 window.AUTH_CONFIG = AUTH_CONFIG;
+window.protectPage = protectPage; // 導出 protectPage 函數供其他腳本使用

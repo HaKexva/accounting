@@ -1,13 +1,48 @@
 /* 設定頁面樣式 */
 
+/* 隱藏預設的頁面標題，改用自訂的大標題 */
+.post-title,
+.page-heading {
+  display: none !important;
+}
+
+.settings-title {
+  font-family: 'Noto Sans TC', 'PingFang TC', sans-serif;
+  font-size: 4rem;
+  font-weight: 900;
+  color: #000000;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  letter-spacing: 0.3em;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.settings-title:hover {
+  color: #000000;
+}
+
 .settings-container {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
+  min-height: 70vh;
   padding: 30px 20px;
-  gap: 20px;
+  gap: 40px;
   width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.settings-buttons-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 25px;
+  width: 100%;
+  max-width: 400px;
   box-sizing: border-box;
 }
 
@@ -17,62 +52,68 @@
   justify-content: center;
   width: 100%;
   max-width: 400px;
-  padding: 35px 25px;
-  font-size: 1.5rem;
+  padding: 50px 30px;
+  font-size: 1.8rem;
   font-weight: 700;
   text-decoration: none;
-  border-radius: 16px;
+  border-radius: 20px;
   transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   cursor: pointer;
   border: none;
   letter-spacing: 0.1em;
   box-sizing: border-box;
+  color: #fff !important;
 }
 
 .settings-btn:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.2);
   text-decoration: none;
+  color: #fff !important;
 }
 
 .settings-btn:active {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(0.98);
+  color: #fff !important;
 }
 
 .btn-category {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  color: white;
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%) !important;
+  color: #fff !important;
 }
 
-.btn-category:hover {
-  background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%);
-  color: white;
+.btn-category:hover,
+.btn-category:active {
+  background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%) !important;
+  color: #fff !important;
 }
 
 .btn-payment {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  color: white;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+  color: #fff !important;
 }
 
-.btn-payment:hover {
-  background: linear-gradient(135deg, #2980b9 0%, #1f6fa8 100%);
-  color: white;
+.btn-payment:hover,
+.btn-payment:active {
+  background: linear-gradient(135deg, #2980b9 0%, #1f6fa8 100%) !important;
+  color: #fff !important;
 }
 
 .btn-platform {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-  color: white;
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+  color: #fff !important;
 }
 
-.btn-platform:hover {
-  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-  color: white;
+.btn-platform:hover,
+.btn-platform:active {
+  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
+  color: #fff !important;
 }
 
 .btn-icon {
-  margin-right: 12px;
-  font-size: 1.6rem;
+  margin-right: 15px;
+  font-size: 2rem;
 }
 
 /* 內容區塊 */
@@ -82,6 +123,7 @@
   max-width: 500px;
   padding: 20px;
   box-sizing: border-box;
+  margin: 0 auto;
 }
 
 .content-panel.active {
@@ -108,8 +150,8 @@
   padding: 8px 16px;
   font-size: 1rem;
   font-weight: 600;
-  color: #666;
-  background: #f0f0f0;
+  color: #fff;
+  background: #666;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -117,8 +159,8 @@
 }
 
 .back-btn:hover {
-  background: #e0e0e0;
-  color: #333;
+  background: #555;
+  color: white;
 }
 
 .panel-content {
@@ -129,11 +171,24 @@
 /* 選項列表 */
 .options-list {
   max-height: 400px;
-  overflow-y: auto;
+  overflow-y: scroll; /* 一開始就顯示右側滾動條 */
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   margin-bottom: 20px;
   background: #fafafa;
+}
+
+.options-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.options-list::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.options-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
 }
 
 .option-item {
@@ -276,6 +331,7 @@
   font-size: 1rem;
   border: 2px solid #3498db;
   border-radius: 6px;
+  text-align: center;
   outline: none;
   background: #fff;
 }
@@ -294,14 +350,53 @@
 
 /* 手機版調整 */
 @media (max-width: 600px) {
+  .settings-title {
+    font-size: 3rem;
+    letter-spacing: 0.2em;
+  }
+  
   .settings-btn {
-    padding: 30px 20px;
-    font-size: 1.3rem;
+    padding: 40px 20px;
+    font-size: 1.5rem;
+    color: #fff !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .settings-btn:active {
+    transform: translateY(-2px) scale(0.98) !important;
+    color: #fff !important;
+  }
+  
+  .settings-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    color: #fff !important;
+  }
+  
+  .btn-category,
+  .btn-payment,
+  .btn-platform {
+    color: #fff !important;
+  }
+  
+  .btn-category:active {
+    background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%) !important;
+    color: #fff !important;
+  }
+  
+  .btn-payment:active {
+    background: linear-gradient(135deg, #2980b9 0%, #1f6fa8 100%) !important;
+    color: #fff !important;
+  }
+  
+  .btn-platform:active {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
+    color: #fff !important;
   }
   
   .btn-icon {
-    font-size: 1.4rem;
-    margin-right: 10px;
+    font-size: 1.8rem;
+    margin-right: 12px;
+    color: #fff !important;
   }
 }
 

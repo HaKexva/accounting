@@ -8,6 +8,6 @@ theme: minima
 plugins:
   - jekyll-feed
 header_pages:
-  - 預算表.md
   - 支出.md
+  - 預算表.md
   - 設定.md
