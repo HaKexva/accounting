@@ -12,39 +12,31 @@ body {
   font-family: inherit;
 }
 
-/* 載入動畫 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* 載入進度條動畫 */
+@keyframes progressShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-#loading-spinner {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 99999;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  border: 2px solid #3498db;
+#loading-progress {
+  position: relative;
+  z-index: 1501;
 }
 
-#loading-spinner > div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-#loading-spinner .spinner-circle {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  transform: none;
+#loading-progress .progress-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, #2ecc71, #3498db);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  animation: progressShimmer 1.5s linear infinite;
+  /* 確保 width 更新時動畫不會干擾 */
+  animation-fill-mode: none;
 }
 
 /* 總計容器 - 與支出頁面一致（不懸浮，自然隨頁面捲動） */
