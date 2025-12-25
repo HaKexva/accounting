@@ -293,7 +293,7 @@
 /* 全頁 Loading Overlay（預設隱藏，由 JS 控制顯示） */
 .loading-overlay {
   position: fixed;
-  top: 0;
+  top: 60px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -302,7 +302,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 1500; /* 低於頁首，不擋住漢堡選單與選項 */
 }
 
 .loading-spinner {

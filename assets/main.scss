@@ -55,6 +55,15 @@
   font-weight: 500;
 }
 
+/* 調整導航順序：將支出按鈕移到最左側（漢堡菜單左側） */
+.site-nav {
+  display: flex;
+}
+
+.site-nav .page-link[href*="/expense/"] {
+  order: -1;
+}
+
 /* 統一各頁面的主標題（頁首標題）大小與樣式 */
 .post-title {
   font-size: 2.2rem;

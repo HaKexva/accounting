@@ -30,12 +30,12 @@ body {
 #loading-progress .progress-bar {
   width: 0%;
   height: 100%;
+  min-width: 0%;
   background: linear-gradient(90deg, #3498db, #2ecc71, #3498db);
   background-size: 200% 100%;
   border-radius: 4px;
   transition: width 0.3s ease;
   animation: progressShimmer 1.5s linear infinite;
-  /* 確保 width 更新時動畫不會干擾 */
   animation-fill-mode: none;
 }
 
@@ -73,7 +73,7 @@ body {
   box-shadow: none !important;
   border: none;
   backdrop-filter: none;
-  overflow: hidden;
+  overflow: visible;
   z-index: 999;
   display: block;
   padding: 20px;
