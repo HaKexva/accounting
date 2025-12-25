@@ -17,14 +17,30 @@
   position: sticky;
   top: 0;
   z-index: 2000;
+  background-color: #fff; /* 移除透明效果 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加陰影以區分頁首 */
 }
 
-/* 登出／使用者資訊區塊：所有頁面共用（放在內容上方，不疊在導覽列裡） */
+/* 登出／使用者資訊區塊：放在頁首內，漢堡菜單左側 */
 #user-info {
   display: flex;
   justify-content: flex-end;
-  margin: 12px 0 16px 0;
-  padding: 0 16px;
+  align-items: center;
+  position: absolute;
+  right: 60px; /* 在漢堡菜單左側 */
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0;
+  margin: 0;
+  z-index: 2001;
+}
+
+/* 手機版調整 */
+@media (max-width: 600px) {
+  #user-info {
+    right: 60px; /* 手機版：確保在漢堡選單（right: 15px, width: 36px）左側，加上間距 */
+    max-width: calc(100vw - 120px); /* 確保不會超出螢幕，留出漢堡選單和左側空間 */
+  }
 }
 
 /* 統一導航列（索引列）的字體大小 */
