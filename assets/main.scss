@@ -26,10 +26,9 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  position: absolute;
+  position: fixed;
   right: 60px; /* 在漢堡菜單左側 */
-  top: 50%;
-  transform: translateY(-50%);
+  top: 12px; /* 固定在頁首位置 */
   padding: 0;
   margin: 0;
   z-index: 2001;
