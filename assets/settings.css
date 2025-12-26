@@ -171,7 +171,7 @@
 /* 選項列表 */
 .options-list {
   max-height: 400px;
-  overflow-y: scroll; /* 一開始就顯示右側滾動條 */
+  overflow-y: scroll !important; /* 一開始就顯示右側滾動條 */
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   margin-bottom: 20px;
