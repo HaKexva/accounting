@@ -1,5 +1,19 @@
 /* 設定頁面樣式 */
 
+/* 關閉回彈效果（兩個方向都不要） */
+html {
+  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  overscroll-behavior-x: none !important;
+}
+
+body {
+  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  overscroll-behavior-x: none !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* 隱藏預設的頁面標題，改用自訂的大標題 */
 .post-title,
 .page-heading {
@@ -176,6 +190,7 @@
   border-radius: 12px;
   margin-bottom: 20px;
   background: #fafafa;
+  overflow-anchor: none;
 }
 
 .options-list::-webkit-scrollbar {
@@ -199,6 +214,40 @@
   border-bottom: 1px solid #eee;
   background: white;
   transition: background 0.2s;
+}
+
+.option-item.dragging {
+  opacity: 0.5;
+}
+
+.option-item {
+  transition: transform 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+  font-size: 1.2rem;
+  color: #999;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  touch-action: pan-y pan-x;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle:hover {
+  color: #666;
+  background-color: #f0f0f0;
+  border-radius: 4px;
 }
 
 .option-item:last-child {

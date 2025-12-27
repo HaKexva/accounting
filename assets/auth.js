@@ -205,16 +205,54 @@ async function protectPage() {
       return false;
     }
     
-    // User is authenticated, show user info if container exists
-    const userInfoEl = document.getElementById('user-info');
-    if (userInfoEl) {
-      userInfoEl.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: #f5f5f5; border-radius: 6px; font-size: 12px; max-width: 200px;">
-          <img src="${session.picture}" alt="${session.name}" style="width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;">
-          <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${session.name}</span>
-          <button onclick="authManager.signOut()" style="margin-left: auto; padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; flex-shrink: 0;">登出</button>
-        </div>
-      `;
+    // User is authenticated, show user info
+    const isMobile = window.innerWidth <= 600;
+    
+    if (isMobile) {
+      // 手機版：將登出按鈕添加到漢堡菜單最下方
+      const siteNav = document.querySelector('.site-nav');
+      if (siteNav) {
+        // 檢查是否已經添加過登出按鈕
+        let logoutLink = siteNav.querySelector('.logout-link');
+        if (!logoutLink) {
+          logoutLink = document.createElement('a');
+          logoutLink.className = 'page-link logout-link';
+          logoutLink.href = '#';
+          logoutLink.textContent = '登出';
+          logoutLink.style.cssText = 'margin-top: auto; border-top: 1px solid #e8e8e8; padding-top: 10px;';
+          logoutLink.onclick = (e) => {
+            e.preventDefault();
+            authManager.signOut();
+          };
+          
+          // 使用 flex 佈局確保登出按鈕在底部
+          if (siteNav.style.display !== 'flex' || siteNav.style.flexDirection !== 'column') {
+            siteNav.style.display = 'flex';
+            siteNav.style.flexDirection = 'column';
+          }
+          
+          siteNav.appendChild(logoutLink);
+        }
+      }
+      
+      // 隱藏原有的 user-info
+      const userInfoEl = document.getElementById('user-info');
+      if (userInfoEl) {
+        userInfoEl.style.display = 'none';
+      }
+    } else {
+      // 桌面版：顯示在右上角
+      const userInfoEl = document.getElementById('user-info');
+      if (userInfoEl) {
+        userInfoEl.style.display = 'flex';
+        userInfoEl.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: #f5f5f5; border-radius: 6px; font-size: 12px; max-width: 200px;">
+            <img src="${session.picture}" alt="${session.name}" style="width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;">
+            <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${session.name}</span>
+            <button onclick="authManager.signOut()" style="margin-left: auto; padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; flex-shrink: 0;">登出</button>
+          </div>
+        `;
+      }
     }
     
     return true;

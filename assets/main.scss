@@ -3,6 +3,22 @@
 
 @import "minima";
 
+/* 關閉回彈效果（兩個方向都不要） */
+html {
+  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  overscroll-behavior-x: none !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  overscroll-behavior-x: none !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 .wrapper {
   max-width: -webkit-calc(1000px - (30px * 2));
   max-width: calc(1000px - (30px * 2));
@@ -37,8 +53,19 @@
 /* 手機版調整 */
 @media (max-width: 600px) {
   #user-info {
-    right: 60px; /* 手機版：確保在漢堡選單（right: 15px, width: 36px）左側，加上間距 */
-    max-width: calc(100vw - 120px); /* 確保不會超出螢幕，留出漢堡選單和左側空間 */
+    display: none !important; /* 手機版隱藏，改用漢堡菜單中的登出按鈕 */
+  }
+  
+  /* 確保漢堡菜單可以垂直排列，登出按鈕在底部 */
+  .site-nav {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .site-nav .logout-link {
+    margin-top: auto !important;
+    border-top: 1px solid #e8e8e8 !important;
+    padding-top: 10px !important;
   }
 }
 
