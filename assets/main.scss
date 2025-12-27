@@ -37,35 +37,34 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加陰影以區分頁首 */
 }
 
-/* 登出／使用者資訊區塊：放在頁首內，漢堡菜單左側 */
+/* 登出按鈕隱藏（不再顯示在右上角） */
 #user-info {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  position: fixed;
-  right: 60px; /* 在漢堡菜單左側 */
-  top: 12px; /* 固定在頁首位置 */
-  padding: 0;
-  margin: 0;
-  z-index: 1999;
+  display: none !important;
 }
 
-/* 手機版調整 */
+/* 確保漢堡菜單中的登出按鈕樣式 */
+.site-nav .logout-link {
+  color: #dc3545 !important;
+  font-weight: 500;
+}
+
+/* 手機版：登出按鈕在漢堡菜單底部 */
 @media (max-width: 600px) {
-  #user-info {
-    display: none !important; /* 手機版隱藏，改用漢堡菜單中的登出按鈕 */
-  }
-  
-  /* 確保漢堡菜單可以垂直排列，登出按鈕在底部 */
-  .site-nav {
-    display: flex !important;
-    flex-direction: column !important;
+  .site-nav .trigger {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: calc(100vh - 60px);
+    padding-bottom: 20px;
   }
   
   .site-nav .logout-link {
-    margin-top: auto !important;
-    border-top: 1px solid #e8e8e8 !important;
-    padding-top: 10px !important;
+    margin-top: auto;
+    border-top: 1px solid #e8e8e8;
+    padding-top: 10px;
+    text-align: center;
+    background-color: #f8d7da;
+    color: #721c24;
   }
 }
 
