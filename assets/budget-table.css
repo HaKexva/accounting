@@ -217,7 +217,7 @@ body {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   background-color: #fff;
   cursor: pointer;
   min-height: 20px;
@@ -351,7 +351,7 @@ body {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   background-color: #fff;
   flex: 1;
@@ -366,7 +366,7 @@ body {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   background-color: #fff;
   min-height: 60px;
   resize: vertical;
@@ -401,7 +401,7 @@ body {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   background-color: #fff;
   cursor: pointer;
   min-height: 20px;

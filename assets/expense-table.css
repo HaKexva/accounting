@@ -228,7 +228,7 @@ body {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   background-color: #fff;
   cursor: pointer;
   min-height: 32px;
@@ -382,7 +382,7 @@ label[for="item-input"] {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   background-color: #fff;
   flex: 1;
@@ -397,7 +397,7 @@ label[for="item-input"] {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   background-color: #fff;
   min-height: 60px;
   resize: vertical;
@@ -454,7 +454,7 @@ label[for="item-input"] {
   padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   background-color: #fff;
   cursor: pointer;
@@ -706,7 +706,7 @@ label[for="item-input"] {
   #record-cost-input {
     height: 32px !important;
     padding: 6px 10px !important;
-    font-size: 14px !important;
+    font-size: 16px !important;
     box-sizing: border-box !important;
     width: 100% !important;
     flex: 1 !important;
@@ -716,7 +716,7 @@ label[for="item-input"] {
   .input-row #record-cost-input {
     height: 32px !important;
     padding: 6px 10px !important;
-    font-size: 14px !important;
+    font-size: 16px !important;
     box-sizing: border-box !important;
   }
 }
