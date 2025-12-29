@@ -335,6 +335,47 @@ body {
   box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
 }
 
+/* 儲存按鈕 */
+.save-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.save-btn {
+  padding: 14px 40px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.save-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.unsaved-hint {
+  font-size: 0.9rem;
+  color: #e67e22;
+  font-weight: 500;
+}
+
 /* 提示文字 */
 .edit-hint {
   text-align: center;
