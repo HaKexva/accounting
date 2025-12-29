@@ -4,19 +4,19 @@
 @import "minima";
 
 /* 防止回彈效果 */
-html {
-  overscroll-behavior: none !important;
-  overscroll-behavior-y: none !important;
-  overscroll-behavior-x: none !important;
-  -webkit-overflow-scrolling: touch;
-}
+// html {
+//   overscroll-behavior: none !important;
+//   overscroll-behavior-y: none !important;
+//   overscroll-behavior-x: none !important;
+//   -webkit-overflow-scrolling: touch;
+// }
 
-body {
-  overscroll-behavior: none !important;
-  overscroll-behavior-y: none !important;
-  overscroll-behavior-x: none !important;
-  -webkit-overflow-scrolling: touch;
-}
+// body {
+//   overscroll-behavior: none !important;
+//   overscroll-behavior-y: none !important;
+//   overscroll-behavior-x: none !important;
+//   -webkit-overflow-scrolling: touch;
+// }
 
 .wrapper {
   max-width: -webkit-calc(1000px - (30px * 2));

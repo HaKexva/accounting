@@ -1,7 +1,7 @@
 /* 設定頁面樣式 */
 
 /* 防止回彈效果 */
-html {
+/* html {
   overscroll-behavior: none !important;
   overscroll-behavior-y: none !important;
   overscroll-behavior-x: none !important;
@@ -13,7 +13,7 @@ body {
   overscroll-behavior-y: none !important;
   overscroll-behavior-x: none !important;
   -webkit-overflow-scrolling: touch;
-}
+} */
 
 /* 隱藏預設的頁面標題，改用自訂的大標題 */
 .post-title,
