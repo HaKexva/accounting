@@ -525,5 +525,13 @@ body {
     margin-right: 12px;
     color: #fff !important;
   }
+
+  /* Prevent iOS zoom on input focus (requires font-size >= 16px) */
+  .add-option-input,
+  .edit-input,
+  input[type="text"] {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
 }
 
