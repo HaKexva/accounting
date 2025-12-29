@@ -32,7 +32,10 @@ function doPost(e) {
   // 新增：接收拖拽排序的索引
   var oldIndex = contents.oldIndex;
   var newIndex = contents.newIndex;
-  
+  // 新增：接收批次更新的資料
+  var originalData = contents.originalData;
+  var newData = contents.newData;
+
   var result = { success: false, message: "" };
   
   try {
@@ -48,6 +51,8 @@ function doPost(e) {
       result = ChangeTabName(sheet,sheetName);
     } else if (name === "Update Dropdown"){
       result = UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex);
+    } else if (name === "Batch Update Dropdown") {
+      result = BatchUpdateDropdown(itemId, originalData, newData);
     } else {
       result.message = "未知的操作類型: " + e.parameter;
     }
@@ -74,6 +79,127 @@ function ShowTabName() {
   });
   console.log(sheetNames);
   return sheetNames;
+}
+
+// 批次更新下拉選單
+function BatchUpdateDropdown(itemId, originalData, newData) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dropdownSheet = ss.getSheets()[1];
+  var data = dropdownSheet.getDataRange().getValues();
+
+  if (data.length === 0) {
+    return { success: false, message: '下拉選單表是空的' };
+  }
+
+  var headerRow = data[0];
+  var colIndex = -1;
+
+  // 找到對應欄位
+  if (itemId === 'category') {
+    colIndex = FindHeaderColumn(headerRow, ['支出－項目', '支出-項目', '消費類別', '類別']);
+  } else if (itemId === 'payment') {
+    colIndex = FindHeaderColumn(headerRow, ['支付方式']);
+  } else if (itemId === 'platform') {
+    colIndex = FindHeaderColumn(headerRow, ['支付平台', '平台']);
+  }
+
+  if (colIndex < 0) {
+    return { success: false, message: '找不到對應欄位' };
+  }
+
+  // 驗證資料
+  if (!Array.isArray(originalData) || !Array.isArray(newData)) {
+    return { success: false, message: 'originalData 和 newData 必須是陣列' };
+  }
+
+  // 找出被刪除的項目（在原始資料中但不在新資料中）
+  var removedItems = originalData.filter(function(item) {
+    return newData.indexOf(item) === -1;
+  });
+
+  // 找出新增的項目（在新資料中但不在原始資料中）
+  var addedItems = newData.filter(function(item) {
+    return originalData.indexOf(item) === -1;
+  });
+
+  // 偵測重新命名：如果刪除和新增數量相同，假設是重新命名
+  var renames = [];
+  if (removedItems.length === addedItems.length && removedItems.length > 0) {
+    for (var i = 0; i < removedItems.length; i++) {
+      renames.push({
+        oldValue: removedItems[i],
+        newValue: addedItems[i]
+      });
+    }
+  }
+
+  // 1. 更新下拉選單表：清除該欄位並寫入新資料
+  var maxRows = dropdownSheet.getMaxRows();
+  if (maxRows > 1) {
+    dropdownSheet.getRange(2, colIndex + 1, maxRows - 1, 1).clearContent();
+  }
+
+  // 寫入新資料
+  if (newData.length > 0) {
+    var writeData = newData.map(function(item) { return [item]; });
+    dropdownSheet.getRange(2, colIndex + 1, newData.length, 1).setValues(writeData);
+  }
+
+  // 2. 如果是 category，更新所有月份表格中的歷史資料
+  var historicalUpdates = 0;
+  if (itemId === 'category' && renames.length > 0) {
+    var allSheets = ss.getSheets();
+    var categoryColumnIndex = 8; // I 欄（類別）
+    var expenseStartColumnIndex = 6; // G 欄（支出記錄的起始欄位，編號）
+
+    for (var s = 2; s < allSheets.length; s++) {
+      var monthSheet = allSheets[s];
+      var monthData = monthSheet.getDataRange().getValues();
+
+      if (monthData.length < 2) continue;
+
+      for (var row = 1; row < monthData.length; row++) {
+        if (monthData[row][0] === '總計' || monthData[row][0] === '') {
+          continue;
+        }
+
+        var expenseNumber = monthData[row][expenseStartColumnIndex];
+        if (expenseNumber !== '' && expenseNumber !== null && expenseNumber !== undefined) {
+          var categoryValue = monthData[row][categoryColumnIndex];
+
+          for (var r = 0; r < renames.length; r++) {
+            if (categoryValue === renames[r].oldValue) {
+              monthSheet.getRange(row + 1, categoryColumnIndex + 1).setValue(renames[r].newValue);
+              historicalUpdates++;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 組裝回傳訊息
+  var message = '下拉選單已更新';
+  if (renames.length > 0) {
+    message += '，重新命名 ' + renames.length + ' 項';
+    if (historicalUpdates > 0) {
+      message += '，歷史記錄更新 ' + historicalUpdates + ' 筆';
+    }
+  }
+  if (removedItems.length > addedItems.length) {
+    message += '，刪除 ' + (removedItems.length - addedItems.length) + ' 項';
+  }
+  if (addedItems.length > removedItems.length) {
+    message += '，新增 ' + (addedItems.length - removedItems.length) + ' 項';
+  }
+
+  return {
+    success: true,
+    message: message,
+    renames: renames,
+    historicalUpdates: historicalUpdates
+  };
 }
 
 function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) {
