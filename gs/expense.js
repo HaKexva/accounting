@@ -36,6 +36,9 @@ function doPost(e) {
   // 新增：接收拖拽排序的索引
   var oldIndex = contents.oldIndex;
   var newIndex = contents.newIndex;
+  // 新增：批次更新用
+  var originalData = contents.originalData;
+  var newData = contents.newData;
 
   var result = { success: false, message: "" };
 
@@ -49,6 +52,8 @@ function doPost(e) {
       result = DeleteData(sheet,updateRow);
     } else if (name === "Update Dropdown"){
       result = UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex);
+    } else if (name === "Batch Update Dropdown") {
+      result = BatchUpdateDropdown(itemId, originalData, newData);
     } else {
       result.message = "未知的操作類型: " + name;
     }
@@ -435,5 +440,127 @@ function GetSummary(sheet){
   var income1 = targetSheet.getRange('A:J').getCell(lastRow,7).getValues()[0][0]
   var income2 = targetSheet.getRange('A:J').getCell(lastRow,9).getValues()[0][0]
   return [income1,income2]
+}
+
+/**
+ * 批次更新下拉選單
+ * @param {string} itemId - 項目 ID (category, payment, platform)
+ * @param {Array} originalData - 原始資料陣列
+ * @param {Array} newData - 新資料陣列
+ */
+function BatchUpdateDropdown(itemId, originalData, newData) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dropdownSheet = ss.getSheets()[1]; // 下拉選單表
+  var data = dropdownSheet.getDataRange().getValues();
+
+  if (data.length === 0) {
+    return { success: false, message: '下拉選單表是空的' };
+  }
+
+  // 找到對應的欄位
+  var headerRow = data[0];
+  var colIndex = -1;
+
+  if (itemId === 'category') {
+    colIndex = FindHeaderColumn(headerRow, ['消費類別', '類別']);
+  } else if (itemId === 'payment') {
+    colIndex = FindHeaderColumn(headerRow, ['支付方式']);
+  } else if (itemId === 'platform') {
+    colIndex = FindHeaderColumn(headerRow, ['支付平台', '平台']);
+  }
+
+  if (colIndex < 0) {
+    return { success: false, message: '找不到對應欄位: ' + itemId };
+  }
+
+  // 驗證資料
+  if (!Array.isArray(originalData) || !Array.isArray(newData)) {
+    return { success: false, message: 'originalData 和 newData 必須是陣列' };
+  }
+
+  // 計算變更
+  var originalSet = new Set(originalData);
+  var newSet = new Set(newData);
+
+  var removed = originalData.filter(function(item) { return !newSet.has(item); });
+  var added = newData.filter(function(item) { return !originalSet.has(item); });
+
+  // 判斷是否為重新命名（移除數量等於新增數量）
+  var renames = [];
+  if (removed.length > 0 && removed.length === added.length) {
+    for (var i = 0; i < removed.length; i++) {
+      renames.push({ oldValue: removed[i], newValue: added[i] });
+    }
+  }
+
+  // 清除該欄位的所有值（保留標題）
+  var maxRows = dropdownSheet.getMaxRows();
+  if (maxRows > 1) {
+    dropdownSheet.getRange(2, colIndex + 1, maxRows - 1, 1).clearContent();
+  }
+
+  // 寫入新資料
+  for (var j = 0; j < newData.length; j++) {
+    dropdownSheet.getRange(j + 2, colIndex + 1).setValue(newData[j]);
+  }
+
+  // 如果是「類別」且有重新命名，更新所有月份表格中的歷史資料
+  var totalRecordsUpdated = 0;
+  var monthSheetsUpdated = 0;
+
+  if (itemId === 'category' && renames.length > 0) {
+    var allSheets = ss.getSheets();
+
+    // 支出表欄位順序：[日期, 項目, 類別, 支付方式, 信用卡支付方式, 本月/次月支付, 實際消費金額, 支付平台, 列帳消費金額, 備註]
+    var targetColumnIndex = 2; // 第3欄（索引2）：類別
+
+    for (var s = 2; s < allSheets.length; s++) { // 從索引 2 開始（跳過前兩個 sheet）
+      var monthSheet = allSheets[s];
+      var monthData = monthSheet.getDataRange().getValues();
+
+      if (monthData.length < 2) continue; // 跳過空表格
+
+      var monthUpdated = false;
+
+      // 從第2行開始（索引1），跳過標題行
+      for (var row = 1; row < monthData.length; row++) {
+        // 檢查是否為「總計」行或空行
+        if (monthData[row][0] === '總計' || monthData[row][0] === '') {
+          continue;
+        }
+
+        var cellValue = monthData[row][targetColumnIndex];
+
+        // 檢查是否需要重新命名
+        for (var r = 0; r < renames.length; r++) {
+          if (cellValue === renames[r].oldValue) {
+            monthSheet.getRange(row + 1, targetColumnIndex + 1).setValue(renames[r].newValue);
+            monthUpdated = true;
+            totalRecordsUpdated++;
+            break;
+          }
+        }
+      }
+
+      if (monthUpdated) {
+        monthSheetsUpdated++;
+      }
+    }
+  }
+
+  var message = '批次更新完成。';
+  if (removed.length > 0) message += ' 移除: ' + removed.length + ' 項。';
+  if (added.length > 0) message += ' 新增: ' + added.length + ' 項。';
+  if (renames.length > 0) message += ' 重新命名: ' + renames.length + ' 項。';
+  if (totalRecordsUpdated > 0) message += ' 歷史記錄更新: ' + totalRecordsUpdated + ' 筆（' + monthSheetsUpdated + ' 個月份）。';
+
+  return {
+    success: true,
+    message: message,
+    removed: removed.length,
+    added: added.length,
+    renamed: renames.length,
+    recordsUpdated: totalRecordsUpdated
+  };
 }
 
