@@ -37,7 +37,7 @@ function doPost(e) {
   var newData = contents.newData;
 
   var result = { success: false, message: "" };
-  
+
   try {
     if (name === "Upsert Data") {
       result = UpsertData(sheet,range,category,item,cost,note,updateRow);
@@ -60,7 +60,7 @@ function doPost(e) {
     result.success = false;
     result.message = "操作失敗: " + error.toString();
   }
-  
+
   return _json(result);
 }
 
@@ -206,14 +206,14 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dropdownSheet = ss.getSheets()[1];
   var data = dropdownSheet.getDataRange().getValues();
-  
+
   if (data.length === 0) {
     return { success: false, message: '下拉選單表是空的' };
   }
-  
+
   var headerRow = data[0];
   var colIndex = -1;
-  
+
   // 在下拉選單表中，category 對應的欄位名稱是「支出－項目」
   if (itemId === 'category') {
     colIndex = FindHeaderColumn(headerRow, ['支出－項目', '支出-項目', '消費類別', '類別']);
@@ -222,18 +222,18 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
   } else if (itemId === 'platform') {
     colIndex = FindHeaderColumn(headerRow, ['支付平台', '平台']);
   }
-  
+
   if (colIndex < 0) {
     return { success: false, message: '找不到對應欄位' };
   }
-  
+
   // === 新增：拖拽排序功能 ===
   if (action === 'reorder') {
     // 檢查索引參數
     if (typeof oldIndex !== 'number' || typeof newIndex !== 'number') {
       return { success: false, message: '排序時 oldIndex 和 newIndex 必須是數字' };
     }
-    
+
     // 收集該欄位的所有值（跳過標題行）
     var values = [];
     for (var r = 1; r < data.length; r++) {
@@ -242,39 +242,39 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
         values.push(val);
       }
     }
-    
+
     // 檢查索引範圍
     if (oldIndex < 0 || oldIndex >= values.length || newIndex < 0 || newIndex >= values.length) {
       return { success: false, message: '索引超出範圍' };
     }
-    
+
     // 執行排序：將 oldIndex 位置的項移到 newIndex 位置
     var movedItem = values.splice(oldIndex, 1)[0];
     values.splice(newIndex, 0, movedItem);
-    
+
     // 更新下拉選單表（從第2行開始寫入）
     var writeRow = 2;
     for (var i = 0; i < values.length; i++) {
       dropdownSheet.getRange(writeRow, colIndex + 1).setValue(values[i]);
       writeRow++;
     }
-    
+
     // 清除後面多餘的單元格
     if (writeRow <= data.length) {
       dropdownSheet.getRange(writeRow, colIndex + 1, data.length - writeRow + 1, 1).clearContent();
     }
-    
+
     return { success: true, message: '排序成功，已更新下拉選單順序' };
   }
-  
+
   var updatedCount = 0;
-  
+
   // === 新增：只更新下拉選單表 ===
   if (action === 'add') {
     if (!newValue) {
       return { success: false, message: '新增時 newValue 必填' };
     }
-    
+
     // 找到該欄位的最後一個有值的行（從下往上找）
     var lastRowInColumn = 1; // 預設為標題行（索引1，對應第2行）
     for (var r = data.length - 1; r >= 1; r--) { // 從最後一行往上找，跳過標題行
@@ -284,12 +284,12 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
         break;
       }
     }
-    
+
     // 在該欄位的最後一列的下一個位置新增
     dropdownSheet.getRange(lastRowInColumn + 1, colIndex + 1).setValue(newValue);
     return { success: true, message: '已新增到下拉選單', updated: 1 };
   }
-  
+
   // === 刪除：只更新下拉選單表 ===
   if (action === 'delete') {
     if (!oldValue) {
@@ -310,13 +310,13 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
     }
     return { success: true, message: '已從下拉選單刪除', updated: updatedCount };
   }
-  
+
   // === 編輯（合併）：更新下拉選單表 + 所有月份表格中的歷史資料 ===
   if (action === 'edit') {
     if (!oldValue || !newValue || oldValue === newValue) {
       return { success: false, message: '編輯時 oldValue / newValue 不正確（oldValue 不可空白）' };
     }
-    
+
     // 1. 更新下拉選單表（欄位名稱：支出－項目）
     for (var r2 = 1; r2 < data.length; r2++) {
       var val2 = data[r2][colIndex];
@@ -326,44 +326,44 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
       }
     }
     dropdownSheet.getDataRange().setValues(data);
-    
+
     // 2. 更新所有月份表格中的歷史資料（只更新 range = 0 的支出記錄的「類別」欄位）
     // 只有當 itemId === 'category' 時才更新月份表格
     if (itemId === 'category') {
       var allSheets = ss.getSheets();
       var monthSheetsUpdated = 0;
       var totalRecordsUpdated = 0;
-      
+
       // 預算表中，支出記錄從 G 欄開始（索引 6）
       // G 欄（索引 6）：編號
       // H 欄（索引 7）：時間
       // I 欄（索引 8）：類別（category）- 這是我們要更新的欄位
       var categoryColumnIndex = 8; // I 欄（類別）
       var expenseStartColumnIndex = 6;  // G 欄（支出記錄的起始欄位，編號）
-      
+
       for (var s = 2; s < allSheets.length; s++) { // 從索引 2 開始（跳過前兩個 sheet）
         var monthSheet = allSheets[s];
         var monthData = monthSheet.getDataRange().getValues();
-        
+
         if (monthData.length < 2) continue; // 跳過空表格
-        
+
         var monthUpdated = false;
-        
+
         // 從第2行開始（索引1），跳過標題行
         for (var row = 1; row < monthData.length; row++) {
           // 檢查是否為「總計」行或空行
           if (monthData[row][0] === '總計' || monthData[row][0] === '') {
             continue;
           }
-          
+
           // 只處理 range = 0 的支出記錄（從 G 欄開始的記錄）
           // 檢查該行的 G 欄是否有值（編號），如果有則表示這是支出記錄
           var expenseNumber = monthData[row][expenseStartColumnIndex]; // G 欄（編號）
-          
+
           // 如果 G 欄有值（是支出記錄），才檢查 I 欄的類別
           if (expenseNumber !== '' && expenseNumber !== null && expenseNumber !== undefined) {
             var categoryValue = monthData[row][categoryColumnIndex]; // I 欄（類別）
-            
+
             if (categoryValue === oldValue) {
               monthSheet.getRange(row + 1, categoryColumnIndex + 1).setValue(newValue);
               monthUpdated = true;
@@ -371,25 +371,25 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
             }
           }
         }
-        
+
         if (monthUpdated) {
           monthSheetsUpdated++;
         }
       }
-      
-      return { 
-        success: true, 
-        message: '已合併完成，下拉選單更新：' + updatedCount + ' 筆，月份表格更新：' + totalRecordsUpdated + ' 筆（' + monthSheetsUpdated + ' 個月份）' 
+
+      return {
+        success: true,
+        message: '已合併完成，下拉選單更新：' + updatedCount + ' 筆，月份表格更新：' + totalRecordsUpdated + ' 筆（' + monthSheetsUpdated + ' 個月份）'
       };
     } else {
       // 如果不是 category，只更新下拉選單表
-      return { 
-        success: true, 
-        message: '已更新下拉選單：' + updatedCount + ' 筆' 
+      return {
+        success: true,
+        message: '已更新下拉選單：' + updatedCount + ' 筆'
       };
     }
   }
-  
+
   return { success: false, message: '未知的 action: ' + action };
 }
 
@@ -407,11 +407,11 @@ function ShowTabData(sheet) {
     res[title] = cleanValues(rng.getValues());
   });
   console.log(res)
-  
+
   function isEmpty(v) {
     return v === "" || v === undefined || v === null;
   }
-  
+
   function cleanValues(values) {
     var res = [];
     values.forEach(function(value){
@@ -421,7 +421,7 @@ function ShowTabData(sheet) {
     });
     return res;
   }
-  
+
   return res;
 }
 
@@ -575,7 +575,7 @@ function DeleteTab(sheet) {
   var targetSheet = ss.getSheets()[sheet];
   var sheetName = targetSheet.getSheetName();
   ss.deleteSheet(targetSheet);
-  
+
   return { success: true, message: '分頁已成功刪除: ' + sheetName };
 }
 
@@ -648,7 +648,7 @@ function ChangeTabName(sheet,name) {
   var targetSheet = ss.getSheets()[sheet];
   var oldName = targetSheet.getSheetName();
   targetSheet.setName(name);
-  
+
   return { success: true, message: '分頁名稱已從 "' + oldName + '" 更改為 "' + name + '"' };
 }
 
