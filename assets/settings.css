@@ -1,6 +1,6 @@
-/* 設定頁面樣式 */
+/* Settings page styles */
 
-/* 防止回彈效果 */
+/* Prevent bounce effect */
 /* html {
   overscroll-behavior: none !important;
   overscroll-behavior-y: none !important;
@@ -15,7 +15,7 @@ body {
   -webkit-overflow-scrolling: touch;
 } */
 
-/* 隱藏預設的頁面標題，改用自訂的大標題 */
+/* Hide default page title, use custom title instead */
 .post-title,
 .page-heading {
   display: none !important;
@@ -131,7 +131,7 @@ body {
   font-size: 2rem;
 }
 
-/* 內容區塊 */
+/* Content panel */
 .content-panel {
   display: none;
   width: 100%;
@@ -183,10 +183,10 @@ body {
   padding: 10px 0;
 }
 
-/* 選項列表 */
+/* Options list */
 .options-list {
   max-height: 400px;
-  overflow-y: scroll !important; /* 一開始就顯示右側滾動條 */
+  overflow-y: scroll !important; /* Always show right scrollbar */
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   margin-bottom: 20px;
@@ -321,7 +321,7 @@ body {
   transform: scale(1.1);
 }
 
-/* 新增選項 */
+/* Add option */
 .add-option-container {
   display: flex;
   gap: 10px;
@@ -360,7 +360,7 @@ body {
   box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
 }
 
-/* 儲存按鈕 */
+/* Save button */
 .save-container {
   display: flex;
   align-items: center;
@@ -401,7 +401,7 @@ body {
   font-weight: 500;
 }
 
-/* 提示文字 */
+/* Hint text */
 .edit-hint {
   text-align: center;
   font-size: 0.85rem;
@@ -409,7 +409,7 @@ body {
   margin: 0;
 }
 
-/* 載入中 & 空訊息 */
+/* Loading & empty message */
 .loading, .empty-msg {
   text-align: center;
   padding: 40px 20px;
@@ -417,7 +417,7 @@ body {
   font-size: 1rem;
 }
 
-/* 全頁 Loading Overlay（預設隱藏，由 JS 控制顯示） */
+/* Full page loading overlay (hidden by default, controlled by JS) */
 .loading-overlay {
   position: fixed;
   top: 60px;
@@ -425,11 +425,11 @@ body {
   right: 0;
   bottom: 0;
   background: rgba(255, 255, 255, 0.95);
-  display: none; /* 進入頁面時不顯示，點細分類且尚未載完時才由 JS 設為 flex */
+  display: none; /* Hidden on page load, JS sets to flex when loading */
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 1500; /* 低於頁首，不擋住漢堡選單與選項 */
+  z-index: 1500; /* Below header, doesn't block hamburger menu */
 }
 
 .loading-spinner {
@@ -451,7 +451,7 @@ body {
   color: #666;
 }
 
-/* 行內編輯輸入框 */
+/* Inline edit input */
 .edit-input {
   flex: 1;
   padding: 8px 12px;
@@ -463,7 +463,7 @@ body {
   background: #fff;
 }
 
-/* 可編輯的選項文字 */
+/* Editable option text */
 .option-text {
   cursor: pointer;
   transition: background 0.2s;
@@ -475,7 +475,7 @@ body {
   background: #e8f4fc;
 }
 
-/* 手機版調整 */
+/* Mobile adjustments */
 @media (max-width: 600px) {
   .settings-title {
     font-size: 3rem;
