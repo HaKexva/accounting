@@ -1,6 +1,6 @@
-/* 支出表樣式 */
+/* Expense table styles */
 
-/* 基礎樣式 */
+/* Base styles */
 body {
   overflow-y: auto;
   overflow-x: hidden;
@@ -610,7 +610,7 @@ label[for="item-input"] {
   font-size: 18px;
 }
 
-/* 響應式設計 */
+/* Responsive design */
 @media (min-width: 769px) {
   .budget-cards-container {
     max-width: 800px !important;
@@ -618,6 +618,19 @@ label[for="item-input"] {
 }
 
 @media (max-width: 768px) {
+  /* Prevent iOS zoom on input focus (requires font-size >= 16px) */
+  input,
+  textarea,
+  select,
+  .input-row input,
+  .input-row textarea,
+  #item-input,
+  #note-input,
+  #actual-cost-input,
+  #record-cost-input {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
   .total-container {
     height: auto !important;
     min-height: auto !important;
