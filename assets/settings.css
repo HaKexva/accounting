@@ -246,21 +246,23 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: none;
   padding: 0;
   line-height: 1;
-  outline: none;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.reorder-btn:focus {
-  outline: none;
-  box-shadow: none;
-}
-
-.reorder-btn:hover:not(:disabled) {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
+.reorder-btn:focus,
+.reorder-btn:focus-visible,
+.reorder-btn:active {
+  outline: none !important;
+  box-shadow: none !important;
+  background: #f8f8f8;
+  border-color: #ddd;
+  color: #666;
 }
 
 .reorder-btn:disabled {
