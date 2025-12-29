@@ -3,7 +3,7 @@
 
 @import "minima";
 
-/* 關閉回彈效果（兩個方向都不要） */
+/* 防止回彈效果 */
 html {
   overscroll-behavior: none !important;
   overscroll-behavior-y: none !important;
@@ -16,7 +16,6 @@ body {
   overscroll-behavior-y: none !important;
   overscroll-behavior-x: none !important;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
 }
 
 .wrapper {

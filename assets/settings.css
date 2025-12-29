@@ -1,10 +1,11 @@
 /* 設定頁面樣式 */
 
-/* 關閉回彈效果（兩個方向都不要） */
+/* 防止回彈效果 */
 html {
   overscroll-behavior: none !important;
   overscroll-behavior-y: none !important;
   overscroll-behavior-x: none !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -237,7 +238,6 @@ body {
   margin-right: 8px;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
-  touch-action: pan-y pan-x;
 }
 
 .drag-handle:active {

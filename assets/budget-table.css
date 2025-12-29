@@ -1,20 +1,11 @@
 /* 預算表樣式 */
 
 /* 基礎樣式 */
-html {
-  overscroll-behavior: none !important;
-  overscroll-behavior-y: none !important;
-  overscroll-behavior-x: none !important;
-}
-
 body {
+  overflow-y: auto;
   overflow-x: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
   font-size: 14px;
-  overscroll-behavior: none !important;
-  overscroll-behavior-y: none !important;
-  overscroll-behavior-x: none !important;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* 統一所有元素的字體 */
@@ -89,10 +80,7 @@ body {
   padding: 20px;
   overflow-x: hidden !important;
   box-sizing: border-box !important;
-  touch-action: pan-y pan-x !important;
   overflow-anchor: none;
-  overscroll-behavior: none;
-  overscroll-behavior-y: none;
 }
 
 .budget-cards-container * {
@@ -268,12 +256,12 @@ body {
   max-height: 200px;
   overflow-y: auto;
   overflow-x: hidden;
+  margin-top: 4px;
   scrollbar-width: thin;
   scrollbar-color: #ccc #f0f0f0;
-  max-height: 200px;
-  overflow-y: auto;
-  margin-top: 4px;
   overflow-anchor: none;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .category-option {
@@ -452,12 +440,12 @@ body {
   max-height: 200px;
   overflow-y: auto;
   overflow-x: hidden;
+  margin-top: 4px;
   scrollbar-width: thin;
   scrollbar-color: #ccc #f0f0f0;
-  max-height: 200px;
-  overflow-y: auto;
-  margin-top: 4px;
   overflow-anchor: none;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .select-option {
