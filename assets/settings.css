@@ -262,6 +262,15 @@ body {
   cursor: not-allowed;
 }
 
+.order-number {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #888;
+  min-width: 24px;
+  text-align: center;
+  line-height: 1;
+}
+
 .option-item:last-child {
   border-bottom: none;
 }
