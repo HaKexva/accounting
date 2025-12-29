@@ -17,17 +17,13 @@ function doPost(e) {
   var contents = JSON.parse(e.postData.contents)
   var name = contents.name;
   var sheet = contents.sheet;
-  // 新增：接收日期欄位（可選）
-  var dateValue = contents.date;   // e.g. "2025/01/31" 或 "2025-01-31"
-  var item = contents.item;
+  var range = contents.range;
+  var sheetName = contents.sheetName;
   var category = contents.category;
-  var spendWay = contents.spendWay;
-  var creditCard = contents.creditCard
-  var month = contents.month
-  var actualCost = contents.actualCost
-  var payment = contents.payment
-  var recordCost = contents.recordCost
+  var item = contents.item;
+  var cost = contents.cost;
   var note = contents.note;
+  var number = contents.number
   var updateRow = contents.updateRow;
   var oldValue = contents.oldValue
   var newValue = contents.newValue
@@ -36,21 +32,29 @@ function doPost(e) {
   // 新增：接收拖拽排序的索引
   var oldIndex = contents.oldIndex;
   var newIndex = contents.newIndex;
+  // 新增：接收批次更新的資料
+  var originalData = contents.originalData;
+  var newData = contents.newData;
 
   var result = { success: false, message: "" };
 
   try {
     if (name === "Upsert Data") {
-      // 傳入 dateValue，讓 UpsertData 可以使用指定日期
-      result = UpsertData(sheet, dateValue, item, category, spendWay, creditCard, month, actualCost, payment, recordCost, note, updateRow);
+      result = UpsertData(sheet,range,category,item,cost,note,updateRow);
     } else if (name === "Create Tab") {
       result = CreateNewTab();
     } else if (name === "Delete Data") {
-      result = DeleteData(sheet,updateRow);
+      result = DeleteData(sheet,range, number);
+    } else if (name === "Delete Tab") {
+      result = DeleteTab(sheet);
+    } else if (name === "Change Tab Name") {
+      result = ChangeTabName(sheet,sheetName);
     } else if (name === "Update Dropdown"){
       result = UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex);
+    } else if (name === "Batch Update Dropdown") {
+      result = BatchUpdateDropdown(itemId, originalData, newData);
     } else {
-      result.message = "未知的操作類型: " + name;
+      result.message = "未知的操作類型: " + e.parameter;
     }
   } catch (error) {
     result.success = false;
@@ -77,61 +81,125 @@ function ShowTabName() {
   return sheetNames;
 }
 
-function ShowTabData(sheet) {
+// 批次更新下拉選單
+function BatchUpdateDropdown(itemId, originalData, newData) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var targetSheet = ss.getSheets()[sheet];
-  var lastRow = targetSheet.getRange('A' + targetSheet.getMaxRows() + ':J' + targetSheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()
-  var output = targetSheet.getRange('A1:J' + lastRow).getValues()
-  console.log(lastRow)
-  console.log(output)
-  return output
-}
+  var dropdownSheet = ss.getSheets()[1];
+  var data = dropdownSheet.getDataRange().getValues();
 
-function CreateNewTab() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var allSheets = ss.getSheets();
-  var targetSheet = ss.getSheets()[0];
-  var value = [["總計",,,,,,"0",,"0"]]
-  targetSheet.getRange("A2:I2").setValues(value)
-  var now = new Date();
-  var year = now.getFullYear();
-  var month = now.getMonth()+1;
-  var sheetNames = [];
-  allSheets.forEach(function(sheet){
-    sheetNames.push(sheet.getSheetName());
+  if (data.length === 0) {
+    return { success: false, message: '下拉選單表是空的' };
+  }
+
+  var headerRow = data[0];
+  var colIndex = -1;
+
+  // 找到對應欄位
+  if (itemId === 'category') {
+    colIndex = FindHeaderColumn(headerRow, ['支出－項目', '支出-項目', '消費類別', '類別']);
+  } else if (itemId === 'payment') {
+    colIndex = FindHeaderColumn(headerRow, ['支付方式']);
+  } else if (itemId === 'platform') {
+    colIndex = FindHeaderColumn(headerRow, ['支付平台', '平台']);
+  }
+
+  if (colIndex < 0) {
+    return { success: false, message: '找不到對應欄位' };
+  }
+
+  // 驗證資料
+  if (!Array.isArray(originalData) || !Array.isArray(newData)) {
+    return { success: false, message: 'originalData 和 newData 必須是陣列' };
+  }
+
+  // 找出被刪除的項目（在原始資料中但不在新資料中）
+  var removedItems = originalData.filter(function(item) {
+    return newData.indexOf(item) === -1;
   });
-  if (month < 10) {
-    month = '0' + month;
-  }
-  if (sheetNames.includes(year.toString() + month.toString()) && parseInt(month)+1 <= 12) {
-    month = parseInt(month) + 1;
-  } else if (sheetNames.includes(year.toString() + month.toString()) && parseInt(month)+1 > 12){
-    year = parseInt(year) + 1;
-    month = 1;
-  }
-  if (parseInt(month) < 10) {
-    month = '0' + parseInt(month);
-  }
-  if (sheetNames.includes(year.toString() + month.toString())) {
-    console.log('隔月試算表已新增，請勿繼續新增');
-    return { success: false, message: '隔月試算表已新增，請勿繼續新增' };
-  } else {
-    var destination = SpreadsheetApp.openById('1R-r3cwuVVDP0seQfkyDB4D7D1youEc_-fQlGYRqtkDk');
-    targetSheet.copyTo(destination);
-    var copyName = ss.getSheetByName('「空白表」的副本');
-    copyName.setName(year + month.toString());
-  }
-  return { success: true, message: '新分頁已成功建立: ' + year + month };
-}
 
-function CleanupSummary(sheetIndex) {  // 改為接收 sheetIndex
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheets()[sheetIndex];  // 使用 sheetIndex 獲取 sheet
-  var column = 10
-  var row = sheet.getRange('A' + sheet.getMaxRows() + ':J' + sheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
-  if (sheet.getRange(row,1).getValue() === '總計') {
-    sheet.getRange(row, 1, 1, column).clear();
+  // 找出新增的項目（在新資料中但不在原始資料中）
+  var addedItems = newData.filter(function(item) {
+    return originalData.indexOf(item) === -1;
+  });
+
+  // 偵測重新命名：如果刪除和新增數量相同，假設是重新命名
+  var renames = [];
+  if (removedItems.length === addedItems.length && removedItems.length > 0) {
+    for (var i = 0; i < removedItems.length; i++) {
+      renames.push({
+        oldValue: removedItems[i],
+        newValue: addedItems[i]
+      });
+    }
   }
+
+  // 1. 更新下拉選單表：清除該欄位並寫入新資料
+  var maxRows = dropdownSheet.getMaxRows();
+  if (maxRows > 1) {
+    dropdownSheet.getRange(2, colIndex + 1, maxRows - 1, 1).clearContent();
+  }
+
+  // 寫入新資料
+  if (newData.length > 0) {
+    var writeData = newData.map(function(item) { return [item]; });
+    dropdownSheet.getRange(2, colIndex + 1, newData.length, 1).setValues(writeData);
+  }
+
+  // 2. 如果是 category，更新所有月份表格中的歷史資料
+  var historicalUpdates = 0;
+  if (itemId === 'category' && renames.length > 0) {
+    var allSheets = ss.getSheets();
+    var categoryColumnIndex = 8; // I 欄（類別）
+    var expenseStartColumnIndex = 6; // G 欄（支出記錄的起始欄位，編號）
+
+    for (var s = 2; s < allSheets.length; s++) {
+      var monthSheet = allSheets[s];
+      var monthData = monthSheet.getDataRange().getValues();
+
+      if (monthData.length < 2) continue;
+
+      for (var row = 1; row < monthData.length; row++) {
+        if (monthData[row][0] === '總計' || monthData[row][0] === '') {
+          continue;
+        }
+
+        var expenseNumber = monthData[row][expenseStartColumnIndex];
+        if (expenseNumber !== '' && expenseNumber !== null && expenseNumber !== undefined) {
+          var categoryValue = monthData[row][categoryColumnIndex];
+
+          for (var r = 0; r < renames.length; r++) {
+            if (categoryValue === renames[r].oldValue) {
+              monthSheet.getRange(row + 1, categoryColumnIndex + 1).setValue(renames[r].newValue);
+              historicalUpdates++;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 組裝回傳訊息
+  var message = '下拉選單已更新';
+  if (renames.length > 0) {
+    message += '，重新命名 ' + renames.length + ' 項';
+    if (historicalUpdates > 0) {
+      message += '，歷史記錄更新 ' + historicalUpdates + ' 筆';
+    }
+  }
+  if (removedItems.length > addedItems.length) {
+    message += '，刪除 ' + (removedItems.length - addedItems.length) + ' 項';
+  }
+  if (addedItems.length > removedItems.length) {
+    message += '，新增 ' + (addedItems.length - removedItems.length) + ' 項';
+  }
+
+  return {
+    success: true,
+    message: message,
+    renames: renames,
+    historicalUpdates: historicalUpdates
+  };
 }
 
 function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) {
@@ -146,8 +214,9 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
   var headerRow = data[0];
   var colIndex = -1;
 
+  // 在下拉選單表中，category 對應的欄位名稱是「支出－項目」
   if (itemId === 'category') {
-    colIndex = FindHeaderColumn(headerRow, ['消費類別', '類別']);
+    colIndex = FindHeaderColumn(headerRow, ['支出－項目', '支出-項目', '消費類別', '類別']);
   } else if (itemId === 'payment') {
     colIndex = FindHeaderColumn(headerRow, ['支付方式']);
   } else if (itemId === 'platform') {
@@ -200,7 +269,7 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
 
   var updatedCount = 0;
 
-  // === 新增：找到該欄位的最後一列，在下一行新增 ===
+  // === 新增：只更新下拉選單表 ===
   if (action === 'add') {
     if (!newValue) {
       return { success: false, message: '新增時 newValue 必填' };
@@ -248,7 +317,7 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
       return { success: false, message: '編輯時 oldValue / newValue 不正確（oldValue 不可空白）' };
     }
 
-    // 1. 更新下拉選單表
+    // 1. 更新下拉選單表（欄位名稱：支出－項目）
     for (var r2 = 1; r2 < data.length; r2++) {
       var val2 = data[r2][colIndex];
       if (val2 === oldValue) {
@@ -258,23 +327,20 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
     }
     dropdownSheet.getDataRange().setValues(data);
 
-    // 2. 更新所有月份表格中的歷史資料（從索引 2 開始）
-    var allSheets = ss.getSheets();
-    var monthSheetsUpdated = 0;
-    var totalRecordsUpdated = 0;
-
-    // 確定要更新的欄位索引（根據 UpsertData 的欄位順序）
-    // 支出表欄位順序：[日期, 項目, 類別, 支付方式, 信用卡支付方式, 本月/次月支付, 實際消費金額, 支付平台, 列帳消費金額, 備註]
-    var targetColumnIndex = -1;
+    // 2. 更新所有月份表格中的歷史資料（只更新 range = 0 的支出記錄的「類別」欄位）
+    // 只有當 itemId === 'category' 時才更新月份表格
     if (itemId === 'category') {
-      targetColumnIndex = 2; // 第3欄（索引2）：類別
-    } else if (itemId === 'payment') {
-      targetColumnIndex = 3; // 第4欄（索引3）：支付方式
-    } else if (itemId === 'platform') {
-      targetColumnIndex = 7; // 第8欄（索引7）：支付平台
-    }
+      var allSheets = ss.getSheets();
+      var monthSheetsUpdated = 0;
+      var totalRecordsUpdated = 0;
 
-    if (targetColumnIndex >= 0) {
+      // 預算表中，支出記錄從 G 欄開始（索引 6）
+      // G 欄（索引 6）：編號
+      // H 欄（索引 7）：時間
+      // I 欄（索引 8）：類別（category）- 這是我們要更新的欄位
+      var categoryColumnIndex = 8; // I 欄（類別）
+      var expenseStartColumnIndex = 6;  // G 欄（支出記錄的起始欄位，編號）
+
       for (var s = 2; s < allSheets.length; s++) { // 從索引 2 開始（跳過前兩個 sheet）
         var monthSheet = allSheets[s];
         var monthData = monthSheet.getDataRange().getValues();
@@ -290,11 +356,19 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
             continue;
           }
 
-          var cellValue = monthData[row][targetColumnIndex];
-          if (cellValue === oldValue) {
-            monthSheet.getRange(row + 1, targetColumnIndex + 1).setValue(newValue);
-            monthUpdated = true;
-            totalRecordsUpdated++;
+          // 只處理 range = 0 的支出記錄（從 G 欄開始的記錄）
+          // 檢查該行的 G 欄是否有值（編號），如果有則表示這是支出記錄
+          var expenseNumber = monthData[row][expenseStartColumnIndex]; // G 欄（編號）
+
+          // 如果 G 欄有值（是支出記錄），才檢查 I 欄的類別
+          if (expenseNumber !== '' && expenseNumber !== null && expenseNumber !== undefined) {
+            var categoryValue = monthData[row][categoryColumnIndex]; // I 欄（類別）
+
+            if (categoryValue === oldValue) {
+              monthSheet.getRange(row + 1, categoryColumnIndex + 1).setValue(newValue);
+              monthUpdated = true;
+              totalRecordsUpdated++;
+            }
           }
         }
 
@@ -302,15 +376,53 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
           monthSheetsUpdated++;
         }
       }
-    }
 
-    return {
-      success: true,
-      message: '已合併完成，下拉選單更新：' + updatedCount + ' 筆，月份表格更新：' + totalRecordsUpdated + ' 筆（' + monthSheetsUpdated + ' 個月份）'
-    };
+      return {
+        success: true,
+        message: '已合併完成，下拉選單更新：' + updatedCount + ' 筆，月份表格更新：' + totalRecordsUpdated + ' 筆（' + monthSheetsUpdated + ' 個月份）'
+      };
+    } else {
+      // 如果不是 category，只更新下拉選單表
+      return {
+        success: true,
+        message: '已更新下拉選單：' + updatedCount + ' 筆'
+      };
+    }
   }
 
   return { success: false, message: '未知的 action: ' + action };
+}
+
+function ShowTabData(sheet) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var targetSheet = ss.getSheets()[sheet];
+  var ranges = targetSheet.getNamedRanges();
+  var res = {};
+  ranges.forEach(function(range) {
+    var title = range.getName();
+    var rng = range.getRange();
+    var sheetName = rng.getSheet().getName();
+    var a1 = rng.getA1Notation();
+    console.log(`NamedRange: ${title}, Sheet: ${sheetName}, Range: ${a1}`);
+    res[title] = cleanValues(rng.getValues());
+  });
+  console.log(res)
+
+  function isEmpty(v) {
+    return v === "" || v === undefined || v === null;
+  }
+
+  function cleanValues(values) {
+    var res = [];
+    values.forEach(function(value){
+      if(!value.every(isEmpty)) {
+        res.push(value);
+      }
+    });
+    return res;
+  }
+
+  return res;
 }
 
 function FindHeaderColumn(headerRow, keywords) {
@@ -326,114 +438,208 @@ function FindHeaderColumn(headerRow, keywords) {
   return -1;
 }
 
-// 調整參數順序：多一個 dateValue
-function UpsertData(sheetIndex, dateValue, item, category, spendWay, creditCard, monthIndex, actualCost, payment, recordCost, note, updateRow) {
+function CreateNewTab() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var allSheets = ss.getSheets();
+  var targetSheet = ss.getSheets()[0];
+  var incomeValue = [["總計",,,"0"]]
+  targetSheet.getRange("A3:D3").setValues(incomeValue)
+  var expenseValue = [["總計",,,,"0"]]
+  targetSheet.getRange("G3:K3").setValues(expenseValue)
+  var now = new Date();
+  var year = now.getFullYear();
+  var month = now.getMonth()+1;
+  var sheetNames = [];
+  allSheets.forEach(function(sheet){
+    sheetNames.push(sheet.getSheetName());
+  });
+  if (month < 10) {
+    month = '0' + month;
+  }
+  if (sheetNames.includes(year.toString() + month.toString()) && parseInt(month)+1 <= 12) {
+    month = parseInt(month) + 1;
+  } else if (sheetNames.includes(year.toString() + month.toString()) && parseInt(month)+1 > 12){
+    year = parseInt(year) + 1;
+    month = 1;
+  }
+  if (parseInt(month) < 10) {
+    month = '0' + parseInt(month);
+  }
+  if (sheetNames.includes(year.toString() + month.toString())) {
+    console.log('隔月試算表已新增，請勿繼續新增');
+    return { success: false, message: '隔月試算表已新增，請勿繼續新增' };
+  } else {
+    var destination = SpreadsheetApp.openById('1G-c8fzN38vH02Eu8izCc9TpGAiPQBMYH-z3tUB_4tVM');
+    targetSheet.copyTo(destination);
+    var copyName = ss.getSheetByName('「空白表」的副本');
+    copyName.setName(year + month.toString());
+  }
+  month = month.toString();
+  var targetSheet = ss.getSheetByName(year.toString()+month.toString());
+  var range = targetSheet.getRange('A2:E');
+  var name = '當月收入' + year.toString() + month.toString();
+  ss.setNamedRange(name,range);
+  var range = targetSheet.getRange('G2:L');
+  var name = '當月支出預算' + year.toString() + month.toString();
+  ss.setNamedRange(name,range);
+  return { success: true, message: '新分頁已成功建立: ' + year + month };
+}
+
+function CleanupSummary(sheet,rangeType) {
+  if (rangeType === 0) {
+    var column = 6
+    var row = sheet.getRange('G' + sheet.getMaxRows() + ':L' + sheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1;
+    console.log((sheet.getRange(row, rangeType === 0 ? 7 : 1).getValue()))
+    if (sheet.getRange(row, rangeType === 0 ? 7 : 1).getValue() === '總計') {
+      sheet.getRange(row, rangeType === 0 ? 7 : 1, 1, column).clear();
+    }
+  } else if (rangeType === 1){
+    var column = 5
+    var row = sheet.getRange('A' + sheet.getMaxRows() + ':E' + sheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1;
+    console.log((sheet.getRange(row, rangeType === 0 ? 7 : 1).getValue()))
+    if (sheet.getRange(row, rangeType === 0 ? 7 : 1).getValue() === '總計') {
+      sheet.getRange(row, rangeType === 0 ? 7 : 1, 1, column).clear();
+    }
+  }
+}
+
+function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheets()[sheetIndex];
-  var startRow = 2;
+  var startRow = 2; // 從第二行開始
+  var column, totalColumn;
   var values;
 
-  // 預設為「今天」的日期字串
-  var now = new Date();
-  var year = now.getFullYear().toString();
-  var month = (now.getMonth() + 1).toString();
-  var day = now.getDate().toString();
-  var defaultDateString = year + '/' + month + '/' + day;
-
-  // 如果前端有傳 date，就用傳進來的；否則用 defaultDateString
-  var timeOutput = dateValue ? dateValue : defaultDateString;
+  var now = new Date()
+  var year = now.getFullYear().toString()
+  var month = parseInt(now.getMonth()+1).toString()
+  var date = now.getDate().toString()
+  var hour = now.getHours().toString()
+  var minute = now.getMinutes().toString()
+  var timeOutput = year+'/'+month+'/'+date+' '+hour+':'+minute
 
   if (updateRow === undefined) { // 新增
-    CleanupSummary(sheetIndex);
-    var lastDataRow = getLastDataRow(sheet, startRow);
-    var insertRow = lastDataRow + 1;
+    CleanupSummary(sheet,rangeType);
 
-    // 第一欄是日期
-    values = [timeOutput, item, category, spendWay, creditCard, monthIndex, actualCost, payment, recordCost, note];
-    sheet.getRange(insertRow, 1, 1, 10).setValues([values]);
+    if (rangeType === 0) { // 支出
+      column = 6;       // 寫入欄數：編號~備註
+      totalColumn = 5;  // 計算總和的欄
+      row = sheet.getRange('G' + sheet.getMaxRows() + ':L' + sheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
+      lastRow = sheet.getRange('G' + sheet.getMaxRows() + ':L' + sheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
+      lastNumber = parseInt(sheet.getRange('G' + (lastRow-1)).getValue())
+      values = [lastNumber+1,timeOutput,category, item, cost, note];
+      if (row < startRow) row = startRow;
+      sheet.getRange(row, 7, 1, column).setValues([values]);
+    } else { // 收入
+      column = 5;
+      totalColumn = 4;
+      row = sheet.getRange('A' + sheet.getMaxRows() + ':E' + sheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
+      lastRow = sheet.getRange('A' + sheet.getMaxRows() + ':E' + sheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
+      lastNumber = parseInt(sheet.getRange('A' + (lastRow-1)).getValue())
+      values = [lastNumber+1,timeOutput,item, cost, note];
+      if (row < startRow) row = startRow;
+      sheet.getRange(row, 1, 1, column).setValues([values]);
+    }
 
-    var totalRow = insertRow + 1;
-    sheet.getRange(totalRow, 1).setValue('總計');
-
-    var firstCell = sheet.getRange(startRow, 7).getA1Notation();
-    var lastCell = sheet.getRange(insertRow, 7).getA1Notation();
-    sheet.getRange(totalRow, 7).setFormula(`=SUM(${firstCell}:${lastCell})`);
-
-    var firstCell2 = sheet.getRange(startRow, 9).getA1Notation();
-    var lastCell2 = sheet.getRange(insertRow, 9).getA1Notation();
-    sheet.getRange(totalRow, 9).setFormula(`=SUM(${firstCell2}:${lastCell2})`);
+    // 新增總計
+    var firstCell = sheet.getRange(startRow, rangeType === 0 ? 11 : totalColumn).getA1Notation(); // cost欄
+    var lastCell = sheet.getRange(row, rangeType === 0 ? 11 : totalColumn).getA1Notation();
+    sheet.getRange(row + 1, rangeType === 0 ? 7 : 1).setValue('總計');
+    sheet.getRange(row + 1, rangeType === 0 ? 11 : totalColumn).setFormula('=SUM(' + firstCell + ':' + lastCell + ')');
 
   } else { // 修改
-    // 如果前端有傳新的 dateValue，就更新日期；否則沿用原本日期。
-    var existingDate = sheet.getRange(updateRow, 1).getValue();
-    var finalDate = dateValue ? dateValue : existingDate;
-
-    values = [finalDate, item, category, spendWay, creditCard, monthIndex, actualCost, payment, recordCost, note];
-    sheet.getRange(updateRow, 1, 1, 10).setValues([values]);
+    if (rangeType === 0) { // 支出
+      column = 6;       // 寫入欄數：編號~備註
+      values = [updateRow-2, timeOutput, category, item, cost, note];
+      sheet.getRange(updateRow, 7, 1, column).setValues([values]);
+    } else { // 收入
+      column = 5;
+      values = [updateRow-2, timeOutput, item, cost, note];
+      sheet.getRange(updateRow, 1, 1, column).setValues([values]);
+    }
   }
 
   return { success: true, message: '資料已成功新增', data: ShowTabData(sheetIndex), total: GetSummary(sheetIndex) };
 }
 
-function DeleteData(sheetIndex, updateRow) {
+function DeleteTab(sheet) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheets()[sheetIndex];
-  var startRow = 2;
+  var targetSheet = ss.getSheets()[sheet];
+  var sheetName = targetSheet.getSheetName();
+  ss.deleteSheet(targetSheet);
 
-  // 避免刪到標題或不合法列
-  if (!updateRow || updateRow < startRow || updateRow > sheet.getLastRow()) {
-    return { success: false, message: '刪除列不合法: ' + updateRow };
-  }
-
-  CleanupSummary(sheetIndex);
-  sheet.deleteRow(updateRow);
-
-  var lastDataRow = getLastDataRow(sheet, startRow);
-  var totalRow = lastDataRow + 1;
-  sheet.getRange(totalRow, 1).setValue('總計');
-
-  if (lastDataRow >= startRow) {
-    var firstCell = sheet.getRange(startRow, 7).getA1Notation();
-    var lastCell = sheet.getRange(lastDataRow, 7).getA1Notation();
-    sheet.getRange(totalRow, 7).setFormula(`=SUM(${firstCell}:${lastCell})`);
-
-    var firstCell2 = sheet.getRange(startRow, 9).getA1Notation();
-    var lastCell2 = sheet.getRange(lastDataRow, 9).getA1Notation();
-    sheet.getRange(totalRow, 9).setFormula(`=SUM(${firstCell2}:${lastCell2})`);
-  }
-
-  return {
-    success: true,
-    message: '資料已成功刪除',
-    data: ShowTabData(sheetIndex),
-    total: GetSummary(sheetIndex)
-  };
+  return { success: true, message: '分頁已成功刪除: ' + sheetName };
 }
 
-function getLastDataRow(sheet, startRow) {
-  var lastRow = sheet.getLastRow();
-
-  // 完全沒資料（只有標題）
-  if (lastRow < startRow) {
-    return startRow - 1;
+function DeleteData(sheetIndex, rangeType, number) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheets()[sheetIndex];
+  var startRow = 2; // 從第二行開始
+  var row, column, totalColumn;
+  var targetRange = sheet.getNamedRanges()[rangeType]
+  CleanupSummary(sheet,rangeType);
+  if (rangeType === 0) {
+    var column = 6;
+    var totalColumn = 5;
+  } else {
+    var column = 5;
+    var totalColumn = 4;
   }
 
-  for (var row = startRow; row <= lastRow; row++) {
-    var val = sheet.getRange(row, 1).getValue();
-    if (val === '' || val === '總計' || val === null) {
-      return row - 1;
-    }
+  var row = 1
+  while (!arrayMatch(targetRange.getRange().getCell(row,1).getValues(), [[number]])) {
+    row = row + 1;
   }
+  targetRange.getRange().getCell(row,1).offset(0,0,1,column).deleteCells(SpreadsheetApp.Dimension.ROWS);
+  while (targetRange.getRange().getCell(row,1).getValue() !== ''){
+    row = row + 1;
+  }
+  targetRange.getRange().getCell(row-1,1).offset(0,0,1,column).deleteCells(SpreadsheetApp.Dimension.ROWS);
 
-  return lastRow;
+  // 新增總計
+  var firstCell = sheet.getRange(startRow, rangeType === 0 ? 11 : totalColumn).getA1Notation(); // cost欄
+  var lastCell = sheet.getRange(row-1, rangeType === 0 ? 11 : totalColumn).getA1Notation();
+  sheet.getRange(row, rangeType === 0 ? 7 : 1).setValue('總計');
+  sheet.getRange(row, rangeType === 0 ? 11 : totalColumn).setFormula('=SUM(' + firstCell + ':' + lastCell + ')');
+
+  return { success: true, message: '資料已成功刪除', data: ShowTabData(sheetIndex), total: GetSummary(sheetIndex) };
+}
+
+function ChangeTabName(sheet,name) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var targetSheet = ss.getSheets()[sheet];
+  var oldName = targetSheet.getSheetName();
+  targetSheet.setName(name);
+
+  return { success: true, message: '分頁名稱已從 "' + oldName + '" 更改為 "' + name + '"' };
 }
 
 function GetSummary(sheet){
+  var sheet = 2
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
-  var lastRow = targetSheet.getRange('A900').getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1
-  var income1 = targetSheet.getRange('A:J').getCell(lastRow,7).getValues()[0][0]
-  var income2 = targetSheet.getRange('A:J').getCell(lastRow,9).getValues()[0][0]
-  return [income1,income2]
+  var incomeLastRow = targetSheet.getRange('A' + targetSheet.getMaxRows() + ':E' + targetSheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1
+  var income = targetSheet.getNamedRanges()[1].getRange().getCell(incomeLastRow,4).getValues()[0][0]
+  var expenseLastRow = targetSheet.getRange('G' + targetSheet.getMaxRows() + ':L' + targetSheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1
+  var expense = targetSheet.getNamedRanges()[0].getRange().getCell(expenseLastRow,5).getValues()[0][0]
+  var total = income - expense
+  console.log([income,expense,total])
+  return [income,expense,total]
+}
+
+function arrayMatch(a1, a2) {
+  if (!Array.isArray(a1) || !Array.isArray(a2)) return false;
+  if (a1.length !== a2.length) return false;
+  for (let i = 0; i < a1.length; i++) {
+    const val1 = a1[i];
+    const val2 = a2[i];
+    const bothArrays = Array.isArray(val1) && Array.isArray(val2);
+    if (bothArrays) {
+      if (!arrayMatch(val1, val2)) return false;
+    } else if (val1 !== val2) {
+      return false;
+    }
+  }
+  return true;
 }
 
