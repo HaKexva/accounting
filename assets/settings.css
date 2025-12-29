@@ -475,9 +475,10 @@ body {
   height: 28px;
   border: none;
   background: #3498db;
+  color: white;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   transition: all 0.2s;
   display: flex;
   align-items: center;
