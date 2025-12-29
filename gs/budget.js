@@ -655,12 +655,29 @@ function ChangeTabName(sheet,name) {
 function GetSummary(sheet){
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
-  var incomeLastRow = targetSheet.getRange('A' + targetSheet.getMaxRows() + ':E' + targetSheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1
-  var income = targetSheet.getNamedRanges()[1].getRange().getCell(incomeLastRow,4).getValues()[0][0]
-  var expenseLastRow = targetSheet.getRange('G' + targetSheet.getMaxRows() + ':L' + targetSheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1
-  var expense = targetSheet.getNamedRanges()[0].getRange().getCell(expenseLastRow,5).getValues()[0][0]
-  var total = income - expense
-  return [income,expense,total]
+  var income = 0;
+  var expense = 0;
+
+  // Find income total: look for "總計" in column A, get value from column D
+  var incomeData = targetSheet.getRange('A:D').getValues();
+  for (var i = incomeData.length - 1; i >= 0; i--) {
+    if (incomeData[i][0] === '總計') {
+      income = incomeData[i][3] || 0; // Column D (index 3)
+      break;
+    }
+  }
+
+  // Find expense total: look for "總計" in column G, get value from column K
+  var expenseData = targetSheet.getRange('G:K').getValues();
+  for (var j = expenseData.length - 1; j >= 0; j--) {
+    if (expenseData[j][0] === '總計') {
+      expense = expenseData[j][4] || 0; // Column K (index 4 relative to G)
+      break;
+    }
+  }
+
+  var total = income - expense;
+  return [income, expense, total];
 }
 
 function arrayMatch(a1, a2) {
