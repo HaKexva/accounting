@@ -436,10 +436,20 @@ function getLastDataRow(sheet, startRow) {
 function GetSummary(sheet){
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
-  var lastRow = targetSheet.getRange('A900').getNextDataCell(SpreadsheetApp.Direction.UP).getRow()-1
-  var income1 = targetSheet.getRange('A:J').getCell(lastRow,7).getValues()[0][0]
-  var income2 = targetSheet.getRange('A:J').getCell(lastRow,9).getValues()[0][0]
-  return [income1,income2]
+  var actualCost = 0;
+  var recordCost = 0;
+
+  // Find "總計" row and get values from columns G (實際消費金額) and I (列帳消費金額)
+  var data = targetSheet.getRange('A:J').getValues();
+  for (var i = data.length - 1; i >= 0; i--) {
+    if (data[i][0] === '總計') {
+      actualCost = data[i][6] || 0;  // Column G (index 6)
+      recordCost = data[i][8] || 0;  // Column I (index 8)
+      break;
+    }
+  }
+
+  return [actualCost, recordCost];
 }
 
 /**
