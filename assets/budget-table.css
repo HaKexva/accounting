@@ -116,38 +116,41 @@ body {
   color: #000;
   font-weight: 400;
   line-height: 1.2;
+  margin-right: 80px;
 }
 
 /* 刪除按鈕 */
 .delete-button {
   position: absolute;
   top: 15px;
-  right: 10px;
+  right: 15px;
   z-index: 1003;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background-color: #dc3545;
-  color: #fff !important;
+  min-width: 60px;
+  padding: 6px 14px;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #dc3545;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  padding: 0;
+  text-align: center;
 }
 
-.delete-button:hover {
-  background-color: #b02a37;
-  transform: scale(1.1);
-  color: #fff !important;
+.delete-button:hover:not(:disabled) {
+  background-color: #dc3545;
+  color: #fff;
 }
 
 .delete-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background-color: #fff;
+  color: #dc3545;
 }
 
 /* 箭頭按鈕 */
