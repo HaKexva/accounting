@@ -8,6 +8,10 @@ on:
       - '.github/workflows/deploy-gas.yml'
   workflow_dispatch:  # Allow manual trigger
 
+concurrency:
+  group: gas-deploy
+  cancel-in-progress: false  # Queue instead of cancel to ensure deployments complete
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
