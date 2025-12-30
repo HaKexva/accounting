@@ -236,14 +236,14 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
     var movedItem = values.splice(oldIndex, 1)[0];
     values.splice(newIndex, 0, movedItem);
 
-    // Update dropdown table (write starting from row 2)
-    var writeRow = 2;
-    for (var i = 0; i < values.length; i++) {
-      dropdownSheet.getRange(writeRow, colIndex + 1).setValue(values[i]);
-      writeRow++;
+    // Update dropdown table (write starting from row 2) - batch write all values at once
+    if (values.length > 0) {
+      var writeData = values.map(function(v) { return [v]; });
+      dropdownSheet.getRange(2, colIndex + 1, values.length, 1).setValues(writeData);
     }
 
     // Clear remaining extra cells
+    var writeRow = 2 + values.length;
     if (writeRow <= data.length) {
       dropdownSheet.getRange(writeRow, colIndex + 1, data.length - writeRow + 1, 1).clearContent();
     }
@@ -477,10 +477,14 @@ function getLastDataRow(sheet, startRow) {
     return startRow - 1;
   }
 
-  for (var row = startRow; row <= lastRow; row++) {
-    var val = sheet.getRange(row, 1).getValue();
+  // Batch read all values in column A at once (much faster than row-by-row)
+  var numRows = lastRow - startRow + 1;
+  var values = sheet.getRange(startRow, 1, numRows, 1).getValues();
+
+  for (var i = 0; i < values.length; i++) {
+    var val = values[i][0];
     if (val === '' || val === 'Total' || val === '總計' || val === null) {
-      return row - 1;
+      return startRow + i - 1;
     }
   }
 
@@ -572,9 +576,10 @@ function BatchUpdateDropdown(itemId, originalData, newData) {
     dropdownSheet.getRange(2, colIndex + 1, maxRows - 1, 1).clearContent();
   }
 
-  // Write new data
-  for (var j = 0; j < newData.length; j++) {
-    dropdownSheet.getRange(j + 2, colIndex + 1).setValue(newData[j]);
+  // Write new data - batch write all values at once
+  if (newData.length > 0) {
+    var writeData = newData.map(function(v) { return [v]; });
+    dropdownSheet.getRange(2, colIndex + 1, newData.length, 1).setValues(writeData);
   }
 
   // If it's "category" and there are renames, update historical data in all monthly sheets
