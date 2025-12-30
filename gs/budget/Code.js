@@ -70,14 +70,58 @@ function _json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// Cache helper functions
+var CACHE_EXPIRATION = 300; // 5 minutes
+
+function getCacheKey(prefix, sheetIndex) {
+  return prefix + '_' + (sheetIndex || 'all');
+}
+
+function getFromCache(key) {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(key);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function setToCache(key, data) {
+  var cache = CacheService.getScriptCache();
+  try {
+    var jsonStr = JSON.stringify(data);
+    // Only cache if data is less than 100KB (CacheService limit)
+    if (jsonStr.length < 100000) {
+      cache.put(key, jsonStr, CACHE_EXPIRATION);
+    }
+  } catch (e) {
+    // Ignore cache errors
+  }
+}
+
+function invalidateCache(sheetIndex) {
+  var cache = CacheService.getScriptCache();
+  cache.remove(getCacheKey('tabData', sheetIndex));
+  cache.remove(getCacheKey('summary', sheetIndex));
+}
+
 function ShowTabName() {
+  var cacheKey = getCacheKey('tabNames');
+  var cached = getFromCache(cacheKey);
+  if (cached) return cached;
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var allSheets = ss.getSheets();
   var sheetNames = [];
   allSheets.slice(2).forEach(function(sheet){
     sheetNames.push(sheet.getSheetName());
   });
-  console.log(sheetNames);
+
+  setToCache(cacheKey, sheetNames);
   return sheetNames;
 }
 
@@ -394,6 +438,10 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
 }
 
 function ShowTabData(sheet) {
+  var cacheKey = getCacheKey('tabData', sheet);
+  var cached = getFromCache(cacheKey);
+  if (cached) return cached;
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
   var ranges = targetSheet.getNamedRanges();
@@ -401,12 +449,8 @@ function ShowTabData(sheet) {
   ranges.forEach(function(range) {
     var title = range.getName();
     var rng = range.getRange();
-    var sheetName = rng.getSheet().getName();
-    var a1 = rng.getA1Notation();
-    console.log(`NamedRange: ${title}, Sheet: ${sheetName}, Range: ${a1}`);
     res[title] = cleanValues(rng.getValues());
   });
-  console.log(res)
 
   function isEmpty(v) {
     return v === "" || v === undefined || v === null;
@@ -422,6 +466,7 @@ function ShowTabData(sheet) {
     return res;
   }
 
+  setToCache(cacheKey, res);
   return res;
 }
 
@@ -466,7 +511,6 @@ function CreateNewTab() {
     month = '0' + parseInt(month);
   }
   if (sheetNames.includes(year.toString() + month.toString())) {
-    console.log('隔月試算表已新增，請勿繼續新增');
     return { success: false, message: '隔月試算表已新增，請勿繼續新增' };
   } else {
     var destination = SpreadsheetApp.openById('1G-c8fzN38vH02Eu8izCc9TpGAiPQBMYH-z3tUB_4tVM');
@@ -557,6 +601,9 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
     }
   }
 
+  // Invalidate cache after data modification
+  invalidateCache(sheetIndex);
+
   return { success: true, message: '資料已成功新增', data: ShowTabData(sheetIndex), total: GetSummary(sheetIndex) };
 }
 
@@ -635,6 +682,9 @@ function DeleteData(sheetIndex, rangeType, number) {
     );
   }
 
+  // Invalidate cache after data modification
+  invalidateCache(sheetIndex);
+
   return {
     success: true,
     message: '資料已成功刪除，總計已更新',
@@ -653,6 +703,10 @@ function ChangeTabName(sheet,name) {
 }
 
 function GetSummary(sheet){
+  var cacheKey = getCacheKey('summary', sheet);
+  var cached = getFromCache(cacheKey);
+  if (cached) return cached;
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
   var income = 0;
@@ -677,7 +731,9 @@ function GetSummary(sheet){
   }
 
   var total = income - expense;
-  return [income, expense, total];
+  var result = [income, expense, total];
+  setToCache(cacheKey, result);
+  return result;
 }
 
 function arrayMatch(a1, a2) {

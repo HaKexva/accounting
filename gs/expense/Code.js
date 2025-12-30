@@ -71,24 +71,72 @@ function _json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// Cache helper functions
+var CACHE_EXPIRATION = 300; // 5 minutes
+
+function getCacheKey(prefix, sheetIndex) {
+  return prefix + '_' + (sheetIndex || 'all');
+}
+
+function getFromCache(key) {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get(key);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function setToCache(key, data) {
+  var cache = CacheService.getScriptCache();
+  try {
+    var jsonStr = JSON.stringify(data);
+    // Only cache if data is less than 100KB (CacheService limit)
+    if (jsonStr.length < 100000) {
+      cache.put(key, jsonStr, CACHE_EXPIRATION);
+    }
+  } catch (e) {
+    // Ignore cache errors
+  }
+}
+
+function invalidateCache(sheetIndex) {
+  var cache = CacheService.getScriptCache();
+  cache.remove(getCacheKey('tabData', sheetIndex));
+  cache.remove(getCacheKey('summary', sheetIndex));
+}
+
 function ShowTabName() {
+  var cacheKey = getCacheKey('tabNames');
+  var cached = getFromCache(cacheKey);
+  if (cached) return cached;
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var allSheets = ss.getSheets();
   var sheetNames = [];
   allSheets.slice(2).forEach(function(sheet){
     sheetNames.push(sheet.getSheetName());
   });
-  console.log(sheetNames);
+
+  setToCache(cacheKey, sheetNames);
   return sheetNames;
 }
 
 function ShowTabData(sheet) {
+  var cacheKey = getCacheKey('tabData', sheet);
+  var cached = getFromCache(cacheKey);
+  if (cached) return cached;
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
   var lastRow = targetSheet.getRange('A' + targetSheet.getMaxRows() + ':J' + targetSheet.getMaxRows()).getNextDataCell(SpreadsheetApp.Direction.UP).getRow()
   var output = targetSheet.getRange('A1:J' + lastRow).getValues()
-  console.log(lastRow)
-  console.log(output)
+
+  setToCache(cacheKey, output);
   return output
 }
 
@@ -377,6 +425,9 @@ function UpsertData(sheetIndex, dateValue, item, category, spendWay, creditCard,
     sheet.getRange(updateRow, 1, 1, 10).setValues([values]);
   }
 
+  // Invalidate cache after data modification
+  invalidateCache(sheetIndex);
+
   return { success: true, message: 'Data successfully saved', data: ShowTabData(sheetIndex), total: GetSummary(sheetIndex) };
 }
 
@@ -407,6 +458,9 @@ function DeleteData(sheetIndex, updateRow) {
     sheet.getRange(totalRow, 9).setFormula(`=SUM(${firstCell2}:${lastCell2})`);
   }
 
+  // Invalidate cache after data modification
+  invalidateCache(sheetIndex);
+
   return {
     success: true,
     message: 'Data successfully deleted',
@@ -434,6 +488,10 @@ function getLastDataRow(sheet, startRow) {
 }
 
 function GetSummary(sheet){
+  var cacheKey = getCacheKey('summary', sheet);
+  var cached = getFromCache(cacheKey);
+  if (cached) return cached;
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
   var actualCost = 0;
@@ -449,7 +507,9 @@ function GetSummary(sheet){
     }
   }
 
-  return [actualCost, recordCost];
+  var result = [actualCost, recordCost];
+  setToCache(cacheKey, result);
+  return result;
 }
 
 /**
