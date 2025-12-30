@@ -19,6 +19,45 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+/* 載入進度條動畫 */
+@keyframes progressShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+#loading-progress {
+  position: relative;
+  z-index: 1501;
+}
+
+#loading-progress .progress-bar {
+  width: 0%;
+  height: 100%;
+  min-width: 0%;
+  background: linear-gradient(90deg, #3498db, #2ecc71, #3498db);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  animation: progressShimmer 1.5s linear infinite;
+  animation-fill-mode: none;
+}
+
+/* 總計區域載入動畫 */
+.summary-loading {
+  display: inline-block;
+  width: 60px;
+  height: 20px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: progressShimmer 1.5s linear infinite;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
 #loading-spinner {
   position: fixed;
   top: 50%;
