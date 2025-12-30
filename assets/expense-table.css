@@ -46,15 +46,15 @@ body {
   animation-fill-mode: none;
 }
 
-/* 總計區域載入動畫 */
-.summary-loading {
+/* 總計區域載入動畫 - 圓形 spinner */
+.summary-spinner {
   display: inline-block;
-  width: 60px;
+  width: 20px;
   height: 20px;
-  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
-  background-size: 200% 100%;
-  animation: progressShimmer 1.5s linear infinite;
-  border-radius: 4px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #3498db;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
   vertical-align: middle;
 }
 
