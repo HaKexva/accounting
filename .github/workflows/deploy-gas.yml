@@ -34,20 +34,21 @@ jobs:
         id: deploy-budget
         working-directory: ./gs/budget
         run: |
-          # Get existing deployment ID if any
-          EXISTING_DEPLOY_ID=$(clasp deployments | grep -E "^- AKfycb" | head -1 | awk '{print $2}')
-          echo "Existing deployment ID: $EXISTING_DEPLOY_ID"
+          # Get existing versioned deployment ID (skip @HEAD which is read-only)
+          EXISTING_DEPLOY_ID=$(clasp deployments | grep -E "^- AKfycb" | grep -v "@HEAD" | head -1 | awk '{print $2}')
+          echo "Existing versioned deployment ID: $EXISTING_DEPLOY_ID"
 
           if [ -n "$EXISTING_DEPLOY_ID" ]; then
             OUTPUT=$(clasp deploy --deploymentId "$EXISTING_DEPLOY_ID" --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+            DEPLOY_ID="$EXISTING_DEPLOY_ID"
           else
+            # Create new deployment
             OUTPUT=$(clasp deploy --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+            # Extract new deployment ID from output
+            DEPLOY_ID=$(echo "$OUTPUT" | grep -oE 'AKfycb[a-zA-Z0-9_-]+' | head -1)
           fi
           echo "$OUTPUT"
-
-          # Extract deployment ID from output (format: "- AKfycbxxxxx @X.")
-          DEPLOY_ID=$(echo "$OUTPUT" | grep -oE 'AKfycb[a-zA-Z0-9_-]+' | head -1)
-          echo "Extracted deployment ID: $DEPLOY_ID"
+          echo "Deployment ID: $DEPLOY_ID"
 
           # Construct the web app URL from deployment ID
           if [ -n "$DEPLOY_ID" ]; then
