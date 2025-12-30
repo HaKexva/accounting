@@ -497,13 +497,16 @@ function GetSummary(sheet){
   var actualCost = 0;
   var recordCost = 0;
 
-  // Find "Total" row and get values from columns G (Actual Cost) and I (Recorded Cost)
-  var data = targetSheet.getRange('A:J').getValues();
-  for (var i = data.length - 1; i >= 0; i--) {
-    if (data[i][0] === 'Total' || data[i][0] === '總計') {
-      actualCost = data[i][6] || 0;  // Column G (index 6)
-      recordCost = data[i][8] || 0;  // Column I (index 8)
-      break;
+  // Only read rows that have data (not entire column)
+  var lastRow = targetSheet.getLastRow();
+  if (lastRow > 0) {
+    var data = targetSheet.getRange(1, 1, lastRow, 10).getValues();
+    for (var i = data.length - 1; i >= 0; i--) {
+      if (data[i][0] === 'Total' || data[i][0] === '總計') {
+        actualCost = data[i][6] || 0;  // Column G (index 6)
+        recordCost = data[i][8] || 0;  // Column I (index 8)
+        break;
+      }
     }
   }
 

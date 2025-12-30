@@ -712,21 +712,23 @@ function GetSummary(sheet){
   var income = 0;
   var expense = 0;
 
-  // Find income total: look for "總計" in column A, get value from column D
-  var incomeData = targetSheet.getRange('A:D').getValues();
-  for (var i = incomeData.length - 1; i >= 0; i--) {
-    if (incomeData[i][0] === '總計') {
-      income = incomeData[i][3] || 0; // Column D (index 3)
-      break;
-    }
-  }
+  // Only read rows that have data (not entire column)
+  var lastRow = targetSheet.getLastRow();
+  if (lastRow > 0) {
+    // Read both income (A:D) and expense (G:K) in one call
+    var data = targetSheet.getRange(1, 1, lastRow, 11).getValues();
 
-  // Find expense total: look for "總計" in column G, get value from column K
-  var expenseData = targetSheet.getRange('G:K').getValues();
-  for (var j = expenseData.length - 1; j >= 0; j--) {
-    if (expenseData[j][0] === '總計') {
-      expense = expenseData[j][4] || 0; // Column K (index 4 relative to G)
-      break;
+    for (var i = data.length - 1; i >= 0; i--) {
+      // Find income total: look for "總計" in column A, get value from column D
+      if (data[i][0] === '總計' && income === 0) {
+        income = data[i][3] || 0; // Column D (index 3)
+      }
+      // Find expense total: look for "總計" in column G, get value from column K
+      if (data[i][6] === '總計' && expense === 0) {
+        expense = data[i][10] || 0; // Column K (index 10)
+      }
+      // Stop if both found
+      if (income !== 0 && expense !== 0) break;
     }
   }
 
