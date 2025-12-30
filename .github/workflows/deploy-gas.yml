@@ -42,17 +42,27 @@ jobs:
         id: deploy-budget
         working-directory: ./gs/budget
         run: |
+          # First, create a new version
+          VERSION_OUTPUT=$(clasp version "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+          echo "$VERSION_OUTPUT"
+          VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep -oE 'Created version ([0-9]+)' | grep -oE '[0-9]+')
+          echo "Created version: $VERSION_NUM"
+
           # Get existing versioned deployment ID (skip @HEAD which is read-only)
           EXISTING_DEPLOY_ID=$(clasp deployments | grep -E "^- AKfycb" | grep -v "@HEAD" | head -1 | awk '{print $2}')
           echo "Existing versioned deployment ID: $EXISTING_DEPLOY_ID"
 
-          if [ -n "$EXISTING_DEPLOY_ID" ]; then
-            OUTPUT=$(clasp deploy --deploymentId "$EXISTING_DEPLOY_ID" --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+          if [ -n "$EXISTING_DEPLOY_ID" ] && [ -n "$VERSION_NUM" ]; then
+            # Update existing deployment to use the new version
+            OUTPUT=$(clasp deploy --deploymentId "$EXISTING_DEPLOY_ID" --versionNumber "$VERSION_NUM" --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
             DEPLOY_ID="$EXISTING_DEPLOY_ID"
+          elif [ -n "$VERSION_NUM" ]; then
+            # Create new deployment with the new version
+            OUTPUT=$(clasp deploy --versionNumber "$VERSION_NUM" --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+            DEPLOY_ID=$(echo "$OUTPUT" | grep -oE 'AKfycb[a-zA-Z0-9_-]+' | head -1)
           else
-            # Create new deployment
+            # Fallback: create deployment without version (will use HEAD)
             OUTPUT=$(clasp deploy --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
-            # Extract new deployment ID from output
             DEPLOY_ID=$(echo "$OUTPUT" | grep -oE 'AKfycb[a-zA-Z0-9_-]+' | head -1)
           fi
           echo "$OUTPUT"
@@ -76,17 +86,27 @@ jobs:
         id: deploy-expense
         working-directory: ./gs/expense
         run: |
+          # First, create a new version
+          VERSION_OUTPUT=$(clasp version "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+          echo "$VERSION_OUTPUT"
+          VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep -oE 'Created version ([0-9]+)' | grep -oE '[0-9]+')
+          echo "Created version: $VERSION_NUM"
+
           # Get existing versioned deployment ID (skip @HEAD which is read-only)
           EXISTING_DEPLOY_ID=$(clasp deployments | grep -E "^- AKfycb" | grep -v "@HEAD" | head -1 | awk '{print $2}')
           echo "Existing versioned deployment ID: $EXISTING_DEPLOY_ID"
 
-          if [ -n "$EXISTING_DEPLOY_ID" ]; then
-            OUTPUT=$(clasp deploy --deploymentId "$EXISTING_DEPLOY_ID" --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+          if [ -n "$EXISTING_DEPLOY_ID" ] && [ -n "$VERSION_NUM" ]; then
+            # Update existing deployment to use the new version
+            OUTPUT=$(clasp deploy --deploymentId "$EXISTING_DEPLOY_ID" --versionNumber "$VERSION_NUM" --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
             DEPLOY_ID="$EXISTING_DEPLOY_ID"
+          elif [ -n "$VERSION_NUM" ]; then
+            # Create new deployment with the new version
+            OUTPUT=$(clasp deploy --versionNumber "$VERSION_NUM" --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
+            DEPLOY_ID=$(echo "$OUTPUT" | grep -oE 'AKfycb[a-zA-Z0-9_-]+' | head -1)
           else
-            # Create new deployment
+            # Fallback: create deployment without version (will use HEAD)
             OUTPUT=$(clasp deploy --description "Auto-deploy $(date +'%Y-%m-%d %H:%M')" 2>&1)
-            # Extract new deployment ID from output
             DEPLOY_ID=$(echo "$OUTPUT" | grep -oE 'AKfycb[a-zA-Z0-9_-]+' | head -1)
           fi
           echo "$OUTPUT"
