@@ -1,0 +1,67 @@
+name: Deploy Google Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gs/**'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Setup clasp credentials
+        run: echo '${{ secrets.CLASP_TOKEN }}' > ~/.clasprc.json
+
+      - name: Push budget script
+        working-directory: ./gs/budget
+        run: clasp push --force
+
+      - name: Deploy budget script
+        working-directory: ./gs/budget
+        run: |
+          DEPLOY_ID=$(clasp deployments | grep -E "^- " | head -1 | awk '{print $2}')
+          if [ -n "$DEPLOY_ID" ]; then
+            clasp deploy --deploymentId "$DEPLOY_ID" --description "Auto-deploy from GitHub $(date +'%Y-%m-%d %H:%M')"
+          else
+            clasp deploy --description "Auto-deploy from GitHub $(date +'%Y-%m-%d %H:%M')"
+          fi
+
+  deploy-expense:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Setup clasp credentials
+        run: echo '${{ secrets.CLASP_TOKEN }}' > ~/.clasprc.json
+
+      - name: Push expense script
+        working-directory: ./gs/expense
+        run: clasp push --force
+
+      - name: Deploy expense script
+        working-directory: ./gs/expense
+        run: |
+          DEPLOY_ID=$(clasp deployments | grep -E "^- " | head -1 | awk '{print $2}')
+          if [ -n "$DEPLOY_ID" ]; then
+            clasp deploy --deploymentId "$DEPLOY_ID" --description "Auto-deploy from GitHub $(date +'%Y-%m-%d %H:%M')"
+          else
+            clasp deploy --description "Auto-deploy from GitHub $(date +'%Y-%m-%d %H:%M')"
+          fi
