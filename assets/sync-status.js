@@ -371,22 +371,7 @@ const SyncStatus = (function() {
       // Ignore
     }
 
-    // Insert the status icon when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', insertStatusIcon);
-    } else {
-      insertStatusIcon();
-    }
-
-    // Add click handler for manual sync
-    if (statusIcon) {
-      statusIcon.addEventListener('click', () => {
-        if (syncState.status === 'error' || syncState.status === 'idle') {
-          // Dispatch custom event for pages to handle
-          window.dispatchEvent(new CustomEvent('syncRequested'));
-        }
-      });
-    }
+    // Sync icon removed from navigation - keep only cache functionality
   };
 
   // Auto-initialize
