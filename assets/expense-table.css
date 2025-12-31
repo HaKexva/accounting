@@ -1,51 +1,55 @@
 /* Expense table specific styles */
 /* Common styles are in common.css */
 
-/* Sticky summary on mobile - like nav bar, positioned right below it */
+/* Sticky summary on mobile - only when record-cost input is focused */
 @media (max-width: 768px) {
-  .total-container {
-    position: sticky !important;
-    top: 56px !important; /* Right below nav bar (nav is ~56px) */
-    z-index: 1999 !important; /* Just below nav bar's 2000 */
+  .total-container.sticky-active {
+    position: fixed !important;
+    top: 56px !important; /* Right below nav bar */
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1999 !important;
     background: #fff !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     margin: 0 !important;
     padding: 8px 15px !important;
     border-radius: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    left: 50% !important;
-    right: 50% !important;
-    margin-left: -50vw !important;
-    margin-right: -50vw !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
-  .total-container .columns-container {
+  .total-container.sticky-active .columns-container {
     flex-direction: row !important;
     justify-content: space-around !important;
     gap: 8px !important;
   }
 
-  .total-container .income-column,
-  .total-container .expense-column,
-  .total-container .total-column {
+  .total-container.sticky-active .income-column,
+  .total-container.sticky-active .expense-column,
+  .total-container.sticky-active .total-column {
     flex-direction: row !important;
     align-items: center !important;
     gap: 4px !important;
   }
 
-  .total-container .income-title,
-  .total-container .expense-title,
-  .total-container .total-title {
+  .total-container.sticky-active .income-title,
+  .total-container.sticky-active .expense-title,
+  .total-container.sticky-active .total-title {
     font-size: 12px !important;
     margin: 0 !important;
   }
 
-  .total-container .income-amount,
-  .total-container .expense-amount,
-  .total-container .total-amount {
+  .total-container.sticky-active .income-amount,
+  .total-container.sticky-active .expense-amount,
+  .total-container.sticky-active .total-amount {
     font-size: 14px !important;
     font-weight: 600 !important;
+  }
+
+  /* Placeholder when sticky is active */
+  .total-container-placeholder.visible {
+    display: block !important;
   }
 }
 
