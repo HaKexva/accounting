@@ -108,6 +108,14 @@ const SyncStatus = (function() {
   // ===== Sync Status UI =====
   let statusIcon = null;
 
+  // Font Awesome icon classes for each state
+  const ICONS = {
+    idle: 'fa-solid fa-cloud',
+    syncing: 'fa-solid fa-arrows-rotate',
+    synced: 'fa-solid fa-check',
+    error: 'fa-solid fa-download'
+  };
+
   const createStatusIcon = () => {
     if (statusIcon) return statusIcon;
 
@@ -116,9 +124,7 @@ const SyncStatus = (function() {
     statusIcon.id = 'sync-status-icon';
     statusIcon.className = 'sync-status-icon';
     statusIcon.innerHTML = `
-      <svg class="sync-icon" viewBox="0 0 24 24" width="20" height="20">
-        <path class="sync-arrow" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
-      </svg>
+      <i class="sync-icon ${ICONS.idle}"></i>
       <span class="sync-tooltip"></span>
     `;
 
@@ -143,25 +149,26 @@ const SyncStatus = (function() {
       }
 
       .sync-status-icon .sync-icon {
-        fill: #666;
-        transition: fill 0.3s, transform 0.3s;
+        font-size: 16px;
+        color: #9e9e9e;
+        transition: color 0.3s;
       }
 
       .sync-status-icon.syncing .sync-icon {
-        fill: #2196F3;
+        color: #2196F3;
         animation: sync-spin 1s linear infinite;
       }
 
       .sync-status-icon.synced .sync-icon {
-        fill: #4CAF50;
+        color: #4CAF50;
       }
 
       .sync-status-icon.error .sync-icon {
-        fill: #f44336;
+        color: #2196F3;
       }
 
       .sync-status-icon.idle .sync-icon {
-        fill: #9e9e9e;
+        color: #9e9e9e;
       }
 
       @keyframes sync-spin {
@@ -210,8 +217,7 @@ const SyncStatus = (function() {
         }
 
         .sync-status-icon .sync-icon {
-          width: 18px;
-          height: 18px;
+          font-size: 14px;
         }
       }
     `;
@@ -253,6 +259,13 @@ const SyncStatus = (function() {
     // Add current status class
     statusIcon.classList.add(syncState.status);
 
+    // Update icon class
+    const iconEl = statusIcon.querySelector('.sync-icon');
+    if (iconEl) {
+      // Remove all icon classes and add the correct one
+      iconEl.className = `sync-icon ${ICONS[syncState.status] || ICONS.idle}`;
+    }
+
     // Update tooltip
     const tooltip = statusIcon.querySelector('.sync-tooltip');
     if (tooltip) {
@@ -268,7 +281,7 @@ const SyncStatus = (function() {
           message = formatTimestamp(syncState.lastSyncTime);
           break;
         case 'error':
-          message = '同步失敗，點擊重試';
+          message = '點擊重新載入';
           break;
         default:
           message = syncState.lastSyncTime ? formatTimestamp(syncState.lastSyncTime) : '未同步';
