@@ -1,6 +1,65 @@
 /* Expense table specific styles */
 /* Common styles are in common.css */
 
+/* Sticky summary on mobile when scrolling */
+@media (max-width: 768px) {
+  .total-container.sticky {
+    position: fixed !important;
+    top: 56px !important; /* Below nav bar */
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 8px 15px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+    border-radius: 0 !important;
+    z-index: 999 !important;
+    transform: translateZ(0); /* GPU acceleration */
+  }
+
+  .total-container.sticky .columns-container {
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    gap: 8px !important;
+  }
+
+  .total-container.sticky .income-column,
+  .total-container.sticky .expense-column,
+  .total-container.sticky .total-column {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  .total-container.sticky .income-title,
+  .total-container.sticky .expense-title,
+  .total-container.sticky .total-title {
+    font-size: 12px !important;
+    margin: 0 !important;
+  }
+
+  .total-container.sticky .income-amount,
+  .total-container.sticky .expense-amount,
+  .total-container.sticky .total-amount {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+  }
+
+  /* Placeholder to prevent content jump when sticky */
+  .total-container-placeholder {
+    display: none;
+  }
+
+  .total-container-placeholder.visible {
+    display: block;
+    height: 80px; /* Approximate height of original total-container */
+  }
+}
+
 /* Expense page specific: pie chart container */
 .pie-chart-container {
   width: 100%;
