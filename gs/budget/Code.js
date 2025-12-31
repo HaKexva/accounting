@@ -562,7 +562,14 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       if (isNaN(lastNumber)) lastNumber = 0;
 
       var row = lastDataRow + 1;
-      var values = [lastNumber + 1, timeOutput, category, item, cost, note];
+      // 確保 cost 是數字類型
+      var costValue = cost;
+      if (typeof costValue === 'string') {
+        costValue = parseFloat(costValue) || 0;
+      } else if (costValue === null || costValue === undefined) {
+        costValue = 0;
+      }
+      var values = [lastNumber + 1, timeOutput, category, item, costValue, note];
       sheet.getRange(row, 7, 1, column).setValues([values]);
 
       // 新增總計
@@ -581,7 +588,14 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       if (isNaN(lastNumber)) lastNumber = 0;
 
       var row = lastDataRow + 1;
-      var values = [lastNumber + 1, timeOutput, item, cost, note];
+      // 確保 cost 是數字類型
+      var costValue = cost;
+      if (typeof costValue === 'string') {
+        costValue = parseFloat(costValue) || 0;
+      } else if (costValue === null || costValue === undefined) {
+        costValue = 0;
+      }
+      var values = [lastNumber + 1, timeOutput, item, costValue, note];
       sheet.getRange(row, 1, 1, column).setValues([values]);
 
       // 新增總計
@@ -593,10 +607,20 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
     if (rangeType === 0) { // 支出
       column = 6;
       totalColumn = 11; // K欄是支出金額總計
-      var values = [updateRow - 2, timeOutput, category, item, cost, note];
+      
+      // 確保 cost 是數字類型
+      var costValue = cost;
+      if (typeof costValue === 'string') {
+        costValue = parseFloat(costValue) || 0;
+      } else if (costValue === null || costValue === undefined) {
+        costValue = 0;
+      }
+      
+      // 先更新資料（在刪除總計行之前，避免行號變化）
+      var values = [updateRow - 2, timeOutput, category, item, costValue, note];
       sheet.getRange(updateRow, 7, 1, column).setValues([values]);
       
-      // 更新總計行
+      // 更新總計行（在更新資料之後）
       RemoveSummaryRow(sheet, startRow, 7); // 刪除舊總計行（G欄）
       var lastDataRow = sheet.getLastRow();
       if (lastDataRow < startRow) {
@@ -610,10 +634,20 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
     } else { // 收入
       column = 5;
       totalColumn = 4; // D欄是收入金額總計
-      var values = [updateRow - 2, timeOutput, item, cost, note];
+      
+      // 確保 cost 是數字類型
+      var costValue = cost;
+      if (typeof costValue === 'string') {
+        costValue = parseFloat(costValue) || 0;
+      } else if (costValue === null || costValue === undefined) {
+        costValue = 0;
+      }
+      
+      // 先更新資料（在刪除總計行之前，避免行號變化）
+      var values = [updateRow - 2, timeOutput, item, costValue, note];
       sheet.getRange(updateRow, 1, 1, column).setValues([values]);
       
-      // 更新總計行
+      // 更新總計行（在更新資料之後）
       RemoveSummaryRow(sheet, startRow, 1); // 刪除舊總計行（A欄）
       var lastDataRow = sheet.getLastRow();
       if (lastDataRow < startRow) {
