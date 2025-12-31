@@ -592,12 +592,38 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
   } else { // 修改資料
     if (rangeType === 0) { // 支出
       column = 6;
+      totalColumn = 11; // K欄是支出金額總計
       var values = [updateRow - 2, timeOutput, category, item, cost, note];
       sheet.getRange(updateRow, 7, 1, column).setValues([values]);
+      
+      // 更新總計行
+      RemoveSummaryRow(sheet, startRow, 7); // 刪除舊總計行（G欄）
+      var lastDataRow = sheet.getLastRow();
+      if (lastDataRow < startRow) {
+        // 沒有資料就設總計為 0
+        sheet.getRange(startRow, 7).setValue('總計');
+        sheet.getRange(startRow, totalColumn).setValue(0);
+      } else {
+        sheet.getRange(lastDataRow + 1, 7).setValue('總計');
+        sheet.getRange(lastDataRow + 1, totalColumn).setFormula(`=SUM(K${startRow}:K${lastDataRow})`);
+      }
     } else { // 收入
       column = 5;
+      totalColumn = 4; // D欄是收入金額總計
       var values = [updateRow - 2, timeOutput, item, cost, note];
       sheet.getRange(updateRow, 1, 1, column).setValues([values]);
+      
+      // 更新總計行
+      RemoveSummaryRow(sheet, startRow, 1); // 刪除舊總計行（A欄）
+      var lastDataRow = sheet.getLastRow();
+      if (lastDataRow < startRow) {
+        // 沒有資料就設總計為 0
+        sheet.getRange(startRow, 1).setValue('總計');
+        sheet.getRange(startRow, totalColumn).setValue(0);
+      } else {
+        sheet.getRange(lastDataRow + 1, 1).setValue('總計');
+        sheet.getRange(lastDataRow + 1, totalColumn).setFormula(`=SUM(D${startRow}:D${lastDataRow})`);
+      }
     }
   }
 
@@ -711,6 +737,8 @@ function GetSummary(sheet){
   var targetSheet = ss.getSheets()[sheet];
   var income = 0;
   var expense = 0;
+  var incomeFound = false;
+  var expenseFound = false;
 
   // Only read rows that have data (not entire column)
   var lastRow = targetSheet.getLastRow();
@@ -718,17 +746,36 @@ function GetSummary(sheet){
     // Read both income (A:D) and expense (G:K) in one call
     var data = targetSheet.getRange(1, 1, lastRow, 11).getValues();
 
+    // 從後往前查找，找到最後一個"總計"行（應該是最新的）
     for (var i = data.length - 1; i >= 0; i--) {
       // Find income total: look for "總計" in column A, get value from column D
-      if (data[i][0] === '總計' && income === 0) {
-        income = data[i][3] || 0; // Column D (index 3)
+      if (data[i][0] === '總計' && !incomeFound) {
+        var incomeValue = data[i][3];
+        // 確保值是數字類型
+        if (typeof incomeValue === 'number') {
+          income = incomeValue;
+        } else if (typeof incomeValue === 'string' && incomeValue.trim() !== '') {
+          income = parseFloat(incomeValue) || 0;
+        } else {
+          income = 0;
+        }
+        incomeFound = true;
       }
       // Find expense total: look for "總計" in column G, get value from column K
-      if (data[i][6] === '總計' && expense === 0) {
-        expense = data[i][10] || 0; // Column K (index 10)
+      if (data[i][6] === '總計' && !expenseFound) {
+        var expenseValue = data[i][10];
+        // 確保值是數字類型
+        if (typeof expenseValue === 'number') {
+          expense = expenseValue;
+        } else if (typeof expenseValue === 'string' && expenseValue.trim() !== '') {
+          expense = parseFloat(expenseValue) || 0;
+        } else {
+          expense = 0;
+        }
+        expenseFound = true;
       }
       // Stop if both found
-      if (income !== 0 && expense !== 0) break;
+      if (incomeFound && expenseFound) break;
     }
   }
 
