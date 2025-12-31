@@ -622,7 +622,21 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       
       // 更新總計行（在更新資料之後）
       RemoveSummaryRow(sheet, startRow, 7); // 刪除舊總計行（G欄）
+      
+      // 找到最後一筆支出資料行（跳過總計行）
       var lastDataRow = sheet.getLastRow();
+      while (lastDataRow >= startRow) {
+        var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // G欄
+        if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+          // 檢查是否是數字編號（有效的資料行）
+          var numValue = Number(cellValue);
+          if (!isNaN(numValue) && numValue > 0) {
+            break; // 找到最後一筆資料行
+          }
+        }
+        lastDataRow--;
+      }
+      
       if (lastDataRow < startRow) {
         // 沒有資料就設總計為 0
         sheet.getRange(startRow, 7).setValue('總計');
@@ -649,7 +663,21 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       
       // 更新總計行（在更新資料之後）
       RemoveSummaryRow(sheet, startRow, 1); // 刪除舊總計行（A欄）
+      
+      // 找到最後一筆收入資料行（跳過總計行）
       var lastDataRow = sheet.getLastRow();
+      while (lastDataRow >= startRow) {
+        var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // A欄
+        if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+          // 檢查是否是數字編號（有效的資料行）
+          var numValue = Number(cellValue);
+          if (!isNaN(numValue) && numValue > 0) {
+            break; // 找到最後一筆資料行
+          }
+        }
+        lastDataRow--;
+      }
+      
       if (lastDataRow < startRow) {
         // 沒有資料就設總計為 0
         sheet.getRange(startRow, 1).setValue('總計');
