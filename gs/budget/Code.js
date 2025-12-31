@@ -830,14 +830,73 @@ function GetSummary(sheet){
         // 直接從 K 欄讀取值（索引 10，對應第 11 列）
         var expenseCell = targetSheet.getRange(i + 1, 11); // K 欄是第 11 列
         var expenseValue = expenseCell.getValue();
+        var cellFormula = expenseCell.getFormula();
+        
+        // 如果有公式，強制重新計算並讀取顯示值
+        if (cellFormula && cellFormula.trim() !== '') {
+          // 使用 getDisplayValue() 獲取公式計算後的顯示值
+          var displayValue = expenseCell.getDisplayValue();
+          if (displayValue && displayValue.trim() !== '') {
+            // 移除千分位符號等格式字符
+            var cleanValue = displayValue.replace(/,/g, '').trim();
+            expenseValue = parseFloat(cleanValue);
+            if (isNaN(expenseValue)) {
+              expenseValue = expenseCell.getValue(); // 回退到 getValue()
+            }
+          } else {
+            // 如果顯示值為空，嘗試使用 getValue()
+            expenseValue = expenseCell.getValue();
+          }
+        }
+        
         // 確保值是數字類型
-        if (typeof expenseValue === 'number') {
+        if (typeof expenseValue === 'number' && !isNaN(expenseValue)) {
           expense = expenseValue;
         } else if (typeof expenseValue === 'string' && expenseValue.trim() !== '') {
-          expense = parseFloat(expenseValue) || 0;
+          // 移除千分位符號等格式字符
+          var cleanValue = expenseValue.replace(/,/g, '').trim();
+          expense = parseFloat(cleanValue) || 0;
         } else {
           expense = 0;
         }
+        
+        // 如果讀取到的值是 0 但公式存在，且總計行之前有數據行，嘗試手動計算
+        if (expense === 0 && cellFormula && cellFormula.trim() !== '' && i + 1 > 2) {
+          // 檢查是否有支出記錄（從第 2 行開始到總計行之前）
+          var hasExpenseData = false;
+          for (var checkRow = 2; checkRow < i + 1; checkRow++) {
+            var checkNumber = targetSheet.getRange(checkRow, 7).getValue(); // G 欄編號
+            if (typeof checkNumber === 'number' && checkNumber > 0) {
+              hasExpenseData = true;
+              break;
+            }
+          }
+          
+          // 如果有支出記錄但總計是 0，手動計算
+          if (hasExpenseData) {
+            var expenseStartRow = 2; // 資料從第 2 行開始
+            var expenseSum = 0;
+            for (var r = expenseStartRow; r < i + 1; r++) {
+              var expenseRowData = targetSheet.getRange(r, 7, 1, 6).getValues()[0]; // G 到 L 欄
+              // 檢查是否是有效的支出記錄（G 欄應該是數字編號）
+              var rowNumber = expenseRowData[0];
+              if (typeof rowNumber === 'number' && rowNumber > 0) {
+                // K 欄是金額（索引 4）
+                var rowCost = expenseRowData[4];
+                if (typeof rowCost === 'number' && !isNaN(rowCost)) {
+                  expenseSum += rowCost;
+                } else if (typeof rowCost === 'string' && rowCost.trim() !== '') {
+                  var numCost = parseFloat(rowCost.replace(/,/g, '')) || 0;
+                  expenseSum += numCost;
+                }
+              }
+            }
+            if (expenseSum !== 0) {
+              expense = expenseSum;
+            }
+          }
+        }
+        
         expenseFound = true;
       }
       // Stop if both found
