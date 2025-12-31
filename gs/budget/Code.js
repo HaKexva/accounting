@@ -750,7 +750,9 @@ function GetSummary(sheet){
     for (var i = data.length - 1; i >= 0; i--) {
       // Find income total: look for "總計" in column A, get value from column D
       if (data[i][0] === '總計' && !incomeFound) {
-        var incomeValue = data[i][3];
+        // 直接從 D 欄讀取值（索引 3）
+        var incomeCell = targetSheet.getRange(i + 1, 4); // D 欄是第 4 列
+        var incomeValue = incomeCell.getValue();
         // 確保值是數字類型
         if (typeof incomeValue === 'number') {
           income = incomeValue;
@@ -763,7 +765,9 @@ function GetSummary(sheet){
       }
       // Find expense total: look for "總計" in column G, get value from column K
       if (data[i][6] === '總計' && !expenseFound) {
-        var expenseValue = data[i][10];
+        // 直接從 K 欄讀取值（索引 10，對應第 11 列）
+        var expenseCell = targetSheet.getRange(i + 1, 11); // K 欄是第 11 列
+        var expenseValue = expenseCell.getValue();
         // 確保值是數字類型
         if (typeof expenseValue === 'number') {
           expense = expenseValue;
