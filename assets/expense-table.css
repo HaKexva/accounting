@@ -3,16 +3,23 @@
 
 /* Sticky summary on mobile - only when record-cost input is focused */
 @media (max-width: 768px) {
+  /* Normal state: same as desktop (vertical layout) */
+  .total-container .columns-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  /* Sticky state when input focused */
   .total-container.sticky-active {
     position: fixed !important;
-    top: 56px !important; /* Right below nav bar */
+    top: 62px !important; /* Right below nav bar (56px + borders) */
     left: 0 !important;
     right: 0 !important;
     z-index: 1999 !important;
     background: #fff !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     margin: 0 !important;
-    padding: 8px 15px !important;
+    padding: 6px 15px !important;
     border-radius: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -21,7 +28,8 @@
 
   .total-container.sticky-active .columns-container {
     flex-direction: row !important;
-    justify-content: space-around !important;
+    justify-content: space-between !important;
+    align-items: center !important;
     gap: 8px !important;
   }
 
@@ -36,20 +44,15 @@
   .total-container.sticky-active .income-title,
   .total-container.sticky-active .expense-title,
   .total-container.sticky-active .total-title {
-    font-size: 12px !important;
+    font-size: 11px !important;
     margin: 0 !important;
   }
 
   .total-container.sticky-active .income-amount,
   .total-container.sticky-active .expense-amount,
   .total-container.sticky-active .total-amount {
-    font-size: 14px !important;
+    font-size: 13px !important;
     font-weight: 600 !important;
-  }
-
-  /* Placeholder when sticky is active */
-  .total-container-placeholder.visible {
-    display: block !important;
   }
 }
 
