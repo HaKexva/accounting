@@ -589,7 +589,13 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       } else if (costValue === null || costValue === undefined) {
         costValue = 0;
       }
-      var values = [lastNumber + 1, timeOutput, category, item, costValue, note];
+      // 確保編號是數字類型
+      var newNumber = lastNumber + 1;
+      if (isNaN(newNumber) || newNumber <= 0) {
+        newNumber = 1;
+      }
+      var values = [newNumber, timeOutput, category, item, costValue, note];
+      // 確保寫入時編號在第一個位置（G欄）
       sheet.getRange(row, 7, 1, column).setValues([values]);
 
       // 新增總計
@@ -632,7 +638,13 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       } else if (costValue === null || costValue === undefined) {
         costValue = 0;
       }
-      var values = [lastNumber + 1, timeOutput, item, costValue, note];
+      // 確保編號是數字類型
+      var newNumber = lastNumber + 1;
+      if (isNaN(newNumber) || newNumber <= 0) {
+        newNumber = 1;
+      }
+      var values = [newNumber, timeOutput, item, costValue, note];
+      // 確保寫入時編號在第一個位置（A欄）
       sheet.getRange(row, 1, 1, column).setValues([values]);
 
       // 新增總計
