@@ -4,6 +4,7 @@ const AUTH_CONFIG = {
   ALLOWED_EMAILS: [
     'ray120424@gmail.com',
     'tubaxenor@gmail.com',
+    'eva811109@gmail.com',
     // Add more authorized emails here by adding them to this array
     // Example: 'another-user@gmail.com',
   ],
