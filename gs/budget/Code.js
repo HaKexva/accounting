@@ -463,6 +463,8 @@ function ShowTabData(sheet) {
   function cleanValues(values) {
     var res = [];
     values.forEach(function(value){
+      // 只要有任何一個欄位不是空的，就保留這一行
+      // 這樣可以確保即使只有編號的行也會被保留
       if(!value.every(isEmpty)) {
         res.push(value);
       }
@@ -557,29 +559,41 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       totalColumn = 11; // K欄是支出金額總計
 
       // 找最後一筆資料列（跳過總計行）
+      // 先從最後一行開始，從後往前找
       var lastDataRow = sheet.getLastRow();
-      if (lastDataRow < startRow) lastDataRow = startRow - 1;
-      
-      // 從後往前找，跳過總計行
-      while (lastDataRow >= startRow) {
-        var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // G欄
-        if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-          var numValue = Number(cellValue);
-          if (!isNaN(numValue) && numValue > 0) {
-            break; // 找到最後一筆資料行
-          }
-        }
-        lastDataRow--;
-      }
-      
       if (lastDataRow < startRow) {
         lastDataRow = startRow - 1; // 沒有資料，從 startRow - 1 開始
+      } else {
+        // 從後往前找，跳過總計行和空行
+        while (lastDataRow >= startRow) {
+          var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // G欄編號
+          if (cellValue === '總計') {
+            lastDataRow--;
+            continue;
+          }
+          if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+            var numValue = Number(cellValue);
+            if (!isNaN(numValue) && numValue > 0) {
+              break; // 找到最後一筆資料行
+            }
+          }
+          lastDataRow--;
+        }
+        
+        if (lastDataRow < startRow) {
+          lastDataRow = startRow - 1; // 沒有找到有效資料，從 startRow - 1 開始
+        }
       }
 
       // 取最後編號
-      var prev = lastDataRow >= startRow ? sheet.getRange(lastDataRow, 7).getValue() : 0; // G欄編號
+      var prev = 0;
+      if (lastDataRow >= startRow) {
+        prev = sheet.getRange(lastDataRow, 7).getValue(); // G欄編號
+      }
       var lastNumber = Number(prev);
-      if (isNaN(lastNumber)) lastNumber = 0;
+      if (isNaN(lastNumber) || lastNumber <= 0) {
+        lastNumber = 0;
+      }
 
       var row = lastDataRow + 1;
       // 確保 cost 是數字類型
@@ -594,8 +608,18 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       if (isNaN(newNumber) || newNumber <= 0) {
         newNumber = 1;
       }
-      var values = [newNumber, timeOutput, category, item, costValue, note];
-      // 確保寫入時編號在第一個位置（G欄）
+      
+      // 準備要寫入的資料，確保所有值都不為 undefined
+      var values = [
+        newNumber,
+        timeOutput || '',
+        category || '',
+        item || '',
+        costValue,
+        note || ''
+      ];
+      
+      // 確保寫入時編號在第一個位置（G欄），寫入6列
       sheet.getRange(row, 7, 1, column).setValues([values]);
 
       // 新增總計
@@ -607,28 +631,41 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       totalColumn = 4; // D欄是收入金額總計
 
       // 找最後一筆資料列（跳過總計行）
+      // 先從最後一行開始，從後往前找
       var lastDataRow = sheet.getLastRow();
-      if (lastDataRow < startRow) lastDataRow = startRow - 1;
-      
-      // 從後往前找，跳過總計行
-      while (lastDataRow >= startRow) {
-        var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // A欄
-        if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-          var numValue = Number(cellValue);
-          if (!isNaN(numValue) && numValue > 0) {
-            break; // 找到最後一筆資料行
-          }
-        }
-        lastDataRow--;
-      }
-      
       if (lastDataRow < startRow) {
         lastDataRow = startRow - 1; // 沒有資料，從 startRow - 1 開始
+      } else {
+        // 從後往前找，跳過總計行和空行
+        while (lastDataRow >= startRow) {
+          var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // A欄編號
+          if (cellValue === '總計') {
+            lastDataRow--;
+            continue;
+          }
+          if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+            var numValue = Number(cellValue);
+            if (!isNaN(numValue) && numValue > 0) {
+              break; // 找到最後一筆資料行
+            }
+          }
+          lastDataRow--;
+        }
+        
+        if (lastDataRow < startRow) {
+          lastDataRow = startRow - 1; // 沒有找到有效資料，從 startRow - 1 開始
+        }
       }
 
-      var prev = lastDataRow >= startRow ? sheet.getRange(lastDataRow, 1).getValue() : 0; // A欄編號
+      // 取最後編號
+      var prev = 0;
+      if (lastDataRow >= startRow) {
+        prev = sheet.getRange(lastDataRow, 1).getValue(); // A欄編號
+      }
       var lastNumber = Number(prev);
-      if (isNaN(lastNumber)) lastNumber = 0;
+      if (isNaN(lastNumber) || lastNumber <= 0) {
+        lastNumber = 0;
+      }
 
       var row = lastDataRow + 1;
       // 確保 cost 是數字類型
@@ -643,8 +680,17 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       if (isNaN(newNumber) || newNumber <= 0) {
         newNumber = 1;
       }
-      var values = [newNumber, timeOutput, item, costValue, note];
-      // 確保寫入時編號在第一個位置（A欄）
+      
+      // 準備要寫入的資料，確保所有值都不為 undefined
+      var values = [
+        newNumber,
+        timeOutput || '',
+        item || '',
+        costValue,
+        note || ''
+      ];
+      
+      // 確保寫入時編號在第一個位置（A欄），寫入5列
       sheet.getRange(row, 1, 1, column).setValues([values]);
 
       // 新增總計
