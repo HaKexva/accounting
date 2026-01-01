@@ -117,7 +117,11 @@ function ShowTabName() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var allSheets = ss.getSheets();
   var sheetNames = [];
-  allSheets.slice(2).forEach(function(sheet){
+  
+  // 從索引 2 開始（跳過前兩個「空白表」、「下拉選單」）
+  // slice(2) 會包含從索引 2 開始到最後的所有元素
+  var sheetsToProcess = allSheets.slice(2);
+  sheetsToProcess.forEach(function(sheet){
     sheetNames.push(sheet.getSheetName());
   });
 
