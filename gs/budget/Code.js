@@ -554,14 +554,30 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
   if (updateRow === undefined) { // 新增
     if (rangeType === 0) { // 支出
       column = 6; // 編號~備註
-      totalColumn = 5; // 計算總和的欄
+      totalColumn = 11; // K欄是支出金額總計
 
-      // 找最後一筆資料列
+      // 找最後一筆資料列（跳過總計行）
       var lastDataRow = sheet.getLastRow();
       if (lastDataRow < startRow) lastDataRow = startRow - 1;
+      
+      // 從後往前找，跳過總計行
+      while (lastDataRow >= startRow) {
+        var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // G欄
+        if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+          var numValue = Number(cellValue);
+          if (!isNaN(numValue) && numValue > 0) {
+            break; // 找到最後一筆資料行
+          }
+        }
+        lastDataRow--;
+      }
+      
+      if (lastDataRow < startRow) {
+        lastDataRow = startRow - 1; // 沒有資料，從 startRow - 1 開始
+      }
 
       // 取最後編號
-      var prev = sheet.getRange(lastDataRow, 7).getValue(); // G欄編號
+      var prev = lastDataRow >= startRow ? sheet.getRange(lastDataRow, 7).getValue() : 0; // G欄編號
       var lastNumber = Number(prev);
       if (isNaN(lastNumber)) lastNumber = 0;
 
@@ -582,12 +598,29 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
 
     } else { // 收入
       column = 5;
-      totalColumn = 4;
+      totalColumn = 4; // D欄是收入金額總計
 
+      // 找最後一筆資料列（跳過總計行）
       var lastDataRow = sheet.getLastRow();
       if (lastDataRow < startRow) lastDataRow = startRow - 1;
+      
+      // 從後往前找，跳過總計行
+      while (lastDataRow >= startRow) {
+        var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // A欄
+        if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+          var numValue = Number(cellValue);
+          if (!isNaN(numValue) && numValue > 0) {
+            break; // 找到最後一筆資料行
+          }
+        }
+        lastDataRow--;
+      }
+      
+      if (lastDataRow < startRow) {
+        lastDataRow = startRow - 1; // 沒有資料，從 startRow - 1 開始
+      }
 
-      var prev = sheet.getRange(lastDataRow, 1).getValue(); // A欄編號
+      var prev = lastDataRow >= startRow ? sheet.getRange(lastDataRow, 1).getValue() : 0; // A欄編號
       var lastNumber = Number(prev);
       if (isNaN(lastNumber)) lastNumber = 0;
 
@@ -755,14 +788,26 @@ function DeleteData(sheetIndex, rangeType, number) {
   // 更新總計
   lastRow = sheet.getLastRow();
   // 刪掉舊總計行（如果存在）
-  if (sheet.getRange(lastRow, numberCol).getValue() === '總計') {
+  if (lastRow >= startRow && sheet.getRange(lastRow, numberCol).getValue() === '總計') {
     sheet.deleteRow(lastRow);
     lastRow--;
   }
 
+  // 找到最後一筆資料行（跳過總計行）
+  var lastDataRow = lastRow;
+  while (lastDataRow >= startRow) {
+    var cellValue = sheet.getRange(lastDataRow, numberCol).getValue();
+    if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
+      var numValue = Number(cellValue);
+      if (!isNaN(numValue) && numValue > 0) {
+        break; // 找到最後一筆資料行
+      }
+    }
+    lastDataRow--;
+  }
+
   // 設定新的總計行
   var firstDataRow = startRow;
-  var lastDataRow = lastRow;
   if (lastDataRow < firstDataRow) {
     // 沒有資料就設總計為 0
     sheet.getRange(firstDataRow, numberCol).setValue('總計');
@@ -819,14 +864,65 @@ function GetSummary(sheet){
         // 直接從 D 欄讀取值（索引 3）
         var incomeCell = targetSheet.getRange(i + 1, 4); // D 欄是第 4 列
         var incomeValue = incomeCell.getValue();
+        var incomeFormula = incomeCell.getFormula();
+        
+        // 如果有公式，強制重新計算並讀取顯示值
+        if (incomeFormula && incomeFormula.trim() !== '') {
+          var displayValue = incomeCell.getDisplayValue();
+          if (displayValue && displayValue.trim() !== '') {
+            var cleanValue = displayValue.replace(/,/g, '').trim();
+            incomeValue = parseFloat(cleanValue);
+            if (isNaN(incomeValue)) {
+              incomeValue = incomeCell.getValue(); // 回退到 getValue()
+            }
+          } else {
+            incomeValue = incomeCell.getValue();
+          }
+        }
+        
         // 確保值是數字類型
-        if (typeof incomeValue === 'number') {
+        if (typeof incomeValue === 'number' && !isNaN(incomeValue)) {
           income = incomeValue;
         } else if (typeof incomeValue === 'string' && incomeValue.trim() !== '') {
-          income = parseFloat(incomeValue) || 0;
+          var cleanValue = incomeValue.replace(/,/g, '').trim();
+          income = parseFloat(cleanValue) || 0;
         } else {
           income = 0;
         }
+        
+        // 如果讀取到的值是 0 但公式存在，且總計行之前有數據行，嘗試手動計算
+        if (income === 0 && incomeFormula && incomeFormula.trim() !== '' && i + 1 > 2) {
+          var hasIncomeData = false;
+          for (var checkRow = 2; checkRow < i + 1; checkRow++) {
+            var checkNumber = targetSheet.getRange(checkRow, 1).getValue(); // A欄編號
+            if (typeof checkNumber === 'number' && checkNumber > 0) {
+              hasIncomeData = true;
+              break;
+            }
+          }
+          
+          if (hasIncomeData) {
+            var incomeStartRow = 2;
+            var incomeSum = 0;
+            for (var r = incomeStartRow; r < i + 1; r++) {
+              var incomeRowData = targetSheet.getRange(r, 1, 1, 5).getValues()[0]; // A 到 E 欄
+              var rowNumber = incomeRowData[0];
+              if (typeof rowNumber === 'number' && rowNumber > 0) {
+                var rowCost = incomeRowData[3]; // D欄是金額（索引 3）
+                if (typeof rowCost === 'number' && !isNaN(rowCost)) {
+                  incomeSum += rowCost;
+                } else if (typeof rowCost === 'string' && rowCost.trim() !== '') {
+                  var numCost = parseFloat(rowCost.replace(/,/g, '')) || 0;
+                  incomeSum += numCost;
+                }
+              }
+            }
+            if (incomeSum !== 0) {
+              income = incomeSum;
+            }
+          }
+        }
+        
         incomeFound = true;
       }
       // Find expense total: look for "總計" in column G, get value from column K
