@@ -703,14 +703,18 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       column = 6;
       totalColumn = 11; // K欄是支出金額總計
       
-      // 先讀取舊值（用於調試，確保不會重複計算）
+      // 先讀取舊值（用於調試）
       var oldCostValue = sheet.getRange(updateRow, 11).getValue(); // K欄是金額
       var oldCostNum = parseFloat(oldCostValue) || 0;
       
-      // 先刪除舊總計行（在更新資料之前，確保總計正確）
+      // ===== 關鍵：先刪除舊總計行，然後清除舊值，再更新資料，最後重新計算總計 =====
+      // 1. 先刪除舊總計行（在更新資料之前，確保總計正確）
       RemoveSummaryRow(sheet, startRow, 7); // 刪除舊總計行（G欄）
       
-      // 確保 cost 是數字類型
+      // 2. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
+      sheet.getRange(updateRow, 11).clearContent(); // 清除 K欄金額（重要：先刪除舊值）
+      
+      // 3. 確保 cost 是數字類型
       var costValue = cost;
       if (typeof costValue === 'string') {
         costValue = parseFloat(costValue) || 0;
@@ -718,10 +722,7 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         costValue = 0;
       }
       
-      // 先清除舊資料行的金額欄位（避免公式殘留）
-      sheet.getRange(updateRow, 11).clearContent(); // 清除 K欄金額
-      
-      // 更新資料（在刪除總計行之後，避免行號變化）
+      // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
       var values = [updateRow - 2, timeOutput, category, item, costValue, note];
       sheet.getRange(updateRow, 7, 1, column).setValues([values]);
       
@@ -751,14 +752,18 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       column = 5;
       totalColumn = 4; // D欄是收入金額總計
       
-      // 先讀取舊值（用於調試，確保不會重複計算）
+      // 先讀取舊值（用於調試）
       var oldCostValue = sheet.getRange(updateRow, 4).getValue(); // D欄是金額
       var oldCostNum = parseFloat(oldCostValue) || 0;
       
-      // 先刪除舊總計行（在更新資料之前，確保總計正確）
+      // ===== 關鍵：先刪除舊總計行，然後清除舊值，再更新資料，最後重新計算總計 =====
+      // 1. 先刪除舊總計行（在更新資料之前，確保總計正確）
       RemoveSummaryRow(sheet, startRow, 1); // 刪除舊總計行（A欄）
       
-      // 確保 cost 是數字類型
+      // 2. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
+      sheet.getRange(updateRow, 4).clearContent(); // 清除 D欄金額（重要：先刪除舊值）
+      
+      // 3. 確保 cost 是數字類型
       var costValue = cost;
       if (typeof costValue === 'string') {
         costValue = parseFloat(costValue) || 0;
@@ -766,10 +771,7 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         costValue = 0;
       }
       
-      // 先清除舊資料行的金額欄位（避免公式殘留）
-      sheet.getRange(updateRow, 4).clearContent(); // 清除 D欄金額
-      
-      // 更新資料（在刪除總計行之後，避免行號變化）
+      // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
       var values = [updateRow - 2, timeOutput, item, costValue, note];
       sheet.getRange(updateRow, 1, 1, column).setValues([values]);
       
@@ -937,38 +939,50 @@ function GetSummary(sheet){
         var incomeCell = targetSheet.getRange(i + 1, 4); // D 欄是第 4 列
         var incomeValue = incomeCell.getValue();
         var incomeFormula = incomeCell.getFormula();
+        var incomeDisplayValue = incomeCell.getDisplayValue();
+        
+        // 調試：記錄讀取到的原始值
+        Logger.log('[GetSummary] 收入總計行: ' + (i + 1) + ', D欄值: ' + incomeValue + ', 公式: ' + incomeFormula + ', 顯示值: ' + incomeDisplayValue);
         
         // 如果有公式，強制重新計算並讀取顯示值
         if (incomeFormula && incomeFormula.trim() !== '') {
-          var displayValue = incomeCell.getDisplayValue();
-          if (displayValue && displayValue.trim() !== '') {
-            var cleanValue = displayValue.replace(/,/g, '').trim();
+          if (incomeDisplayValue && incomeDisplayValue.trim() !== '') {
+            var cleanValue = incomeDisplayValue.replace(/,/g, '').trim();
             incomeValue = parseFloat(cleanValue);
             if (isNaN(incomeValue)) {
               incomeValue = incomeCell.getValue(); // 回退到 getValue()
             }
+            Logger.log('[GetSummary] 從顯示值解析收入: ' + incomeValue);
           } else {
             incomeValue = incomeCell.getValue();
+            Logger.log('[GetSummary] 顯示值為空，使用 getValue(): ' + incomeValue);
           }
         }
         
         // 確保值是數字類型
         if (typeof incomeValue === 'number' && !isNaN(incomeValue)) {
           income = incomeValue;
+          Logger.log('[GetSummary] 收入（數字類型）: ' + income);
         } else if (typeof incomeValue === 'string' && incomeValue.trim() !== '') {
           var cleanValue = incomeValue.replace(/,/g, '').trim();
           income = parseFloat(cleanValue) || 0;
+          Logger.log('[GetSummary] 收入（字串解析）: ' + income);
         } else {
           income = 0;
+          Logger.log('[GetSummary] 收入設為 0（無法解析）');
         }
         
-        // 如果讀取到的值是 0 但公式存在，且總計行之前有數據行，嘗試手動計算
-        if (income === 0 && incomeFormula && incomeFormula.trim() !== '' && i + 1 > 2) {
+        // 無論讀取到的值是什麼，都嘗試手動計算收入（確保準確性）
+        // 檢查總計行之前是否有數據行
+        if (i + 1 > 2) {
           var hasIncomeData = false;
           for (var checkRow = 2; checkRow < i + 1; checkRow++) {
             var checkNumber = targetSheet.getRange(checkRow, 1).getValue(); // A欄編號
             if (typeof checkNumber === 'number' && checkNumber > 0) {
               hasIncomeData = true;
+              if (typeof Logger !== 'undefined') {
+                Logger.log('[GetSummary] 找到收入數據行: ' + checkRow);
+              }
               break;
             }
           }
@@ -976,21 +990,45 @@ function GetSummary(sheet){
           if (hasIncomeData) {
             var incomeStartRow = 2;
             var incomeSum = 0;
+            var incomeRowCount = 0;
             for (var r = incomeStartRow; r < i + 1; r++) {
               var incomeRowData = targetSheet.getRange(r, 1, 1, 5).getValues()[0]; // A 到 E 欄
               var rowNumber = incomeRowData[0];
               if (typeof rowNumber === 'number' && rowNumber > 0) {
                 var rowCost = incomeRowData[3]; // D欄是金額（索引 3）
+                if (typeof Logger !== 'undefined') {
+                  Logger.log('[GetSummary] 收入行 ' + r + ': 編號=' + rowNumber + ', 金額=' + rowCost + ' (類型: ' + typeof rowCost + ')');
+                }
                 if (typeof rowCost === 'number' && !isNaN(rowCost)) {
                   incomeSum += rowCost;
+                  incomeRowCount++;
                 } else if (typeof rowCost === 'string' && rowCost.trim() !== '') {
                   var numCost = parseFloat(rowCost.replace(/,/g, '')) || 0;
                   incomeSum += numCost;
+                  incomeRowCount++;
                 }
               }
             }
+            if (typeof Logger !== 'undefined') {
+              Logger.log('[GetSummary] 手動計算收入總計: ' + incomeSum + ' (共 ' + incomeRowCount + ' 筆記錄)');
+              Logger.log('[GetSummary] 讀取到的收入值: ' + income);
+            }
+            // 如果手動計算的結果不為 0，優先使用手動計算的結果
+            // 如果手動計算的結果為 0 但讀取到的值不為 0，使用讀取到的值
             if (incomeSum !== 0) {
               income = incomeSum;
+              if (typeof Logger !== 'undefined') {
+                Logger.log('[GetSummary] 使用手動計算的收入: ' + income);
+              }
+            } else if (income === 0 && incomeSum === 0 && incomeRowCount > 0) {
+              // 如果有數據行但計算結果為 0，可能是所有金額都是 0，這是正常的
+              if (typeof Logger !== 'undefined') {
+                Logger.log('[GetSummary] 收入數據行存在但金額總和為 0');
+              }
+            }
+          } else {
+            if (typeof Logger !== 'undefined') {
+              Logger.log('[GetSummary] 沒有找到收入數據行');
             }
           }
         }
@@ -1078,6 +1116,13 @@ function GetSummary(sheet){
 
   var total = income - expense;
   var result = [income, expense, total];
+  
+  // 調試：記錄最終結果（使用 Logger 如果可用，否則使用 console）
+  if (typeof Logger !== 'undefined') {
+    Logger.log('[GetSummary] 最終結果: income=' + income + ', expense=' + expense + ', total=' + total);
+    Logger.log('[GetSummary] 結果陣列: [' + result.join(', ') + ']');
+  }
+  
   setToCache(cacheKey, result);
   return result;
 }
@@ -1097,4 +1142,3 @@ function arrayMatch(a1, a2) {
   }
   return true;
 }
-
