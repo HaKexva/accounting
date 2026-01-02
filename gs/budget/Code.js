@@ -703,6 +703,9 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       column = 6;
       totalColumn = 11; // K欄是支出金額總計
       
+      // 先刪除舊總計行（在更新資料之前，確保總計正確）
+      RemoveSummaryRow(sheet, startRow, 7); // 刪除舊總計行（G欄）
+      
       // 確保 cost 是數字類型
       var costValue = cost;
       if (typeof costValue === 'string') {
@@ -711,12 +714,9 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         costValue = 0;
       }
       
-      // 先更新資料（在刪除總計行之前，避免行號變化）
+      // 更新資料（在刪除總計行之後，避免行號變化）
       var values = [updateRow - 2, timeOutput, category, item, costValue, note];
       sheet.getRange(updateRow, 7, 1, column).setValues([values]);
-      
-      // 更新總計行（在更新資料之後）
-      RemoveSummaryRow(sheet, startRow, 7); // 刪除舊總計行（G欄）
       
       // 找到最後一筆支出資料行（跳過總計行）
       var lastDataRow = sheet.getLastRow();
@@ -744,6 +744,9 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       column = 5;
       totalColumn = 4; // D欄是收入金額總計
       
+      // 先刪除舊總計行（在更新資料之前，確保總計正確）
+      RemoveSummaryRow(sheet, startRow, 1); // 刪除舊總計行（A欄）
+      
       // 確保 cost 是數字類型
       var costValue = cost;
       if (typeof costValue === 'string') {
@@ -752,12 +755,9 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         costValue = 0;
       }
       
-      // 先更新資料（在刪除總計行之前，避免行號變化）
+      // 更新資料（在刪除總計行之後，避免行號變化）
       var values = [updateRow - 2, timeOutput, item, costValue, note];
       sheet.getRange(updateRow, 1, 1, column).setValues([values]);
-      
-      // 更新總計行（在更新資料之後）
-      RemoveSummaryRow(sheet, startRow, 1); // 刪除舊總計行（A欄）
       
       // 找到最後一筆收入資料行（跳過總計行）
       var lastDataRow = sheet.getLastRow();
