@@ -977,6 +977,7 @@ const loadMonthData = async (sheetIndex) => {
 
   // 如果數據是陣列格式（Apps Script ShowTabData 返回 getValues()），需要轉換為物件格式
   if (Array.isArray(data)) {
+    console.log("data: "+ data)
     // 將陣列轉換為物件格式，以便與 processDataFromResponse 兼容
     // 假設陣列包含所有數據行，我們需要根據實際情況區分收入和支出
     // 由於支出頁面只處理支出數據，我們將其轉換為物件格式
