@@ -847,9 +847,13 @@ function DeleteData(sheetIndex, rangeType, number) {
   // Find row to delete
   var lastRow = sheet.getLastRow();
   var targetRow = -1;
+  // Convert number to integer for comparison (handle both string and number input)
+  var targetNumber = parseInt(number, 10);
   for (var r = startRow; r <= lastRow; r++) {
     var cellVal = sheet.getRange(r, numberCol).getValue();
-    if (cellVal === number) {
+    // Compare as numbers to handle type mismatch
+    var cellNum = parseInt(cellVal, 10);
+    if (!isNaN(cellNum) && !isNaN(targetNumber) && cellNum === targetNumber) {
       targetRow = r;
       break;
     }
