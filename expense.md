@@ -104,7 +104,6 @@ const syncFromAPI = async () => {
     // Recalculate current month index
     const closestSheetIndex = findClosestMonth();
     currentSheetIndex = closestSheetIndex;
-    console.log('[syncFromAPI] sheetNames:', sheetNames, 'currentSheetIndex:', currentSheetIndex);
 
     // 載入當前月份的最新資料
     const currentMonthData = await loadMonthData(currentSheetIndex);
@@ -136,7 +135,6 @@ const syncFromAPI = async () => {
     // Background preload budgets for other months
     const budgetSheetIndices = sheetNames.map((name, idx) => idx + 2);
     const otherBudgetIndices = budgetSheetIndices.filter(sheetIndex => sheetIndex !== currentSheetIndex);
-    console.log('[syncFromAPI] preloading budgets for sheetIndices:', otherBudgetIndices);
     const budgetPromises = otherBudgetIndices.map(sheetIndex => loadBudgetForMonth(sheetIndex).catch(() => {}));
 
     Promise.all(budgetPromises).then(() => {
@@ -602,10 +600,8 @@ const budgetTotals = {};
 
 // 載入預算表中指定月份的資料，並先把每個類別的預算加總好存起來
 async function loadBudgetForMonth(sheetIndex) {
-  console.log('[loadBudgetForMonth] called with sheetIndex:', sheetIndex);
   // Return from cache if available
   if (budgetTotals[sheetIndex]) {
-    console.log('[loadBudgetForMonth] returning cached data for sheetIndex:', sheetIndex);
     return budgetTotals[sheetIndex];
   }
 
@@ -653,14 +649,12 @@ async function loadBudgetForMonth(sheetIndex) {
       // 只處理包含「支出」字樣的命名範圍（例如：當月支出預算202512）
       const isExpenseBudget = key.includes('支出');
       if (!isExpenseBudget) {
-        console.log("key: "+ key + " is not expense budget")
         skippedRowsReasons.notExpenseBudget++;
         return;
       }
 
       rows.forEach((row, rowIndex) => {
         if (!row || row.length === 0) {
-          console.log("key: "+ key + " row is empty")
           skippedRowsReasons.emptyRow++;
           return;
         }
@@ -676,7 +670,6 @@ async function loadBudgetForMonth(sheetIndex) {
         if (firstCellStr === '編號' || firstCellStr === '總計' ||
             firstCellStr.toLowerCase() === '編號' || firstCellStr.toLowerCase() === '總計' ||
             firstCellStr.includes('編號') || firstCellStr.includes('總計')) {
-          console.log("key: "+ key + " first cell is header or total")
           skippedRowsReasons.headerOrTotal++;
           return;
         }
@@ -699,12 +692,10 @@ async function loadBudgetForMonth(sheetIndex) {
         const cost = parseFloat(costRaw);
 
         if (!category) {
-          console.log("key: "+ key + " category is empty")
           skippedRowsReasons.noCategory++;
           return;
         }
         if (!Number.isFinite(cost)) {
-          console.log("key: "+ key + " cost is invalid")
           skippedRowsReasons.invalidCost++;
           return;
         }
@@ -715,7 +706,6 @@ async function loadBudgetForMonth(sheetIndex) {
         const budgetKey = category; // 只用 category 作為 key
         const oldTotal = categoryTotals[budgetKey] || 0;
         categoryTotals[budgetKey] = oldTotal + cost;
-        console.log('key:' + key + ' budget:' + budgetKey, 'oldTotal:' + oldTotal, 'cost:' + cost);
         processedRowsCount++;
       });
     });
@@ -3706,7 +3696,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Load budget cache - but verify it has correct month data
         if (cachedBudgetTotals && cachedBudgetTotals[currentSheetIndex]) {
           const monthName = sheetNames[currentSheetIndex - 2] || '';
-          console.log('[initCache] loading cached budgetTotals for sheetIndex:', currentSheetIndex, 'monthName:', monthName, 'cachedKeys:', Object.keys(cachedBudgetTotals[currentSheetIndex]));
           // Clear stale cache - force fresh load from API
           // budgetTotals[currentSheetIndex] = cachedBudgetTotals[currentSheetIndex];
         }
