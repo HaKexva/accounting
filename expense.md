@@ -1326,19 +1326,19 @@ const loadContent = async (forceReload = false) => {
 };
 
 
-const loadTotal = async () => {
+const loadTotal = async (forceRefresh = false) => {
   // 驗證 currentSheetIndex 是否有效
   if (!Number.isFinite(currentSheetIndex) || currentSheetIndex < 2) {
     currentSheetIndex = 2; // 預設為第三個分頁
   }
 
-  // 優先從預算快取讀取（預算表來源）
-  if (budgetTotals[currentSheetIndex]) {
+  // 優先從預算快取讀取（預算表來源），除非強制刷新
+  if (!forceRefresh && budgetTotals[currentSheetIndex]) {
     updateTotalDisplay();
     return;
   }
 
-  // 如果快取中沒有，則向「預算表」發送請求並彙總同類別預算
+  // 向「預算表」發送請求並彙總同類別預算
   try {
     await loadBudgetForMonth(currentSheetIndex);
     updateTotalDisplay();
@@ -1834,8 +1834,8 @@ const saveData = async () => {
       setToIDB(`monthData_${currentSheetIndex}`, allMonthsData[currentSheetIndex]).catch(() => {});
     }
 
-    // 更新總計顯示（確保預算資料已載入）
-    await loadTotal();
+    // 更新總計顯示（強制從 API 重新載入）
+    await loadTotal(true);
 
     // 儲存完成後清空表單，準備下一筆新增
     clearForm();
