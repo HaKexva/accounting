@@ -1784,10 +1784,10 @@ const updateDivVisibility = (forceType = null) => {
 const saveData = async () => {
   // 鎖定整個頁面，等待後端回傳
   showSpinner();
-  saveButton.textContent = '儲存中...';
-  saveButton.disabled = true;
-  saveButton.style.opacity = '0.6';
-  saveButton.style.cursor = 'not-allowed';
+  mainSaveButton.textContent = '儲存中...';
+  mainSaveButton.disabled = true;
+  mainSaveButton.style.opacity = '0.6';
+  mainSaveButton.style.cursor = 'not-allowed';
 
   // 禁用所有輸入和按鈕
   const itemInput = document.getElementById('item-input');
@@ -1844,10 +1844,10 @@ const saveData = async () => {
   } finally {
     // 恢復所有按鈕和輸入
     hideSpinner();
-    saveButton.textContent = '儲存';
-    saveButton.disabled = false;
-    saveButton.style.opacity = '1';
-    saveButton.style.cursor = 'pointer';
+    mainSaveButton.textContent = '儲存';
+    mainSaveButton.disabled = false;
+    mainSaveButton.style.opacity = '1';
+    mainSaveButton.style.cursor = 'pointer';
 
     if (itemInput) itemInput.disabled = false;
     if (expenseCategorySelect) expenseCategorySelect.disabled = false;
@@ -2208,7 +2208,7 @@ function createHistoryItem(record, listElement) {
     if (actualCostInput) actualCostInput.disabled = true;
     if (recordCostInput) recordCostInput.disabled = true;
     if (noteInput) noteInput.disabled = true;
-    if (saveButton) saveButton.disabled = true;
+    if (mainSaveButton) mainSaveButton.disabled = true;
     if (historyButton) historyButton.disabled = true;
 
     try {
@@ -2236,7 +2236,7 @@ function createHistoryItem(record, listElement) {
       if (actualCostInput) actualCostInput.disabled = false;
       if (recordCostInput) recordCostInput.disabled = false;
       if (noteInput) noteInput.disabled = false;
-      if (saveButton) saveButton.disabled = false;
+      if (mainSaveButton) mainSaveButton.disabled = false;
       if (historyButton) historyButton.disabled = false;
     }
   };
@@ -2988,23 +2988,23 @@ function showEditModal(record) {
   }, 100); // 等待 DOM 完全渲染後再填充
 
   // 儲存按鈕
-  const saveBtn = document.createElement('button');
-  saveBtn.textContent = '儲存';
-  saveBtn.className = 'save-button';
-  saveBtn.style.cssText = `
+  const editModalSaveButton = document.createElement('button');
+  editModalSaveButton.textContent = '儲存';
+  editModalSaveButton.className = 'save-button';
+  editModalSaveButton.style.cssText = `
     margin-top: 20px;
     width: 100%;
   `;
 
   let isSaving = false;
-  saveBtn.onclick = async () => {
+  editModalSaveButton.onclick = async () => {
     if (isSaving) return;
     isSaving = true;
 
     // 鎖定整個頁面，等待後端回傳
     showSpinner();
-    saveBtn.textContent = '儲存中...';
-    saveBtn.disabled = true;
+    editModalSaveButton.textContent = '儲存中...';
+    editModalSaveButton.disabled = true;
 
     // 禁用所有輸入和按鈕
     const editItemInput = document.getElementById('edit-item-input');
@@ -3045,7 +3045,7 @@ function showEditModal(record) {
     if (actualCostInput) actualCostInput.disabled = true;
     if (recordCostInput) recordCostInput.disabled = true;
     if (noteInput) noteInput.disabled = true;
-    if (saveButton) saveButton.disabled = true;
+    if (mainSaveButton) mainSaveButton.disabled = true;
     if (historyButton) historyButton.disabled = true;
 
     try {
@@ -3082,8 +3082,8 @@ function showEditModal(record) {
       // 恢復所有按鈕和輸入
       hideSpinner();
       isSaving = false;
-      saveBtn.textContent = '儲存';
-      saveBtn.disabled = false;
+      editModalSaveButton.textContent = '儲存';
+      editModalSaveButton.disabled = false;
 
       // 恢復編輯 modal 的輸入
       if (editItemInput) editItemInput.disabled = false;
@@ -3106,7 +3106,7 @@ function showEditModal(record) {
       if (actualCostInput) actualCostInput.disabled = false;
       if (recordCostInput) recordCostInput.disabled = false;
       if (noteInput) noteInput.disabled = false;
-      if (saveButton) saveButton.disabled = false;
+      if (mainSaveButton) mainSaveButton.disabled = false;
       if (historyButton) historyButton.disabled = false;
     }
   };
@@ -3114,7 +3114,7 @@ function showEditModal(record) {
   content.appendChild(closeBtn);
   content.appendChild(title);
   content.appendChild(formContainer);
-  content.appendChild(saveBtn);
+  content.appendChild(editModalSaveButton);
   modal.appendChild(content);
 
   // 點擊背景關閉編輯視窗，返回歷史記錄列表
@@ -3559,9 +3559,9 @@ itemContainer.appendChild(actualCostRow);
 itemContainer.appendChild(recordCostRow);
 itemContainer.appendChild(noteRow);
 
-const saveButton = document.createElement('button');
-saveButton.textContent = '儲存';
-saveButton.className = 'save-button';
+const mainSaveButton = document.createElement('button');
+mainSaveButton.textContent = '儲存';
+mainSaveButton.className = 'save-button';
 
 const columnsContainer = document.createElement('div');
 columnsContainer.className = 'columns-container';
@@ -3666,10 +3666,10 @@ totalContainer.appendChild(columnsContainer);
 
 budgetCardsContainer.appendChild(itemContainer);
 budgetCardsContainer.appendChild(submitContainer);
-  submitContainer.appendChild(saveButton);
+  submitContainer.appendChild(mainSaveButton);
 
-saveButton.addEventListener('click', saveData);
-saveButton.addEventListener('click', loadTotal);
+mainSaveButton.addEventListener('click', saveData);
+mainSaveButton.addEventListener('click', loadTotal);
 
 document.addEventListener('DOMContentLoaded', async function() {
   // 顯示進度條載入下拉選單（第一個請求）
