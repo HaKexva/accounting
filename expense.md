@@ -645,6 +645,7 @@ async function loadBudgetForMonth(sheetIndex) {
 
   if (data && typeof data === 'object') {
     Object.keys(data).forEach(key => {
+      console.log("Key: "+ key)
       const rows = data[key] || [];
 
       // 只處理包含「支出」字樣的命名範圍（例如：當月支出預算202512）
@@ -653,7 +654,7 @@ async function loadBudgetForMonth(sheetIndex) {
         skippedRowsReasons.notExpenseBudget++;
         return;
       }
-      
+
       rows.forEach((row, rowIndex) => {
         if (!row || row.length === 0) {
           skippedRowsReasons.emptyRow++;
@@ -662,19 +663,19 @@ async function loadBudgetForMonth(sheetIndex) {
 
         const firstCell = row[0];
         const firstCellStr = String(firstCell || '').trim();
-        
+
         // 跳過標題列與總計列
         // 預算格式：[編號, 時間, category, item, cost, note]
         // 標題行的 firstCell 可能是 "編號" 或其他標題文字
         // 總計行的 firstCell 可能是 "總計" 或其他總計標記
         // 數據行的 firstCell 通常是數字（編號）或空字串
-        if (firstCellStr === '編號' || firstCellStr === '總計' || 
+        if (firstCellStr === '編號' || firstCellStr === '總計' ||
             firstCellStr.toLowerCase() === '編號' || firstCellStr.toLowerCase() === '總計' ||
             firstCellStr.includes('編號') || firstCellStr.includes('總計')) {
           skippedRowsReasons.headerOrTotal++;
           return;
         }
-        
+
         // 如果 firstCell 是數字，表示這是有效的資料行（編號）
         // 如果 firstCell 是空字串或 null/undefined，也可能是有效的資料行（允許空編號）
         // 繼續處理
@@ -839,7 +840,7 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
   // 根據目前選擇的類型過濾記錄（預設顯示支出）
   if (shouldFilter) {
     filterRecordsByType('支出'); // 現在只有支出
-    
+
     // 支出頁面只有新增模式，不需要顯示歷史記錄
     if (filteredRecords.length >= 1) {
       isNewMode = true;
@@ -854,7 +855,7 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
 const updateTotalDisplay = () => {
   const recordCostInput = document.getElementById('record-cost-input');
   const expenseCategorySelect = document.getElementById('expense-category-select');
-  
+
   // 獲取當前選擇的類別
   const selectedCategory = expenseCategorySelect ? expenseCategorySelect.value : '';
   // 如果沒有選擇類別，顯示 0
@@ -886,13 +887,13 @@ const updateTotalDisplay = () => {
 
     historyExpense = records.reduce((sum, r) => {
       const row = r.row || [];
-      
+
       // 檢查類別是否匹配（類別在 index 2）
       const recordCategory = (row[2] || '').toString().trim();
       if (recordCategory !== selectedCategory) {
         return sum; // 跳過不同類別的記錄
       }
-      
+
       // 使用列帳金額（index 8）
       const raw = row[8] !== undefined && row[8] !== null && row[8] !== '' ? row[8] : 0;
       const num = parseFloat(raw) || 0;
@@ -917,7 +918,7 @@ const updateTotalDisplay = () => {
       liveInput = parseFloat(recordCostInput.value) || 0;
     }
   }
-  
+
   const expense = historyExpense + liveInput;
 
   // 3. 餘額：預算 - 支出
@@ -2025,18 +2026,18 @@ async function showMonthSelect() {
       const referenceYear = 2025;
       const referenceMonth = 12;
       const referenceIndex = 3;
-      
+
       // 計算目標月份與參考月份的月份差
       const calculateMonthDiff = (targetYear, targetMonth) => {
         return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
       };
-      
+
       // 從月份名稱（例如 "202601"）提取年份和月份
       const yearNum = parseInt(month.substring(0, 4));
       const monthNum = parseInt(month.substring(4, 6));
       const monthDiff = calculateMonthDiff(yearNum, monthNum);
       const sheetIndex = referenceIndex + monthDiff;
-      
+
       option.value = sheetIndex;
       option.textContent = month;
       option.dataset.monthName = month; // 儲存月份名稱以便調試
@@ -3875,7 +3876,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           const monthNum = parseInt(month.substring(4, 6));
           const monthDiff = calculateMonthDiff(yearNum, monthNum);
           const sheetIndex = referenceIndex + monthDiff;
-          
+
           option.value = sheetIndex;
           option.textContent = month;
           option.dataset.monthName = month;

@@ -132,16 +132,16 @@ jobs:
 
           if [ -n "$BUDGET_URL" ]; then
             # Update baseBudget in all .md files
-            sed -i "s|const baseBudget.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseBudget = \"$BUDGET_URL\"|g" 預算表.md
-            sed -i "s|const baseBudget.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseBudget  = \"$BUDGET_URL\"|g" 支出.md
-            sed -i "s|const baseBudget.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseBudget  = \"$BUDGET_URL\"|g" 設定.md
+            sed -i "s|const baseBudget.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseBudget = \"$BUDGET_URL\"|g" budget.md
+            sed -i "s|const baseBudget.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseBudget  = \"$BUDGET_URL\"|g" expense.md
+            sed -i "s|const baseBudget.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseBudget  = \"$BUDGET_URL\"|g" setting.md
           fi
 
           if [ -n "$EXPENSE_URL" ]; then
             # Update baseExpense in all .md files
-            sed -i "s|const baseExpense.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseExpense = \"$EXPENSE_URL\"|g" 預算表.md
-            sed -i "s|const baseExpense.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseExpense = \"$EXPENSE_URL\"|g" 支出.md
-            sed -i "s|const baseExpense.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseExpense = \"$EXPENSE_URL\"|g" 設定.md
+            sed -i "s|const baseExpense.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseExpense = \"$EXPENSE_URL\"|g" budget.md
+            sed -i "s|const baseExpense.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseExpense = \"$EXPENSE_URL\"|g" expense.md
+            sed -i "s|const baseExpense.*=.*\"https://script.google.com/macros/s/[^\"]*\"|const baseExpense = \"$EXPENSE_URL\"|g" setting.md
           fi
 
       - name: Commit and push URL updates
