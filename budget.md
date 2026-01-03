@@ -28,6 +28,7 @@ let monthSelectChangeHandler = null; // 儲存月份選擇事件處理器，用�
 let currentAbortController = null; // 用於取消正在進行的請求
 let timeUpdateInterval = null; // 用於更新新增模式的時間
 let hasUnsavedChanges = false; // 追蹤是否有未儲存的變更
+let originalValues = null; // 儲存原始值，用於比較是否有變更
 
 // ===== 使用共用快取模組 (SyncStatus) =====
 // 使用 SyncStatus 模組的快取功能 (定義在 assets/sync-status.js)
@@ -300,6 +301,8 @@ function enterNewModeIfEmpty() {
   if (noteInput) noteInput.value = '';
   updateDeleteButton();
   updateArrowButtons();
+  // 儲存空值作為原始值（新增模式）
+  storeOriginalValues();
 }
 
 // 根據目前選擇的類型過濾記錄
@@ -562,10 +565,6 @@ function showRecord(index) {
           // 如果是空字符串或 null/undefined，顯示空字符串
           costInput.value = '';
         }
-        // 強制觸發 input 事件，確保值已設定
-        if (costInput.value !== undefined && costInput.value !== null) {
-          costInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
         // 再次確認值是否正確設定
       } else {
       }
@@ -574,6 +573,9 @@ function showRecord(index) {
 
     // 更新箭頭按鈕狀態
     updateArrowButtons();
+    
+    // 儲存原始值（在輸入欄位設定完成後）
+    storeOriginalValues();
   }, 150);
 }
 
@@ -1619,9 +1621,9 @@ const createInputRow = (labelText, inputId, inputType = 'text') => {
   input.name = inputId; // 添加 name 屬性以支持自動填充
   input.type = inputType;
   
-  // 添加輸入變化監聽器，標記為已變更
+  // 添加輸入變化監聽器，檢查是否有實際變更
   input.addEventListener('input', () => {
-    markAsChanged();
+    checkForChanges();
   });
 
   row.appendChild(label);
@@ -1642,9 +1644,9 @@ const createTextareaRow = (labelText, textareaId, rows = 3) => {
   textarea.name = textareaId; // 添加 name 屬性以支持自動填充
   textarea.rows = rows;
   
-  // 添加輸入變化監聽器，標記為已變更
+  // 添加輸入變化監聽器，檢查是否有實際變更
   textarea.addEventListener('input', () => {
-    markAsChanged();
+    checkForChanges();
   });
 
   row.appendChild(label);
@@ -1698,7 +1700,7 @@ const createSelectRow = (labelText, selectId, options) => {
       dropdown.style.display = 'none';
       selectArrow.style.transform = 'rotate(0deg)';
       hiddenSelect.dispatchEvent(new Event('change'));
-      markAsChanged(); // 標記為已變更
+      checkForChanges(); // 檢查是否有實際變更
     });
 
     dropdown.appendChild(option);
@@ -1792,7 +1794,7 @@ const updateDivVisibility = (forceType = null) => {
       // 添加新的監聽器
       newCostInput.addEventListener('input', () => {
         updateTotalDisplay(); // 不傳參數，使用即時計算
-        markAsChanged(); // 標記為已變更
+        checkForChanges(); // 檢查是否有實際變更
       });
     }
   }, 100);
@@ -2098,6 +2100,7 @@ const saveData = async () => {
       // 總計更新完成後，才還原按鈕狀態
       saveButton.textContent = '儲存';
       markAsSaved(); // 標記為已儲存，禁用按鈕
+      storeOriginalValues(); // 儲存當前值作為新的原始值
       alreadyReset = true;
     } else {
       const errorMessage = result.message || result.error || '未知錯誤';
@@ -2809,6 +2812,86 @@ const markAsSaved = () => {
     saveButton.disabled = true;
     saveButton.style.opacity = '0.5';
     saveButton.style.cursor = 'not-allowed';
+  }
+};
+
+// 儲存當前輸入值作為原始值（用於比較是否有變更）
+const storeOriginalValues = () => {
+  const itemInput = document.getElementById('item-input');
+  const costInput = document.getElementById('cost-input');
+  const noteInput = document.getElementById('note-input');
+  const categorySelectElement = document.getElementById('expense-category-select');
+  const categorySelect = document.getElementById('category-select');
+  
+  originalValues = {
+    item: itemInput ? itemInput.value : '',
+    cost: costInput ? costInput.value : '',
+    note: noteInput ? noteInput.value : '',
+    expenseCategory: categorySelectElement ? categorySelectElement.value : '',
+    category: categorySelect ? categorySelect.value : ''
+  };
+};
+
+// 檢查是否有變更，根據結果啟用/禁用儲存按鈕
+const checkForChanges = () => {
+  // 新增模式：任何輸入都視為變更
+  if (isNewMode) {
+    const itemInput = document.getElementById('item-input');
+    const costInput = document.getElementById('cost-input');
+    const noteInput = document.getElementById('note-input');
+    
+    // 檢查是否有任何有效輸入
+    const hasInput = (itemInput && itemInput.value.trim() !== '') ||
+                     (costInput && costInput.value.trim() !== '') ||
+                     (noteInput && noteInput.value.trim() !== '');
+    
+    if (hasInput) {
+      markAsChanged();
+    } else {
+      hasUnsavedChanges = false;
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.style.opacity = '0.5';
+        saveButton.style.cursor = 'not-allowed';
+      }
+    }
+    return;
+  }
+  
+  // 編輯模式：比較當前值與原始值
+  if (!originalValues) {
+    return;
+  }
+  
+  const itemInput = document.getElementById('item-input');
+  const costInput = document.getElementById('cost-input');
+  const noteInput = document.getElementById('note-input');
+  const categorySelectElement = document.getElementById('expense-category-select');
+  const categorySelect = document.getElementById('category-select');
+  
+  const currentItem = itemInput ? itemInput.value : '';
+  const currentCost = costInput ? costInput.value : '';
+  const currentNote = noteInput ? noteInput.value : '';
+  const currentExpenseCategory = categorySelectElement ? categorySelectElement.value : '';
+  const currentCategory = categorySelect ? categorySelect.value : '';
+  
+  // 比較是否有任何欄位變更
+  const hasChanges = 
+    currentItem !== originalValues.item ||
+    currentCost !== originalValues.cost ||
+    currentNote !== originalValues.note ||
+    currentExpenseCategory !== originalValues.expenseCategory ||
+    currentCategory !== originalValues.category;
+  
+  if (hasChanges) {
+    markAsChanged();
+  } else {
+    hasUnsavedChanges = false;
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.style.opacity = '0.5';
+      saveButton.style.cursor = 'not-allowed';
+    }
   }
 };
 

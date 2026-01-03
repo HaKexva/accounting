@@ -522,7 +522,7 @@ function CreateNewTab() {
   if (sheetNames.includes(year.toString() + month.toString())) {
     return { success: false, message: 'Next month spreadsheet already created, please do not add again' };
   } else {
-    var destination = SpreadsheetApp.openById('1G-c8fzN38vH02Eu8izCc9TpGAiPQBMYH-z3tUB_4tVM');
+    var destination = SpreadsheetApp.openById('1P5RtR3fYgSVfvCjY5ryLqEfYU4jEvsacNsSg_1LAdQg');
     targetSheet.copyTo(destination);
     var copyName = ss.getSheetByName('「空白表」的副本');
     copyName.setName(year + month.toString());
