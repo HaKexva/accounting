@@ -630,16 +630,18 @@ const findRecordInData = (data, recordNumber, recordType) => {
 
 // 處理從 Apps Script 回傳的資料（用於更新 allRecords）
 const processDataFromResponse = (data, shouldFilter = true) => {
+  // 調試：記錄載入的資料
+  const monthIndex = currentSheetIndex - 2;
+  const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '未知';
+  console.log(`[預算] 載入月份: ${currentMonthName} (sheetIndex: ${currentSheetIndex})`);
+  console.log('[預算] 原始資料:', data);
+  
   // 先清空目前的記錄
   allRecords = [];
 
   if (!data) {
     return;
   }
-
-  // 獲取當前月份名稱
-  const monthIndex = currentSheetIndex - 2;
-  const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
 
   // 使用 Set 追蹤已處理的記錄，避免重複
   const processedRecords = new Set();
@@ -776,7 +778,18 @@ const processDataFromResponse = (data, shouldFilter = true) => {
       });
     });
     
-    // 調試日誌：顯示處理的記錄數量
+    // 調試：記錄處理完成的資料
+    console.log(`[預算] 處理完成，共 ${allRecords.length} 筆記錄`);
+    if (allRecords.length > 0) {
+      console.log('[預算] 記錄列表:', allRecords.map(r => ({
+        type: r.type,
+        編號: r.row[0],
+        時間: r.row[1],
+        類別: r.type === '預計支出' ? r.row[2] : '收入',
+        項目: r.type === '預計支出' ? r.row[3] : r.row[2],
+        金額: r.type === '預計支出' ? r.row[4] : r.row[3]
+      })));
+    }
   } else if (Array.isArray(data)) {
     // 如果資料是陣列格式，嘗試轉換為物件格式
     // 這種情況應該很少見，因為預算表使用命名範圍格式

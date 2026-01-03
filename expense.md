@@ -735,6 +735,13 @@ async function loadBudgetForMonth(sheetIndex) {
 
 // 處理從 Apps Script 回傳的資料（用於更新 allRecords）
 const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext = null) => {
+  // 調試：記錄載入的資料
+  const effectiveIdx = (sheetIndexForContext !== undefined && sheetIndexForContext !== null) ? sheetIndexForContext : currentSheetIndex;
+  const monthIdx = effectiveIdx - 2;
+  const monthName = (monthIdx >= 0 && monthIdx < sheetNames.length) ? sheetNames[monthIdx] : '未知';
+  console.log(`[支出] 載入月份: ${monthName} (sheetIndex: ${effectiveIdx})`);
+  console.log('[支出] 原始資料:', data);
+  
   // 先清空目前的記錄
   allRecords = [];
 
@@ -865,6 +872,18 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
         allRecords.push({ type, row });
       });
     });
+  }
+
+  // 調試：記錄處理完成的資料
+  console.log(`[支出] 處理完成，共 ${allRecords.length} 筆記錄`);
+  if (allRecords.length > 0) {
+    console.log('[支出] 記錄列表:', allRecords.map(r => ({
+      type: r.type,
+      時間: r.row[0],
+      項目: r.row[1],
+      類別: r.row[2],
+      金額: r.row[8]
+    })));
   }
 
   // 根據目前選擇的類型過濾記錄（預設顯示支出）
