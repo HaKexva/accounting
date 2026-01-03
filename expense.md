@@ -95,12 +95,13 @@ const syncFromAPI = async () => {
         await callAPI({ name: "Create Tab" });
         await loadMonthNames();
         setToIDB('sheetNames', sheetNames).catch(() => {});
+        setToIDB('hasInvalidFirstTwoSheets', hasInvalidFirstTwoSheets).catch(() => {});
       } catch (e) {
         // 建立失敗，稍後再試
       }
     }
 
-    // 重新計算當前月份索引
+    // 重新計算當前月份索引（確保使用最新的 sheetNames 和 hasInvalidFirstTwoSheets）
     const closestSheetIndex = findClosestMonth();
     currentSheetIndex = closestSheetIndex;
 
@@ -2019,8 +2020,23 @@ async function showMonthSelect() {
   } else {
     months.forEach((month, index) => {
       const option = document.createElement('option');
-      // sheetIndex 的計算：無論如何，月份的 sheet index 都是從 2 開始（因為前兩個是空白表和下拉選單）
-      const sheetIndex = index + 2;
+      // sheetIndex 的計算：使用參考點 202512=index3 來推算
+      // 參考點：202512 = index 3
+      const referenceYear = 2025;
+      const referenceMonth = 12;
+      const referenceIndex = 3;
+      
+      // 計算目標月份與參考月份的月份差
+      const calculateMonthDiff = (targetYear, targetMonth) => {
+        return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
+      };
+      
+      // 從月份名稱（例如 "202601"）提取年份和月份
+      const yearNum = parseInt(month.substring(0, 4));
+      const monthNum = parseInt(month.substring(4, 6));
+      const monthDiff = calculateMonthDiff(yearNum, monthNum);
+      const sheetIndex = referenceIndex + monthDiff;
+      
       option.value = sheetIndex;
       option.textContent = month;
       option.dataset.monthName = month; // 儲存月份名稱以便調試
@@ -2228,23 +2244,52 @@ function loadHistoryListFromCache(sheetIndex) {
 }
 
 // 找到最接近的月份（當前月份或最新月份）
+// 使用參考點：202512 = index 3，從此開始推算
 function findClosestMonth() {
-  if (sheetNames.length === 0) return 2; // 預設為第一個月份
-
   // 根據現在的年月選擇最接近的月份
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const currentMonthStr = `${currentYear}${String(currentMonth).padStart(2, '0')}`;
 
-  // 先嘗試找到當前月份
-  const currentIndex = sheetNames.findIndex(name => name === currentMonthStr);
-  if (currentIndex !== -1) {
-    return currentIndex + 2;
+  // 參考點：202512 = index 3
+  const referenceYear = 2025;
+  const referenceMonth = 12;
+  const referenceIndex = 3;
+
+  // 計算目標月份與參考月份的月份差
+  const calculateMonthDiff = (targetYear, targetMonth) => {
+    return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
+  };
+
+  // 計算當前月份的索引
+  const currentYearNum = parseInt(currentMonthStr.substring(0, 4));
+  const currentMonthNum = parseInt(currentMonthStr.substring(4, 6));
+  const currentMonthDiff = calculateMonthDiff(currentYearNum, currentMonthNum);
+  const calculatedIndex = referenceIndex + currentMonthDiff;
+
+  // 確保索引不小於 2（因為前兩個是「空白表」和「下拉選單」）
+  if (calculatedIndex < 2) {
+    return 2;
   }
 
-  // 如果找不到當前月份，返回最新的月份（最後一個）
-  return sheetNames.length + 1; // 最後一個月份的 sheetIndex
+  // 如果 sheetNames 有資料，驗證計算出的索引是否在有效範圍內
+  if (sheetNames.length > 0) {
+    // 檢查計算出的索引對應的月份是否存在於 sheetNames 中
+    // 如果不存在，嘗試在 sheetNames 中找到當前月份
+    const currentIndex = sheetNames.findIndex(name => name === currentMonthStr);
+    if (currentIndex !== -1) {
+      // 如果 hasInvalidFirstTwoSheets 為 true，表示 sheetNames 已經跳過了前兩個無效項目
+      // 所以索引需要加上 2
+      // 如果 hasInvalidFirstTwoSheets 為 false，表示 sheetNames 包含所有數據
+      // 所以索引就是 currentIndex（從 0 開始）
+      const sheetIndex = hasInvalidFirstTwoSheets ? currentIndex + 2 : currentIndex;
+      // 如果計算出的索引和從 sheetNames 找到的索引不一致，使用計算出的索引（因為計算更準確）
+      return calculatedIndex;
+    }
+  }
+
+  return calculatedIndex;
 }
 
 // 顯示歷史紀錄彈出視窗（包含月份選擇）
@@ -3802,6 +3847,48 @@ saveButton.addEventListener('click', loadTotal);
 document.addEventListener('DOMContentLoaded', async function() {
   // 顯示進度條載入下拉選單（第一個請求）
   showSpinner();
+
+  // 一進到頁面就發送 Create Tab
+  try {
+    await callAPI({ name: "Create Tab" });
+    // 發送 Create Tab 後，重新載入月份列表
+    await loadMonthNames();
+    setToIDB('sheetNames', sheetNames).catch(() => {});
+    setToIDB('hasInvalidFirstTwoSheets', hasInvalidFirstTwoSheets).catch(() => {});
+    // 如果月份選擇下拉選單已經打開，更新它
+    const existingModal = document.querySelector('.month-select-modal');
+    if (existingModal) {
+      // 如果月份選擇彈出視窗已經打開，重新載入月份列表並更新選項
+      const select = existingModal.querySelector('#month-select');
+      if (select) {
+        select.innerHTML = '';
+        sheetNames.forEach((month) => {
+          const option = document.createElement('option');
+          // 使用參考點 202512=index3 來推算
+          const referenceYear = 2025;
+          const referenceMonth = 12;
+          const referenceIndex = 3;
+          const calculateMonthDiff = (targetYear, targetMonth) => {
+            return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
+          };
+          const yearNum = parseInt(month.substring(0, 4));
+          const monthNum = parseInt(month.substring(4, 6));
+          const monthDiff = calculateMonthDiff(yearNum, monthNum);
+          const sheetIndex = referenceIndex + monthDiff;
+          
+          option.value = sheetIndex;
+          option.textContent = month;
+          option.dataset.monthName = month;
+          if (sheetIndex === currentSheetIndex) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      }
+    }
+  } catch (e) {
+    // 建立失敗，忽略錯誤（可能已經存在）
+  }
 
   // ===== 新的載入流程：先從 IndexedDB 快取載入，再背景同步 =====
   let loadedFromCache = false;

@@ -3617,6 +3617,13 @@ document.addEventListener('DOMContentLoaded', async function() {
   // 立即顯示載入動畫，讓用戶知道頁面正在載入
   showSpinner();
 
+  // 一進到頁面就發送 Create Tab
+  try {
+    await callAPI({ name: "Create Tab" });
+  } catch (e) {
+    // 建立失敗，忽略錯誤（可能已經存在）
+  }
+
   document.getElementsByClassName('post-content')[0].appendChild(totalContainer);
   document.getElementsByClassName('post-content')[0].appendChild(budgetCardsContainer);
 
