@@ -101,9 +101,10 @@ const syncFromAPI = async () => {
       }
     }
 
-    // 重新計算當前月份索引（確保使用最新的 sheetNames 和 hasInvalidFirstTwoSheets）
+    // Recalculate current month index
     const closestSheetIndex = findClosestMonth();
     currentSheetIndex = closestSheetIndex;
+    console.log('[syncFromAPI] sheetNames:', sheetNames, 'currentSheetIndex:', currentSheetIndex);
 
     // 載入當前月份的最新資料
     const currentMonthData = await loadMonthData(currentSheetIndex);
@@ -132,11 +133,11 @@ const syncFromAPI = async () => {
       })
       .catch(() => {});
 
-    // 背景預載其他月份的預算（並行載入）
-    const budgetPromises = sheetNames
-      .map((name, idx) => idx + 2)
-      .filter(sheetIndex => sheetIndex !== currentSheetIndex)
-      .map(sheetIndex => loadBudgetForMonth(sheetIndex).catch(() => {}));
+    // Background preload budgets for other months
+    const budgetSheetIndices = sheetNames.map((name, idx) => idx + 2);
+    const otherBudgetIndices = budgetSheetIndices.filter(sheetIndex => sheetIndex !== currentSheetIndex);
+    console.log('[syncFromAPI] preloading budgets for sheetIndices:', otherBudgetIndices);
+    const budgetPromises = otherBudgetIndices.map(sheetIndex => loadBudgetForMonth(sheetIndex).catch(() => {}));
 
     Promise.all(budgetPromises).then(() => {
       setToIDB('budgetTotals', budgetTotals).catch(() => {});
@@ -601,8 +602,10 @@ const budgetTotals = {};
 
 // 載入預算表中指定月份的資料，並先把每個類別的預算加總好存起來
 async function loadBudgetForMonth(sheetIndex) {
-  // 如果已經有快取，直接返回
+  console.log('[loadBudgetForMonth] called with sheetIndex:', sheetIndex);
+  // Return from cache if available
   if (budgetTotals[sheetIndex]) {
+    console.log('[loadBudgetForMonth] returning cached data for sheetIndex:', sheetIndex);
     return budgetTotals[sheetIndex];
   }
 
@@ -981,7 +984,6 @@ const loadMonthData = async (sheetIndex) => {
 
   // 如果數據是陣列格式（Apps Script ShowTabData 返回 getValues()），需要轉換為物件格式
   if (Array.isArray(data)) {
-    console.log("data: "+ data)
     // 將陣列轉換為物件格式，以便與 processDataFromResponse 兼容
     // 假設陣列包含所有數據行，我們需要根據實際情況區分收入和支出
     // 由於支出頁面只處理支出數據，我們將其轉換為物件格式
@@ -3629,232 +3631,6 @@ budgetCardsContainer.appendChild(submitContainer);
 
 saveButton.addEventListener('click', saveData);
 saveButton.addEventListener('click', loadTotal);
-
-// 為下拉選單容器添加防止回彈（主頁面由 CSS 處理）
-// (function() {
-//   // 檢查是否為拖拽元素
-//   function isDragElement(target) {
-//     return target.closest('.drag-handle') ||
-//            target.closest('.option-item') ||
-//            target.closest('[draggable="true"]') ||
-//            target.classList.contains('drag-handle') ||
-//            target.classList.contains('option-item') ||
-//            target.hasAttribute('draggable');
-//   }
-
-//   // 硬鎖方案：在 dropdown 開啟時鎖定 body 滾動（防止整頁被拉開）
-//   let bodyScrollLocked = false;
-//   let scrollY = 0;
-
-//   function lockBodyScroll() {
-//     if (!bodyScrollLocked) {
-//       // 記住當前滾動位置
-//       scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-//       console.log('[硬鎖] 鎖定 body 滾動，當前 scrollY:', scrollY);
-
-//       // 同時鎖定 html 和 body（iOS 上真正的 scroll container 有時是 html）
-//       document.documentElement.style.overflow = 'hidden';
-//       document.body.style.overflow = 'hidden';
-
-//       // 使用 fixed 定位保持視覺位置，避免跳動
-//       document.body.style.position = 'fixed';
-//       document.body.style.top = `-${scrollY}px`;
-//       document.body.style.width = '100%';
-
-//       bodyScrollLocked = true;
-//       console.log('[硬鎖] 鎖定完成，bodyScrollLocked:', bodyScrollLocked);
-//     } else {
-//       console.log('[硬鎖] 已經鎖定，跳過');
-//     }
-//   }
-
-//   function unlockBodyScroll() {
-//     if (bodyScrollLocked) {
-//       console.log('[硬鎖] 解鎖 body 滾動，恢復 scrollY:', scrollY);
-
-//       // 還原 html 和 body 的 overflow
-//       document.documentElement.style.overflow = '';
-//       document.body.style.overflow = '';
-
-//       // 還原 body 的定位樣式
-//       document.body.style.position = '';
-//       document.body.style.top = '';
-//       document.body.style.width = '';
-
-//       // 恢復到原本的滾動位置
-//       window.scrollTo(0, scrollY);
-
-//       bodyScrollLocked = false;
-//       console.log('[硬鎖] 解鎖完成，bodyScrollLocked:', bodyScrollLocked);
-//     } else {
-//       console.log('[硬鎖] 未鎖定，跳過解鎖');
-//     }
-//   }
-
-//   // 監聽所有下拉選單的顯示/隱藏
-//   let dropdownObserver = null;
-//   let styleObserver = null;
-//   const observedDropdowns = new Set();
-
-//   function checkDropdownsAndLock() {
-//     // 重新查詢所有下拉選單（因為是動態創建的）
-//     const dropdowns = document.querySelectorAll('.category-dropdown, .select-dropdown');
-//     console.log('[硬鎖] 檢查下拉選單，找到', dropdowns.length, '個');
-
-//     let anyOpen = false;
-//     const openDropdowns = [];
-
-//     dropdowns.forEach((dropdown, index) => {
-//       const isOpen = dropdown.style.display === 'block' ||
-//                     window.getComputedStyle(dropdown).display === 'block';
-//       if (isOpen) {
-//         anyOpen = true;
-//         openDropdowns.push(index);
-//       }
-
-//       // 為新創建的下拉選單設置監聽
-//       if (!observedDropdowns.has(dropdown)) {
-//         observedDropdowns.add(dropdown);
-//         if (styleObserver) {
-//           styleObserver.observe(dropdown, {
-//             attributes: true,
-//             attributeFilter: ['style']
-//           });
-//           console.log('[硬鎖] 開始監聽新下拉選單', index);
-//         }
-//       }
-//     });
-
-//     if (openDropdowns.length > 0) {
-//       console.log('[硬鎖] 下拉選單狀態變化，開啟的數量:', openDropdowns.length, '索引:', openDropdowns);
-//     }
-
-//     if (anyOpen) {
-//       lockBodyScroll();
-//     } else {
-//       unlockBodyScroll();
-//     }
-//   }
-
-//   function setupBodyScrollLock() {
-//     console.log('[硬鎖] 開始初始化');
-
-//     // 創建監聽下拉選單樣式變化的 observer
-//     styleObserver = new MutationObserver(() => {
-//       checkDropdownsAndLock();
-//     });
-
-//     // 創建監聽 DOM 變化的 observer（當有新的 dropdown 被創建時）
-//     dropdownObserver = new MutationObserver((mutations) => {
-//       let hasNewDropdown = false;
-//       mutations.forEach(mutation => {
-//         mutation.addedNodes.forEach(node => {
-//           if (node.nodeType === 1) { // Element node
-//             if (node.classList && (
-//               node.classList.contains('category-dropdown') ||
-//               node.classList.contains('select-dropdown')
-//             )) {
-//               hasNewDropdown = true;
-//             }
-//             // 檢查子節點
-//             if (node.querySelectorAll) {
-//               const childDropdowns = node.querySelectorAll('.category-dropdown, .select-dropdown');
-//               if (childDropdowns.length > 0) {
-//                 hasNewDropdown = true;
-//               }
-//             }
-//           }
-//         });
-//       });
-
-//       if (hasNewDropdown) {
-//         console.log('[硬鎖] 檢測到新的下拉選單被創建');
-//         checkDropdownsAndLock();
-//       }
-//     });
-
-//     // 監聽整個 body 的變化
-//     dropdownObserver.observe(document.body, {
-//       childList: true,
-//       subtree: true
-//     });
-
-//     // 初始檢查一次
-//     checkDropdownsAndLock();
-
-//     console.log('[硬鎖] 設置完成，開始監聽 DOM 變化');
-//   }
-
-//   // 為所有下拉選單容器添加防止回彈
-//   function setupDropdownPrevention() {
-//     const dropdowns = document.querySelectorAll('.category-dropdown, .select-dropdown, .options-list, .select-options');
-//     dropdowns.forEach(dropdown => {
-//       // 避免重複綁定
-//       if (dropdown.dataset.bouncePrevented) return;
-//       dropdown.dataset.bouncePrevented = 'true';
-
-//       let dropdownTouchStartY = 0;
-
-//       dropdown.addEventListener('touchstart', function(e) {
-//         if (isDragElement(e.target) || window._isDragging) {
-//           return;
-//         }
-//         dropdownTouchStartY = e.touches[0].clientY;
-//       }, { passive: true });
-
-//       dropdown.addEventListener('touchmove', function(e) {
-//         if (window._isDragging || isDragElement(e.target)) {
-//           return;
-//         }
-
-//         const currentY = e.touches[0].clientY;
-//         const deltaY = currentY - dropdownTouchStartY;
-//         const currentScrollTop = dropdown.scrollTop;
-//         const scrollHeight = dropdown.scrollHeight;
-//         const clientHeight = dropdown.clientHeight;
-
-//         // 精準判斷：只在邊界且繼續向邊界方向滑動時阻止
-//         // 使用 <= 1 而不是 === 0 以處理負值和次像素捨入（與設定頁保持一致）
-//         const isAtTop = currentScrollTop <= 1;
-//         const isAtBottom = currentScrollTop + clientHeight >= scrollHeight - 1;
-
-//         // 在頂部且向下拉（deltaY > 0）時阻止
-//         if (isAtTop && deltaY > 0) {
-//           if (e.cancelable) {
-//             e.preventDefault();
-//           }
-//           dropdown.scrollTop = 0;
-//         }
-//         // 在底部且向上拉（deltaY < 0）時阻止
-//         else if (isAtBottom && deltaY < 0) {
-//           if (e.cancelable) {
-//             e.preventDefault();
-//           }
-//           dropdown.scrollTop = Math.max(0, scrollHeight - clientHeight);
-//         }
-//       }, { passive: false });
-//     });
-//   }
-
-//   // 頁面載入後設置下拉選單
-//   if (document.readyState === 'loading') {
-//     document.addEventListener('DOMContentLoaded', () => {
-//       setupDropdownPrevention();
-//       // 啟用硬鎖方案（防止整頁被拉開）
-//       setupBodyScrollLock();
-//     });
-//   } else {
-//     setupDropdownPrevention();
-//     // 啟用硬鎖方案（防止整頁被拉開）
-//     setupBodyScrollLock();
-//   }
-
-//   // 監聽動態添加的下拉選單
-//   const observer = new MutationObserver(() => {
-//     setupDropdownPrevention();
-//   });
-//   observer.observe(document.body, { childList: true, subtree: true });
-// })();
 
 document.addEventListener('DOMContentLoaded', async function() {
   // 顯示進度條載入下拉選單（第一個請求）
