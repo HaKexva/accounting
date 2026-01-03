@@ -706,7 +706,7 @@ async function loadBudgetForMonth(sheetIndex) {
         const budgetKey = category; // 只用 category 作為 key
         const oldTotal = categoryTotals[budgetKey] || 0;
         categoryTotals[budgetKey] = oldTotal + cost;
-        console.log('oldTotal:' + oldTotal, 'cost:' + cost);
+        console.log('budget:' + budgetKey, 'oldTotal:' + oldTotal, 'cost:' + cost);
         processedRowsCount++;
       });
     });
