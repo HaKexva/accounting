@@ -3703,9 +3703,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (cachedMonthData) {
         allMonthsData[currentSheetIndex] = cachedMonthData;
 
-        // 載入預算快取
+        // Load budget cache - but verify it has correct month data
         if (cachedBudgetTotals && cachedBudgetTotals[currentSheetIndex]) {
-          budgetTotals[currentSheetIndex] = cachedBudgetTotals[currentSheetIndex];
+          const monthName = sheetNames[currentSheetIndex - 2] || '';
+          console.log('[initCache] loading cached budgetTotals for sheetIndex:', currentSheetIndex, 'monthName:', monthName, 'cachedKeys:', Object.keys(cachedBudgetTotals[currentSheetIndex]));
+          // Clear stale cache - force fresh load from API
+          // budgetTotals[currentSheetIndex] = cachedBudgetTotals[currentSheetIndex];
         }
 
         loadedFromCache = true;
