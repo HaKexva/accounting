@@ -476,15 +476,7 @@ function showRecord(index) {
     currentRecordNumber = recordNum;
     
     // 調試日誌
-    console.log('[預算表] showRecord: 更新編號', {
-      index: index,
-      recordNum: recordNum,
-      numberText: numberText,
-      elementFound: !!recordNumberEl,
-      display: recordNumberEl.style.display
-    });
   } else {
-    console.warn('[預算表] showRecord: 找不到編號元素 record-number');
   }
 
   // 更新右上角「資料時間」：使用每筆記錄的時間欄位（row[1]，通常為試算表中的時間 / 最後修正時間）
@@ -557,53 +549,25 @@ function showRecord(index) {
       // 確保金額正確顯示（轉換為數字再轉回字串，避免格式問題）
       if (costInput) {
         const costValue = row[3];
-        console.log('[預算表] showRecord: 收入金額顯示', {
-          type: '收入',
-          row: row,
-          rowLength: row.length,
-          costValue: costValue,
-          costValueType: typeof costValue,
-          costValueUndefined: costValue === undefined,
-          costValueNull: costValue === null,
-          costValueEmpty: costValue === '',
-          costValueZero: costValue === 0 || costValue === '0'
-        });
         // 收入金額在 row[3]，即使為 0 或空也要顯示
         // 確保所有情況都能正確顯示
         if (costValue !== undefined && costValue !== null && costValue !== '') {
           const numCost = parseFloat(costValue);
           const finalValue = Number.isFinite(numCost) ? numCost.toString() : String(costValue);
           costInput.value = finalValue;
-          console.log('[預算表] showRecord: 收入金額已設定', {
-            finalValue: finalValue,
-            costInputValue: costInput.value,
-            numCost: numCost,
-            isFinite: Number.isFinite(numCost)
-          });
         } else if (costValue === 0 || costValue === '0') {
           // 即使是 0 也要顯示
           costInput.value = '0';
-          console.log('[預算表] showRecord: 收入金額設為 0');
         } else {
           // 如果是空字符串或 null/undefined，顯示空字符串
           costInput.value = '';
-          console.log('[預算表] showRecord: 收入金額設為空字符串', {
-            costValue: costValue,
-            reason: costValue === undefined ? 'undefined' : (costValue === null ? 'null' : 'empty string')
-          });
         }
         // 強制觸發 input 事件，確保值已設定
         if (costInput.value !== undefined && costInput.value !== null) {
           costInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
         // 再次確認值是否正確設定
-        console.log('[預算表] showRecord: 收入金額最終狀態', {
-          costInputValue: costInput.value,
-          costInputValueType: typeof costInput.value,
-          costInputDisplayValue: costInput.value || '(空)'
-        });
       } else {
-        console.warn('[預算表] showRecord: 找不到 cost-input 元素');
       }
       if (noteInput) noteInput.value = row[4] || '';
     }
@@ -668,7 +632,6 @@ const processDataFromResponse = (data, shouldFilter = true) => {
   allRecords = [];
 
   if (!data) {
-    console.warn('[預算表] processDataFromResponse: data 為空');
     return;
   }
 
@@ -726,11 +689,6 @@ const processDataFromResponse = (data, shouldFilter = true) => {
 
       rows.forEach((row, rowIndex) => {
         if (!row || !Array.isArray(row) || row.length === 0) {
-          console.log('[預算表] processDataFromResponse: 跳過空行', {
-            key: key,
-            rowIndex: rowIndex,
-            row: row
-          });
           return;
         }
 
@@ -746,14 +704,6 @@ const processDataFromResponse = (data, shouldFilter = true) => {
         
         // 調試：記錄每行的處理情況
         if (!isValidNumber) {
-          console.log('[預算表] processDataFromResponse: 檢查行', {
-            key: key,
-            rowIndex: rowIndex,
-            firstCell: firstCell,
-            firstCellType: typeof firstCell,
-            rowLength: row.length,
-            row: row
-          });
         }
 
         // 如果是有效的數字編號，則視為數據行（即使欄位數量不足或其他檢查可能誤判）
@@ -784,23 +734,9 @@ const processDataFromResponse = (data, shouldFilter = true) => {
         // 預算格式檢查：收入應該是5欄，支出應該是6欄
         // 但允許欄位數量稍微寬鬆（可能有些欄位為空）
         if (type === '收入' && row.length < 5) {
-          console.log('[預算表] processDataFromResponse: 跳過收入行（欄位不足）', {
-            key: key,
-            rowIndex: rowIndex,
-            rowLength: row.length,
-            expectedLength: 5,
-            row: row
-          });
           return;
         }
         if (type === '支出' && row.length < 6) {
-          console.log('[預算表] processDataFromResponse: 跳過支出行（欄位不足）', {
-            key: key,
-            rowIndex: rowIndex,
-            rowLength: row.length,
-            expectedLength: 6,
-            row: row
-          });
           return;
         }
 
@@ -812,13 +748,6 @@ const processDataFromResponse = (data, shouldFilter = true) => {
             firstCellLower === '時間' || firstCellLower === '總計' || firstCellStr === '' ||
             firstCellLower.includes('項目') || firstCellLower.includes('金額') ||
             firstCellLower.includes('備註') || firstCellLower.includes('類別')) {
-          console.log('[預算表] processDataFromResponse: 跳過標題/總計行', {
-            key: key,
-            rowIndex: rowIndex,
-            firstCell: firstCell,
-            firstCellStr: firstCellStr,
-            row: row
-          });
           return;
         }
 
@@ -846,23 +775,13 @@ const processDataFromResponse = (data, shouldFilter = true) => {
     });
     
     // 調試日誌：顯示處理的記錄數量
-    console.log('[預算表] processDataFromResponse: 處理完成', {
-      totalRowsCount: totalRowsCount,
-      processedCount: processedCount,
-      allRecordsCount: allRecords.length,
-      currentMonthName: currentMonthName,
-      skippedCount: totalRowsCount - processedCount,
-      dataKeys: Object.keys(data || {})
-    });
   } else if (Array.isArray(data)) {
     // 如果資料是陣列格式，嘗試轉換為物件格式
     // 這種情況應該很少見，因為預算表使用命名範圍格式
     // 但為了健壯性，我們還是處理一下
-    console.warn('[預算表] 收到陣列格式的資料，預期應該是物件格式（命名範圍）');
     // 可以嘗試將陣列轉換為物件，但需要知道資料結構
     // 暫時跳過，因為預算表應該總是返回物件格式
   } else {
-    console.warn('[預算表] 收到未知格式的資料:', typeof data, data);
   }
 
   // 根據目前選擇的類型過濾記錄（預設顯示支出）
@@ -877,14 +796,6 @@ const updateTotalDisplay = (totalData = null) => {
   let income = 0;
   let expense = 0;
   let total = 0;
-
-  console.log('[預算表] updateTotalDisplay: 開始更新總計', {
-    hasTotalData: !!totalData,
-    totalDataType: Array.isArray(totalData) ? 'array' : typeof totalData,
-    totalDataLength: Array.isArray(totalData) ? totalData.length : null,
-    allRecordsCount: allRecords.length
-  });
-
   // 重要：無論是否有後端返回的總計，都從 allRecords 重新計算，確保編輯金額時正確計算（總計-舊值+新值）
   // 因為編輯金額時，allRecords 已經更新為新值，所以從 allRecords 計算會得到正確的總計
   if (false && totalData && Array.isArray(totalData) && totalData.length >= 3) {
@@ -901,36 +812,14 @@ const updateTotalDisplay = (totalData = null) => {
     
     // 如果解析失敗，使用 0
     if (isNaN(income)) {
-      console.warn('[預算表] updateTotalDisplay: 收入總計解析失敗', {
-        incomeRaw: incomeRaw,
-        incomeRawType: typeof incomeRaw
-      });
       income = 0;
     }
     if (isNaN(expense)) {
-      console.warn('[預算表] updateTotalDisplay: 支出總計解析失敗', {
-        expenseRaw: expenseRaw,
-        expenseRawType: typeof expenseRaw
-      });
       expense = 0;
     }
     if (isNaN(total)) {
-      console.warn('[預算表] updateTotalDisplay: 總計解析失敗', {
-        totalRaw: totalRaw,
-        totalRawType: typeof totalRaw
-      });
       total = income - expense; // 使用計算值
     }
-    
-    console.log('[預算表] updateTotalDisplay: 使用後端返回的總計', {
-      income: income,
-      expense: expense,
-      total: total,
-      totalData: totalData,
-      incomeRaw: incomeRaw,
-      expenseRaw: expenseRaw,
-      totalRaw: totalRaw
-    });
   } else {
     // 從當前記錄計算即時總計
     // 重要：一開始全部要加總，只有當用戶修改金額時才要排除舊值加上新值
@@ -974,48 +863,17 @@ const updateTotalDisplay = (totalData = null) => {
         const num = parseInt(r.row[0], 10);
         return !(Number.isFinite(num) && num > 0 && num === currentRecordNumber && r.type === currentRecord.type);
       });
-      
-      console.log('[預算表] updateTotalDisplay: 用戶正在修改金額，排除舊記錄', {
-        currentRecordNumber: currentRecordNumber,
-        currentRecordType: currentRecord.type,
-        oldAmount: oldAmount,
-        newAmount: costInput ? parseFloat(costInput.value) || 0 : 0,
-        allRecordsCount: allRecords.length,
-        recordsToCalculateCount: recordsToCalculate.length
-      });
     } else {
       // 一開始全部要加總（包括當前記錄），不加上 costInput.value
       recordsToCalculate = allRecords;
-      console.log('[預算表] updateTotalDisplay: 初始顯示，全部加總（不加上 costInput）', {
-        isNewMode: isNewMode,
-        isEditingAmount: isEditingAmount,
-        allRecordsCount: allRecords.length,
-        hasCostInput: !!costInput,
-        costInputValue: costInput ? costInput.value : null
-      });
     }
     
     const incomeRecords = recordsToCalculate.filter(r => r.type === '收入');
     const expenseRecords = recordsToCalculate.filter(r => r.type === '支出');
-
-    console.log('[預算表] updateTotalDisplay: 從記錄計算總計', {
-      incomeRecordsCount: incomeRecords.length,
-      expenseRecordsCount: expenseRecords.length,
-      allRecordsCount: allRecords.length,
-      recordsToCalculateCount: recordsToCalculate.length,
-      isNewMode: isNewMode
-    });
-
     // 計算收入總計
     income = incomeRecords.reduce((sum, r) => {
       if (!r || !r.row || !Array.isArray(r.row)) return sum;
       const cost = parseFloat(r.row[3] || 0) || 0; // 收入：row[3] 是金額
-      console.log('[預算表] updateTotalDisplay: 收入記錄', {
-        row: r.row,
-        cost: cost,
-        sum: sum,
-        newSum: sum + cost
-      });
       return sum + cost;
     }, 0);
 
@@ -1023,13 +881,6 @@ const updateTotalDisplay = (totalData = null) => {
     expense = expenseRecords.reduce((sum, r) => {
       if (!r || !r.row || !Array.isArray(r.row)) return sum;
       const cost = parseFloat(r.row[4] || 0) || 0; // 支出：row[4] 是金額
-      console.log('[預算表] updateTotalDisplay: 支出記錄', {
-        row: r.row,
-        rowNumber: r.row[0],
-        cost: cost,
-        sum: sum,
-        newSum: sum + cost
-      });
       return sum + cost;
     }, 0);
 
@@ -1045,55 +896,23 @@ const updateTotalDisplay = (totalData = null) => {
         } else {
           expense += liveCost;
         }
-        console.log('[預算表] updateTotalDisplay: 加上即時輸入金額', {
-          currentType: currentType,
-          liveCost: liveCost,
-          isNewMode: isNewMode,
-          isEditingAmount: isEditingAmount,
-          income: income,
-          expense: expense
-        });
       }
     } else {
-      console.log('[預算表] updateTotalDisplay: 不加上即時輸入金額（值已在 allRecords 中）', {
-        isNewMode: isNewMode,
-        isEditingAmount: isEditingAmount,
-        costInputValue: costInput ? costInput.value : null
-      });
     }
 
     total = income - expense;
-    console.log('[預算表] updateTotalDisplay: 計算完成', {
-      income: income,
-      expense: expense,
-      total: total
-    });
   }
 
   incomeAmount.textContent = income.toLocaleString('zh-TW');
   expenseAmount.textContent = expense.toLocaleString('zh-TW');
   totalAmount.textContent = total.toLocaleString('zh-TW');
   updateTotalColor(total);
-  
-  console.log('[預算表] updateTotalDisplay: 總計顯示更新完成', {
-    incomeDisplay: incomeAmount.textContent,
-    expenseDisplay: expenseAmount.textContent,
-    totalDisplay: totalAmount.textContent
-  });
 };
 
 // 載入單個月份的資料和總計
 const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
-  console.log('[預算表] loadMonthData: 開始載入月份資料', {
-    sheetIndex: sheetIndex,
-    useGlobalAbortController: useGlobalAbortController
-  });
-
   // 驗證 sheetIndex 是否有效
   if (!Number.isFinite(sheetIndex) || sheetIndex < 2) {
-    console.error('[預算表] loadMonthData: sheetIndex 無效', {
-      sheetIndex: sheetIndex
-    });
     throw new Error(`無效的 sheet 索引: ${sheetIndex}`);
   }
 
@@ -1139,14 +958,6 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
     data = await res.json();
 
     // 在 console 顯示回傳資料
-    console.log('[預算表] 完成 get data，回傳資料：', {
-      sheetIndex: sheetIndex,
-      currentMonthName: currentMonthName,
-      data: data,
-      dataKeys: data ? Object.keys(data) : [],
-      dataType: Array.isArray(data) ? 'array' : (typeof data === 'object' ? 'object' : typeof data)
-    });
-
     // 如果資料是陣列格式，需要轉換成命名範圍格式
     if (Array.isArray(data)) {
 
@@ -1220,25 +1031,11 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
   try {
     totalData = await Totalres.json();
   } catch (e) {
-    console.error('[預算表] 解析總計 JSON 失敗', {
-      error: e,
-      responseText: await Totalres.text(),
-      sheetIndex: sheetIndex,
-      currentMonthName: currentMonthName
-    });
     throw new Error('解析總計資料失敗: ' + e.message);
   }
 
   // 驗證總計資料格式
   if (!Array.isArray(totalData) || totalData.length < 3) {
-    console.error('[預算表] 總計資料格式錯誤', {
-      sheetIndex: sheetIndex,
-      currentMonthName: currentMonthName,
-      totalData: totalData,
-      totalDataType: typeof totalData,
-      totalDataLength: Array.isArray(totalData) ? totalData.length : 'N/A',
-      expectedFormat: '[income, expense, total]'
-    });
     // 如果格式錯誤，使用 [0, 0, 0] 作為預設值
     totalData = [0, 0, 0];
   }
@@ -1249,17 +1046,6 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
   const total = parseFloat(totalData[2]);
   
   if (isNaN(income) || isNaN(expense) || isNaN(total)) {
-    console.error('[預算表] 總計資料包含無效數字', {
-      sheetIndex: sheetIndex,
-      currentMonthName: currentMonthName,
-      totalData: totalData,
-      income: income,
-      expense: expense,
-      total: total,
-      incomeIsNaN: isNaN(income),
-      expenseIsNaN: isNaN(expense),
-      totalIsNaN: isNaN(total)
-    });
     // 如果包含無效數字，使用 0 作為預設值
     totalData = [
       Number.isFinite(income) ? income : 0,
@@ -1269,20 +1055,6 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
   }
 
   // 在 console 顯示回傳的總計資料
-  console.log('[預算表] 完成 get total，回傳總計：', {
-    sheetIndex: sheetIndex,
-    currentMonthName: currentMonthName,
-    totalData: totalData,
-    totalDataType: Array.isArray(totalData) ? 'array' : (typeof totalData === 'object' ? 'object' : typeof totalData),
-    totalDataLength: Array.isArray(totalData) ? totalData.length : 'N/A',
-    income: totalData[0],
-    expense: totalData[1],
-    total: totalData[2],
-    incomeType: typeof totalData[0],
-    expenseType: typeof totalData[1],
-    totalType: typeof totalData[2]
-  });
-
   // 請求成功後，清除 AbortController（僅當使用全局 AbortController 時）
   if (useGlobalAbortController) {
     currentAbortController = null;
@@ -1402,12 +1174,6 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
       // 有支出記錄，使用計算的值
       finalTotal = calculatedTotalData;
       if (Math.abs(apiExpense - calculatedExpense) > 0.01) {
-        console.warn('[預算表] 檢測到支出記錄，但 API 返回的支出總計與計算值不同，使用計算的總計', {
-          api: { income: apiIncome, expense: apiExpense, total: apiTotal },
-          calculated: { income: calculatedIncome, expense: calculatedExpense, total: calculatedTotal },
-          expenseCount: expenseCount,
-          difference: Math.abs(apiExpense - calculatedExpense)
-        });
       }
     } else if (calculatedIncome > 0 || calculatedExpense > 0) {
       // 計算出有收入或支出，使用計算的值
@@ -1421,24 +1187,9 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
     }
   } else {
     // API 返回的總計格式不正確，使用計算的總計
-    console.warn('[預算表] API 返回的總計格式不正確，使用計算的總計', {
-      received: totalData,
-      calculated: calculatedTotalData,
-      expenseCount: expenseCount
-    });
   }
 
   // 在 console 顯示最終返回的資料和總計
-  console.log('[預算表] loadMonthData 完成，返回結果：', {
-    sheetIndex: sheetIndex,
-    currentMonthName: currentMonthName,
-    dataKeys: data ? Object.keys(data) : [],
-    finalTotal: finalTotal,
-    calculatedTotal: calculatedTotalData,
-    expenseCount: expenseCount,
-    incomeCount: incomeCount
-  });
-
   return { data, total: finalTotal };
 };
 
@@ -1453,19 +1204,7 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
     const sheetIndex = idx + 2;
     return sheetIndex === currentSheetIndex;
   });
-
-  console.log('[預算表] preloadAllMonthsData: 開始預載', {
-    sheetNamesCount: sheetNames.length,
-    sheetNames: sheetNames,
-    currentSheetIndex: currentSheetIndex,
-    currentMonthIdx: currentMonthIdx
-  });
-
   if (currentMonthIdx === -1) {
-    console.warn('[預算表] preloadAllMonthsData: 找不到當前月份在 sheetNames 中的索引', {
-      currentSheetIndex: currentSheetIndex,
-      sheetNames: sheetNames
-    });
     return;
   }
 
@@ -1476,9 +1215,7 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
   const currentMonthSheetIndex = currentMonthIdx + 2;
   if (!allMonthsData[currentMonthSheetIndex]) {
     loadOrder.push({ idx: currentMonthIdx, sheetIndex: currentMonthSheetIndex, name: sheetNames[currentMonthIdx] });
-    console.log(`[預算表] preloadAllMonthsData: 加入載入順序（當前月份）: ${sheetNames[currentMonthIdx]} (idx: ${currentMonthIdx}, sheetIndex: ${currentMonthSheetIndex})`);
   } else {
-    console.log(`[預算表] preloadAllMonthsData: 跳過已載入的當前月份: ${sheetNames[currentMonthIdx]} (sheetIndex: ${currentMonthSheetIndex})`);
   }
 
   // 先加入下一個月及之後的月份（從 currentMonthIdx + 1 開始）
@@ -1486,9 +1223,7 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
     const sheetIndex = i + 2;
     if (!allMonthsData[sheetIndex]) {
       loadOrder.push({ idx: i, sheetIndex, name: sheetNames[i] });
-      console.log(`[預算表] preloadAllMonthsData: 加入載入順序（之後的月份）: ${sheetNames[i]} (idx: ${i}, sheetIndex: ${sheetIndex})`);
     } else {
-      console.log(`[預算表] preloadAllMonthsData: 跳過已載入的月份: ${sheetNames[i]} (sheetIndex: ${sheetIndex})`);
     }
   }
 
@@ -1497,19 +1232,10 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
     const sheetIndex = i + 2;
     if (!allMonthsData[sheetIndex]) {
       loadOrder.push({ idx: i, sheetIndex, name: sheetNames[i] });
-      console.log(`[預算表] preloadAllMonthsData: 加入載入順序（之前的月份）: ${sheetNames[i]} (idx: ${i}, sheetIndex: ${sheetIndex})`);
     } else {
-      console.log(`[預算表] preloadAllMonthsData: 跳過已載入的月份: ${sheetNames[i]} (sheetIndex: ${sheetIndex})`);
     }
   }
-
-  console.log('[預算表] preloadAllMonthsData: 載入順序', {
-    loadOrderCount: loadOrder.length,
-    loadOrder: loadOrder.map(item => `${item.name} (sheetIndex: ${item.sheetIndex})`)
-  });
-
   if (loadOrder.length === 0) {
-    console.log('[預算表] preloadAllMonthsData: 所有月份都已載入，無需預載');
     return;
   }
 
@@ -1527,19 +1253,12 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
     }
 
     try {
-      console.log(`[預算表] preloadAllMonthsData: 開始載入月份 ${item.name} (sheetIndex: ${item.sheetIndex})`);
       // 使用獨立的 AbortController，避免與用戶操作衝突
       const monthData = await loadMonthData(item.sheetIndex, false);
       allMonthsData[item.sheetIndex] = monthData;
 
       // 保存到快取
       setToCache(`budget_monthData_${item.sheetIndex}`, monthData);
-
-      console.log(`[預算表] preloadAllMonthsData: 成功載入月份 ${item.name} (sheetIndex: ${item.sheetIndex})`, {
-        hasData: !!monthData.data,
-        hasTotal: !!monthData.total
-      });
-
       // 更新進度條
       loadedCount++;
       if (totalProgress > 0) {
@@ -1556,24 +1275,12 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
       }
 
       // 如果遇到錯誤，繼續載入下一個月份（不中斷）
-      console.error(`[預算表] preloadAllMonthsData: 載入月份 ${item.name} (sheetIndex: ${item.sheetIndex}) 失敗`, error);
     }
   }
-  
-  console.log('[預算表] preloadAllMonthsData: 預載完成', {
-    totalLoaded: loadedCount,
-    totalOrder: loadOrder.length,
-    allMonthsDataKeys: Object.keys(allMonthsData).map(k => parseInt(k)).sort((a, b) => a - b)
-  });
 };
 
 // 從記憶體載入當前月份的資料（不發送請求）
 const loadContentFromMemory = async () => {
-  console.log('[預算表] loadContentFromMemory: 開始從記憶體載入預算', {
-    currentSheetIndex: currentSheetIndex,
-    allMonthsDataKeys: Object.keys(allMonthsData)
-  });
-
   // 先清空目前的記錄（確保不同月份的資料不會混在一起）
   allRecords = [];
   filteredRecords = [];
@@ -1582,26 +1289,12 @@ const loadContentFromMemory = async () => {
   // 驗證 currentSheetIndex 是否有效
   if (!Number.isFinite(currentSheetIndex) || currentSheetIndex < 2) {
     currentSheetIndex = 2; // 預設為第三個分頁
-    console.log('[預算表] loadContentFromMemory: currentSheetIndex 無效，設為預設值 2');
   }
 
   // 先從記憶體讀取資料
   let monthData = allMonthsData[currentSheetIndex];
-  console.log('[預算表] loadContentFromMemory: 從記憶體讀取資料', {
-    currentSheetIndex: currentSheetIndex,
-    hasMonthData: !!monthData,
-    monthDataType: monthData ? typeof monthData : 'null',
-    hasData: !!monthData?.data,
-    hasTotal: !!monthData?.total,
-    dataKeys: monthData?.data ? Object.keys(monthData.data) : [],
-    total: monthData?.total
-  });
-
   // 如果記憶體中沒有，嘗試從快取讀取
   if (!monthData) {
-    console.log('[預算表] loadContentFromMemory: 記憶體中沒有資料，嘗試從快取讀取', {
-      cacheKey: `budget_monthData_${currentSheetIndex}`
-    });
     try {
       const storedData = await getFromCache(`budget_monthData_${currentSheetIndex}`);
       if (storedData) {
@@ -1610,78 +1303,35 @@ const loadContentFromMemory = async () => {
         monthData._fromCache = true;
         // 同時載入到記憶體
         allMonthsData[currentSheetIndex] = monthData;
-        console.log('[預算表] loadContentFromMemory: 成功從快取載入資料', {
-          hasData: !!monthData.data,
-          hasTotal: !!monthData.total,
-          dataKeys: monthData.data ? Object.keys(monthData.data) : [],
-          total: monthData.total
-        });
       } else {
-        console.log('[預算表] loadContentFromMemory: 快取中沒有資料');
       }
     } catch (e) {
       // 快取可能不可用或數據損壞，忽略錯誤
-      console.warn('[預算表] loadContentFromMemory: 從快取讀取失敗', e);
     }
   }
 
   if (!monthData) {
-    console.log('[預算表] loadContentFromMemory: 沒有找到資料，需要重新載入');
     return false; // 表示需要重新載入
   }
-
-  console.log('[預算表] loadContentFromMemory: 開始處理資料', {
-    hasData: !!monthData.data,
-    hasTotal: !!monthData.total,
-    dataType: monthData.data ? typeof monthData.data : 'null',
-    totalType: monthData.total ? (Array.isArray(monthData.total) ? 'array' : typeof monthData.total) : 'null'
-  });
-
   // 從儲存載入時，顯示 loading 並擋住頁首
   showSpinner(true);
 
   // 處理資料（會自動過濾並顯示記錄）
   if (monthData.data) {
-    console.log('[預算表] loadContentFromMemory: 處理資料', {
-      dataKeys: Object.keys(monthData.data),
-      dataKeysCount: Object.keys(monthData.data).length
-    });
     processDataFromResponse(monthData.data, true);
-    console.log('[預算表] loadContentFromMemory: 處理資料完成', {
-      allRecordsCount: allRecords.length,
-      filteredRecordsCount: filteredRecords.length
-    });
-
     // 處理資料後立即更新總計（確保總計自動計算）
     if (monthData.total && Array.isArray(monthData.total) && monthData.total.length >= 3) {
-      console.log('[預算表] loadContentFromMemory: 使用記憶體中的總計', {
-        total: monthData.total,
-        income: monthData.total[0],
-        expense: monthData.total[1],
-        totalAmount: monthData.total[2]
-      });
       updateTotalDisplay(monthData.total);
     } else {
       // 如果沒有總計或格式不正確，使用即時計算
-      console.log('[預算表] loadContentFromMemory: 記憶體中沒有總計或格式不正確，使用即時計算', {
-        total: monthData.total,
-        totalType: monthData.total ? (Array.isArray(monthData.total) ? 'array' : typeof monthData.total) : 'null'
-      });
       updateTotalDisplay();
     }
   } else {
-    console.warn('[預算表] loadContentFromMemory: 從記憶體載入的資料缺少 data 欄位', monthData);
     allRecords = [];
     filteredRecords = [];
     // 即使沒有資料，也要更新總計（顯示為0）
     updateTotalDisplay();
   }
-
-  console.log('[預算表] loadContentFromMemory: 載入完成', {
-    allRecordsCount: allRecords.length,
-    filteredRecordsCount: filteredRecords.length
-  });
-
   // 確保顯示第一筆記錄（如果有的話，且不在新增模式）
   if (filteredRecords.length > 0) {
     showRecord(0);
@@ -1706,79 +1356,34 @@ const loadContentFromMemory = async () => {
 
 // 載入當前月份的資料（優先從記憶體讀取，如果沒有則發送請求）
 const loadContent = async (forceReload = false) => {
-  console.log('[預算表] loadContent: 開始載入預算', {
-    forceReload: forceReload,
-    currentSheetIndex: currentSheetIndex,
-    allMonthsDataKeys: Object.keys(allMonthsData)
-  });
-
   // 如果不強制重新載入，先嘗試從記憶體讀取
   if (!forceReload) {
-    console.log('[預算表] loadContent: 嘗試從記憶體載入');
     const loadedFromMemory = await loadContentFromMemory();
     if (loadedFromMemory) {
-      console.log('[預算表] loadContent: 成功從記憶體載入，直接返回');
       return; // 成功從記憶體載入，直接返回
     }
-    console.log('[預算表] loadContent: 記憶體載入失敗，需要從 API 載入');
   } else {
-    console.log('[預算表] loadContent: 強制重新載入，跳過記憶體');
   }
 
   // 如果記憶體中沒有資料，或需要強制重新載入，則發送請求
   try {
-    console.log('[預算表] loadContent: 開始從 API 載入資料', {
-      currentSheetIndex: currentSheetIndex
-    });
     const monthData = await loadMonthData(currentSheetIndex);
-    console.log('[預算表] loadContent: API 載入完成', {
-      hasData: !!monthData.data,
-      hasTotal: !!monthData.total,
-      dataKeys: monthData.data ? Object.keys(monthData.data) : [],
-      total: monthData.total,
-      totalType: monthData.total ? (Array.isArray(monthData.total) ? 'array' : typeof monthData.total) : 'null'
-    });
-
     // 更新記憶體中的資料
     allMonthsData[currentSheetIndex] = monthData;
 
     // 保存到快取
     setToCache(`budget_monthData_${currentSheetIndex}`, monthData);
-    console.log('[預算表] loadContent: 資料已保存到記憶體和快取', {
-      currentSheetIndex: currentSheetIndex
-    });
-
     // 處理資料（會自動過濾並顯示記錄）
     if (monthData.data) {
-      console.log('[預算表] loadContent: 開始處理資料', {
-        dataKeys: Object.keys(monthData.data),
-        dataKeysCount: Object.keys(monthData.data).length
-      });
       processDataFromResponse(monthData.data, true);
-      console.log('[預算表] loadContent: 處理資料完成', {
-        allRecordsCount: allRecords.length,
-        filteredRecordsCount: filteredRecords.length
-      });
-
       // 處理資料後立即更新總計（確保總計自動計算）
       if (monthData.total && Array.isArray(monthData.total) && monthData.total.length >= 3) {
-        console.log('[預算表] loadContent: 使用 API 返回的總計', {
-          total: monthData.total,
-          income: monthData.total[0],
-          expense: monthData.total[1],
-          totalAmount: monthData.total[2]
-        });
         updateTotalDisplay(monthData.total);
       } else {
         // 如果沒有總計或格式不正確，使用即時計算
-        console.log('[預算表] loadContent: API 返回的總計格式不正確，使用即時計算', {
-          total: monthData.total,
-          totalType: monthData.total ? (Array.isArray(monthData.total) ? 'array' : typeof monthData.total) : 'null'
-        });
         updateTotalDisplay();
       }
     } else {
-      console.warn('[預算表] loadContent: 載入的資料缺少 data 欄位', monthData);
       allRecords = [];
       filteredRecords = [];
       // 即使沒有資料，也要更新總計（顯示為0）
@@ -1787,15 +1392,10 @@ const loadContent = async (forceReload = false) => {
 
     // 確保顯示第一筆記錄（如果有的話，且不在新增模式）
     if (filteredRecords.length > 0) {
-      console.log('[預算表] loadContent: 顯示第一筆記錄', {
-        filteredRecordsCount: filteredRecords.length,
-        firstRecord: filteredRecords[0]
-      });
       showRecord(0);
       updateArrowButtons();
     } else {
       // 如果沒有記錄，進入新增模式
-      console.log('[預算表] loadContent: 沒有記錄，進入新增模式');
       enterNewModeIfEmpty();
       updateDeleteButton();
       updateArrowButtons();
@@ -1803,16 +1403,7 @@ const loadContent = async (forceReload = false) => {
     
     // 載入完成後重置按鈕狀態
     markAsSaved();
-    console.log('[預算表] loadContent: 載入完成', {
-      allRecordsCount: allRecords.length,
-      filteredRecordsCount: filteredRecords.length,
-      currentSheetIndex: currentSheetIndex
-    });
   } catch (error) {
-    console.error('[預算表] loadContent: 載入失敗', {
-      error: error,
-      currentSheetIndex: currentSheetIndex
-    });
     throw error;
   }
 };
@@ -2360,19 +1951,8 @@ const saveData = async () => {
             return Number.isFinite(num) && num > 0 && num === savedRecordNumber;
           });
           if (oldRecordIndex >= 0) {
-            console.log('[預算表] saveData: 移除舊記錄', {
-              recordNumber: savedRecordNumber,
-              oldRecord: allRecords[oldRecordIndex],
-              oldRecordIndex: oldRecordIndex,
-              oldRecordCost: allRecords[oldRecordIndex].type === '收入' ? allRecords[oldRecordIndex].row[3] : allRecords[oldRecordIndex].row[4]
-            });
             allRecords.splice(oldRecordIndex, 1);
           } else {
-            console.warn('[預算表] saveData: 找不到要移除的舊記錄', {
-              recordNumber: savedRecordNumber,
-              allRecordsCount: allRecords.length,
-              allRecordsNumbers: allRecords.map(r => parseInt(r.row[0], 10))
-            });
           }
         }
 
@@ -2393,26 +1973,10 @@ const saveData = async () => {
         // 使用回傳的資料更新記錄和總計（不自動過濾，稍後手動過濾）
         // 重要：無論是新增還是修改，都重新處理所有數據，確保不會少一筆資料
         // 因為後端已經正確處理了總計（先刪除舊值再重新計算），所以前端也應該重新處理所有數據
-        console.log('[預算表] saveData: 重新處理所有數據', {
-          wasInNewMode: wasInNewMode,
-          savedRecordNumber: savedRecordNumber,
-          savedType: savedType,
-          allRecordsCountBefore: allRecords.length,
-          resultDataKeys: result.data ? Object.keys(result.data) : []
-        });
         processDataFromResponse(result.data, false);
-        console.log('[預算表] saveData: 重新處理完成', {
-          allRecordsCountAfter: allRecords.length
-        });
-
         // 確保總計正確更新
         // 重要：編輯金額時，應該從 allRecords 重新計算總計，而不是使用後端返回的總計
         // 因為 allRecords 已經更新為新值，從 allRecords 計算會得到正確的總計（總計-舊值+新值）
-        console.log('[預算表] saveData: 從 allRecords 重新計算總計', {
-          allRecordsCount: allRecords.length,
-          wasInNewMode: wasInNewMode,
-          savedRecordNumber: savedRecordNumber
-        });
         updateTotalDisplay(null); // 傳入 null，強制從 allRecords 計算
 
         // 根據保存的類型重新過濾記錄
@@ -3338,17 +2902,10 @@ async function loadMonthNames() {
     const data = await res.json();
 
     if (!Array.isArray(data) || data.length === 0) {
-      console.warn('[預算表] loadMonthNames: API 返回的資料不是陣列或為空', data);
       return [];
     }
 
     sheetNames = data;
-    console.log('[預算表] loadMonthNames: 載入月份列表完成', {
-      count: sheetNames.length,
-      sheetNames: sheetNames,
-      first: sheetNames[0],
-      last: sheetNames[sheetNames.length - 1]
-    });
     return sheetNames;
 }
 
@@ -3363,7 +2920,6 @@ const initMonthSelect = async () => {
       // 保存到快取
       setToCache('budget_sheetNames', sheetNames);
     } catch (e) {
-      console.warn('[預算表] 載入月份列表失敗:', e);
       // 如果載入失敗，嘗試從快取讀取
       try {
         const storedSheetNames = await getFromCache('budget_sheetNames');
@@ -3414,16 +2970,6 @@ const initMonthSelect = async () => {
     const currentMonthNum = parseInt(currentMonthStr.substring(4, 6));
     const currentMonthDiff = calculateMonthDiff(currentYearNum, currentMonthNum);
     const currentMonthIndex = referenceIndex + currentMonthDiff;
-
-    console.log('[預算表] initMonthSelect: 計算月份索引', {
-      currentMonthStr: currentMonthStr,
-      currentMonthIndex: currentMonthIndex,
-      nextMonthStr: nextMonthStr,
-      nextMonthIndex: nextMonthIndex,
-      sheetNames: sheetNames,
-      sheetNamesLength: sheetNames.length
-    });
-
     let targetSheetIndex = null;
     let targetMonthName = null;
 
@@ -3442,12 +2988,6 @@ const initMonthSelect = async () => {
         if (testData && testData.data) {
           const dataKeys = Object.keys(testData.data);
           const hasMonth = dataKeys.some(key => key.includes(name));
-          console.log(`[預算表] initMonthSelect: 檢查記憶體中的月份 ${name} (sheetIndex: ${index})`, {
-            hasData: !!testData.data,
-            dataKeys: dataKeys,
-            hasMonth: hasMonth,
-            targetSheetIndex: targetSheetIndex
-          });
           if (hasMonth && !targetSheetIndex) {
             // 如果資料沒有明確標記來源，假設是從 API 載入的（保守處理）
             // 這樣可以避免錯誤地顯示 spinner
@@ -3456,7 +2996,6 @@ const initMonthSelect = async () => {
             }
             targetSheetIndex = index;
             targetMonthName = name;
-            console.log(`[預算表] initMonthSelect: 使用記憶體中的月份 ${name} (sheetIndex: ${index})`);
             break;
           }
         }
@@ -3517,21 +3056,11 @@ const initMonthSelect = async () => {
     // 如果下一個月載入失敗，嘗試當前月份
     if (!targetSheetIndex && currentMonthIndex >= 2) {
       try {
-        console.log(`[預算表] initMonthSelect: 嘗試載入當前月份 ${currentMonthStr} (sheetIndex: ${currentMonthIndex})`);
         const testData = await loadMonthData(currentMonthIndex);
 
         if (testData && testData.data) {
           const dataKeys = Object.keys(testData.data);
           const hasCurrentMonth = dataKeys.some(key => key.includes(currentMonthStr));
-
-          console.log(`[預算表] initMonthSelect: 當前月份載入結果`, {
-            month: currentMonthStr,
-            sheetIndex: currentMonthIndex,
-            hasData: !!testData.data,
-            dataKeys: dataKeys,
-            hasCurrentMonth: hasCurrentMonth
-          });
-
           if (hasCurrentMonth) {
             targetSheetIndex = currentMonthIndex;
             targetMonthName = currentMonthStr;
@@ -3540,23 +3069,13 @@ const initMonthSelect = async () => {
 
             // 保存到快取
             setToCache(`budget_monthData_${currentMonthIndex}`, testData);
-            console.log(`[預算表] initMonthSelect: 成功載入當前月份 ${currentMonthStr} (sheetIndex: ${currentMonthIndex})`);
           }
         }
       } catch (e) {
-        console.error(`[預算表] initMonthSelect: 載入當前月份 ${currentMonthStr} (sheetIndex: ${currentMonthIndex}) 失敗`, e);
       }
     }
 
     // 如果找到了目標月份，顯示它
-    console.log('[預算表] initMonthSelect: 檢查是否找到目標月份', {
-      targetSheetIndex: targetSheetIndex,
-      targetMonthName: targetMonthName,
-      currentMonthStr: currentMonthStr,
-      currentMonthIndex: currentMonthIndex,
-      sheetNames: sheetNames
-    });
-    
     // 如果沒有找到目標月份，但當前月份在 sheetNames 中，嘗試使用當前月份
     if (!targetSheetIndex && sheetNames.length > 0) {
       const currentMonthInSheetNames = sheetNames.findIndex(name => name === currentMonthStr);
@@ -3565,11 +3084,9 @@ const initMonthSelect = async () => {
         if (allMonthsData[currentMonthSheetIndex]) {
           targetSheetIndex = currentMonthSheetIndex;
           targetMonthName = currentMonthStr;
-          console.log(`[預算表] initMonthSelect: 使用當前月份 ${currentMonthStr} (sheetIndex: ${currentMonthSheetIndex})`);
         } else {
           // 如果當前月份不在記憶體中，嘗試載入
           try {
-            console.log(`[預算表] initMonthSelect: 當前月份不在記憶體中，嘗試載入 ${currentMonthStr} (sheetIndex: ${currentMonthSheetIndex})`);
             const testData = await loadMonthData(currentMonthSheetIndex);
             if (testData && testData.data) {
               const dataKeys = Object.keys(testData.data);
@@ -3580,11 +3097,9 @@ const initMonthSelect = async () => {
                 testData._fromApi = true;
                 allMonthsData[currentMonthSheetIndex] = testData;
                 setToCache(`budget_monthData_${currentMonthSheetIndex}`, testData);
-                console.log(`[預算表] initMonthSelect: 成功載入當前月份 ${currentMonthStr} (sheetIndex: ${currentMonthSheetIndex})`);
               }
             }
           } catch (e) {
-            console.error(`[預算表] initMonthSelect: 載入當前月份 ${currentMonthStr} 失敗`, e);
           }
         }
       }
@@ -3593,13 +3108,6 @@ const initMonthSelect = async () => {
     if (targetSheetIndex && targetMonthName) {
       currentSheetIndex = targetSheetIndex;
       const targetMonthData = allMonthsData[targetSheetIndex];
-      console.log('[預算表] initMonthSelect: 準備顯示目標月份', {
-        targetSheetIndex: targetSheetIndex,
-        targetMonthName: targetMonthName,
-        hasData: !!targetMonthData?.data,
-        hasTotal: !!targetMonthData?.total
-      });
-
       // 檢查資料是否從快取載入（需要擋住頁首）
       // 只有當 _fromCache 為 true 或 _fromApi 明確為 false 時，才認為是從快取載入
       const isFromCache = allMonthsData[targetSheetIndex] &&
@@ -3620,29 +3128,19 @@ const initMonthSelect = async () => {
           updateTotalDisplay(targetMonthData.total);
         } else {
           // 如果沒有總計或格式不正確，重新載入總計
-          console.log('[預算表] initMonthSelect: 目標月份缺少總計，重新載入', {
-            targetSheetIndex: targetSheetIndex,
-            targetMonthName: targetMonthName
-          });
           try {
             await loadMonthData(targetSheetIndex, false);
             // loadMonthData 會自動更新總計
           } catch (error) {
-            console.error('[預算表] initMonthSelect: 載入總計失敗', error);
             // 如果載入失敗，使用即時計算
             updateTotalDisplay();
           }
         }
       } else {
-        console.warn('[預算表] 目標月份資料缺少 data 欄位，重新載入', {
-          targetSheetIndex: targetSheetIndex,
-          targetMonthName: targetMonthName
-        });
         // 如果沒有資料，重新載入
         try {
           await loadMonthData(targetSheetIndex, false);
         } catch (error) {
-          console.error('[預算表] initMonthSelect: 載入資料失敗', error);
           allRecords = [];
           filteredRecords = [];
           // 即使沒有資料，也要更新總計（顯示為0）
@@ -3710,25 +3208,13 @@ const initMonthSelect = async () => {
       // 在背景載入完整月份列表並預載其他月份的資料
       loadMonthNames().then(() => {
         // 使用完整的月份列表更新下拉選單
-        console.log('[預算表] initMonthSelect: 更新月份下拉選單', {
-          sheetNamesCount: sheetNames.length,
-          sheetNames: sheetNames,
-          currentSheetIndex: currentSheetIndex,
-          beforeUpdateOptionsCount: monthSelect.options.length
-        });
         monthSelect.innerHTML = '';
         sheetNames.forEach((name, idx) => {
           const opt = document.createElement('option');
           opt.value = String(idx);
           opt.textContent = name;
           monthSelect.appendChild(opt);
-          console.log(`[預算表] initMonthSelect: 添加月份選項 ${idx}: ${name} (value: ${idx})`);
         });
-        console.log('[預算表] initMonthSelect: 月份下拉選單已更新', {
-          optionsCount: monthSelect.options.length,
-          options: Array.from(monthSelect.options).map(opt => ({ value: opt.value, text: opt.textContent }))
-        });
-
         // 更新月份選擇器顯示
         if (currentSheetIndex >= 2) {
           const selectIndex = currentSheetIndex - 2;
@@ -3741,14 +3227,11 @@ const initMonthSelect = async () => {
         preloadAllMonthsData(0, 0).then(() => {
         }).catch((error) => {
           // 背景預載失敗不影響用戶操作
-          console.warn('[預算表] initMonthSelect: 預載月份資料失敗', error);
         });
       }).catch((err) => {
         // 載入月份列表失敗不影響當前顯示
-        console.error('[預算表] initMonthSelect: 載入月份列表失敗', err);
         // 即使失敗，也嘗試顯示已載入的月份（如果有）
         if (sheetNames.length > 0) {
-          console.log('[預算表] initMonthSelect: 使用已載入的月份列表', sheetNames);
           monthSelect.innerHTML = '';
           sheetNames.forEach((name, idx) => {
             const opt = document.createElement('option');
@@ -3934,7 +3417,6 @@ saveButton.addEventListener('click', loadTotal);
 //     if (!bodyScrollLocked) {
 //       // 記住當前滾動位置
 //       scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-//       console.log('[硬鎖] 鎖定 body 滾動，當前 scrollY:', scrollY);
 
 //       // 同時鎖定 html 和 body（iOS 上真正的 scroll container 有時是 html）
 //       document.documentElement.style.overflow = 'hidden';
@@ -3946,15 +3428,12 @@ saveButton.addEventListener('click', loadTotal);
 //       document.body.style.width = '100%';
 
 //       bodyScrollLocked = true;
-//       console.log('[硬鎖] 鎖定完成，bodyScrollLocked:', bodyScrollLocked);
 //     } else {
-//       console.log('[硬鎖] 已經鎖定，跳過');
 //     }
 //   }
 
 //   function unlockBodyScroll() {
 //     if (bodyScrollLocked) {
-//       console.log('[硬鎖] 解鎖 body 滾動，恢復 scrollY:', scrollY);
 
 //       // 還原 html 和 body 的 overflow
 //       document.documentElement.style.overflow = '';
@@ -3969,9 +3448,7 @@ saveButton.addEventListener('click', loadTotal);
 //       window.scrollTo(0, scrollY);
 
 //       bodyScrollLocked = false;
-//       console.log('[硬鎖] 解鎖完成，bodyScrollLocked:', bodyScrollLocked);
 //     } else {
-//       console.log('[硬鎖] 未鎖定，跳過解鎖');
 //     }
 //   }
 
@@ -3983,7 +3460,6 @@ saveButton.addEventListener('click', loadTotal);
 //   function checkDropdownsAndLock() {
 //     // 重新查詢所有下拉選單（因為是動態創建的）
 //     const dropdowns = document.querySelectorAll('.category-dropdown, .select-dropdown');
-//     console.log('[硬鎖] 檢查下拉選單，找到', dropdowns.length, '個');
 
 //     let anyOpen = false;
 //     const openDropdowns = [];
@@ -4004,13 +3480,11 @@ saveButton.addEventListener('click', loadTotal);
 //             attributes: true,
 //             attributeFilter: ['style']
 //           });
-//           console.log('[硬鎖] 開始監聽新下拉選單', index);
 //         }
 //       }
 //     });
 
 //     if (openDropdowns.length > 0) {
-//       console.log('[硬鎖] 下拉選單狀態變化，開啟的數量:', openDropdowns.length, '索引:', openDropdowns);
 //     }
 
 //     if (anyOpen) {
@@ -4021,7 +3495,6 @@ saveButton.addEventListener('click', loadTotal);
 //   }
 
 //   function setupBodyScrollLock() {
-//     console.log('[硬鎖] 開始初始化');
 
 //     // 創建監聽下拉選單樣式變化的 observer
 //     styleObserver = new MutationObserver(() => {
@@ -4052,7 +3525,6 @@ saveButton.addEventListener('click', loadTotal);
 //       });
 
 //       if (hasNewDropdown) {
-//         console.log('[硬鎖] 檢測到新的下拉選單被創建');
 //         checkDropdownsAndLock();
 //       }
 //     });
@@ -4066,7 +3538,6 @@ saveButton.addEventListener('click', loadTotal);
 //     // 初始檢查一次
 //     checkDropdownsAndLock();
 
-//     console.log('[硬鎖] 設置完成，開始監聽 DOM 變化');
 //   }
 
 //   // 為所有下拉選單容器添加防止回彈
@@ -4180,7 +3651,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         await loadContent(true); // 強制重新載入
         SyncStatus.endSync(true);
       } catch (e) {
-        console.error('[預算表] 手動同步失敗:', e);
         SyncStatus.endSync(false);
       }
     });

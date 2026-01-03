@@ -557,7 +557,6 @@ async function saveChanges(itemId) {
     alert('儲存成功！');
 
   } catch (error) {
-    console.error('儲存失敗:', error);
     alert('儲存失敗：' + error.message);
   } finally {
     // Unlock

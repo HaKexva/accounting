@@ -141,7 +141,6 @@ const syncFromAPI = async () => {
       setToIDB('budgetTotals', budgetTotals).catch(() => {});
     });
   } catch (e) {
-    console.error('[背景同步] 失敗:', e);
     SyncStatus.endSync(false);
   }
 };
@@ -601,76 +600,33 @@ const budgetTotals = {};
 
 // 載入預算表中指定月份的資料，並先把每個類別的預算加總好存起來
 async function loadBudgetForMonth(sheetIndex) {
-  console.log('[支出表] loadBudgetForMonth: 開始載入預算', {
-    sheetIndex: sheetIndex,
-    hasCache: !!budgetTotals[sheetIndex],
-    cacheValue: budgetTotals[sheetIndex]
-  });
-
   // 如果已經有快取，直接返回
   if (budgetTotals[sheetIndex]) {
-    console.log('[支出表] loadBudgetForMonth: 使用快取資料', {
-      sheetIndex: sheetIndex,
-      categoryTotals: budgetTotals[sheetIndex],
-      categoryKeys: Object.keys(budgetTotals[sheetIndex] || {})
-    });
     return budgetTotals[sheetIndex];
   }
-
-  console.log('[支出表] loadBudgetForMonth: 從 API 載入預算', {
-    sheetIndex: sheetIndex,
-    baseBudget: baseBudget
-  });
 
   const params = { name: "Show Tab Data", sheet: sheetIndex, _t: Date.now() };
   const url = `${baseBudget}?${new URLSearchParams(params)}`;
   let res;
   try {
-    console.log('[支出表] loadBudgetForMonth: 發送 API 請求', {
-      url: url,
-      params: params
-    });
     res = await fetch(url, {
       method: "GET",
       redirect: "follow",
       mode: "cors",
       cache: "no-store"
     });
-    console.log('[支出表] loadBudgetForMonth: API 請求完成', {
-      status: res.status,
-      statusText: res.statusText,
-      ok: res.ok
-    });
   } catch (err) {
-    console.error('[支出表] loadBudgetForMonth: API 請求失敗', {
-      error: err,
-      message: err.message
-    });
     throw new Error(`無法連接預算表伺服器: ${err.message}`);
   }
 
   if (!res.ok) {
-    console.error('[支出表] loadBudgetForMonth: API 回應錯誤', {
-      status: res.status,
-      statusText: res.statusText
-    });
     throw new Error(`載入預算資料失敗: HTTP ${res.status} ${res.statusText}`);
   }
 
   let data;
   try {
     data = await res.json();
-    console.log('[支出表] loadBudgetForMonth: 解析 JSON 完成', {
-      dataType: typeof data,
-      isArray: Array.isArray(data),
-      isObject: typeof data === 'object' && data !== null,
-      dataKeys: data && typeof data === 'object' ? Object.keys(data) : null,
-      data: data
-    });
   } catch (jsonErr) {
-    console.error('[支出表] loadBudgetForMonth: JSON 解析失敗', {
-      error: jsonErr
-    });
     const text = await res.text();
     throw new Error('預算表回應格式錯誤');
   }
@@ -687,39 +643,19 @@ async function loadBudgetForMonth(sheetIndex) {
   };
 
   if (data && typeof data === 'object') {
-    console.log('[支出表] loadBudgetForMonth: 開始處理資料', {
-      dataKeys: Object.keys(data),
-      dataKeysCount: Object.keys(data).length,
-      data: data
-    });
-
     Object.keys(data).forEach(key => {
       const rows = data[key] || [];
-      console.log('[支出表] loadBudgetForMonth: 處理命名範圍', {
-        key: key,
-        rowsCount: rows.length,
-        isExpenseBudget: key.includes('支出')
-      });
 
       // 只處理包含「支出」字樣的命名範圍（例如：當月支出預算202512）
       const isExpenseBudget = key.includes('支出');
       if (!isExpenseBudget) {
         skippedRowsReasons.notExpenseBudget++;
-        console.log('[支出表] loadBudgetForMonth: 跳過非支出預算的命名範圍', {
-          key: key,
-          skippedCount: skippedRowsReasons.notExpenseBudget
-        });
         return;
       }
       
       rows.forEach((row, rowIndex) => {
         if (!row || row.length === 0) {
           skippedRowsReasons.emptyRow++;
-          console.log('[支出表] loadBudgetForMonth: 跳過空行', {
-            key: key,
-            rowIndex: rowIndex,
-            skippedCount: skippedRowsReasons.emptyRow
-          });
           return;
         }
 
@@ -735,14 +671,6 @@ async function loadBudgetForMonth(sheetIndex) {
             firstCellStr.toLowerCase() === '編號' || firstCellStr.toLowerCase() === '總計' ||
             firstCellStr.includes('編號') || firstCellStr.includes('總計')) {
           skippedRowsReasons.headerOrTotal++;
-          console.log('[支出表] loadBudgetForMonth: 跳過標題列或總計列', {
-            key: key,
-            rowIndex: rowIndex,
-            firstCell: firstCell,
-            firstCellStr: firstCellStr,
-            row: row,
-            skippedCount: skippedRowsReasons.headerOrTotal
-          });
           return;
         }
         
@@ -763,39 +691,12 @@ async function loadBudgetForMonth(sheetIndex) {
         const costRaw = row[4];
         const cost = parseFloat(costRaw);
 
-        console.log('[支出表] loadBudgetForMonth: 處理資料列', {
-          key: key,
-          rowIndex: rowIndex,
-          row: row,
-          category: category,
-          item: item,
-          costRaw: costRaw,
-          cost: cost,
-          hasCategory: !!category,
-          hasItem: !!item,
-          isFiniteCost: Number.isFinite(cost)
-        });
-
         if (!category) {
           skippedRowsReasons.noCategory++;
-          console.log('[支出表] loadBudgetForMonth: 跳過沒有類別的行', {
-            key: key,
-            rowIndex: rowIndex,
-            row: row,
-            skippedCount: skippedRowsReasons.noCategory
-          });
           return;
         }
         if (!Number.isFinite(cost)) {
           skippedRowsReasons.invalidCost++;
-          console.log('[支出表] loadBudgetForMonth: 跳過金額無效的行', {
-            key: key,
-            rowIndex: rowIndex,
-            row: row,
-            costRaw: costRaw,
-            cost: cost,
-            skippedCount: skippedRowsReasons.invalidCost
-          });
           return;
         }
 
@@ -807,43 +708,11 @@ async function loadBudgetForMonth(sheetIndex) {
         categoryTotals[budgetKey] = oldTotal + cost;
 
         processedRowsCount++;
-        console.log('[支出表] loadBudgetForMonth: 更新預算總計（相同 category 相加）', {
-          budgetKey: budgetKey,
-          category: category,
-          item: item,
-          cost: cost,
-          oldTotal: oldTotal,
-          newTotal: categoryTotals[budgetKey],
-          processedRowsCount: processedRowsCount,
-          note: '相同 category 的預算會相加'
-        });
       });
-    });
-
-    console.log('[支出表] loadBudgetForMonth: 處理資料完成（統計）', {
-      categoryTotals: categoryTotals,
-      categoryKeys: Object.keys(categoryTotals),
-      categoryCount: Object.keys(categoryTotals).length,
-      processedRowsCount: processedRowsCount,
-      skippedRowsCount: skippedRowsCount,
-      skippedRowsReasons: skippedRowsReasons,
-      totalRowsProcessed: processedRowsCount + Object.values(skippedRowsReasons).reduce((a, b) => a + b, 0)
-    });
-  } else {
-    console.warn('[支出表] loadBudgetForMonth: 資料格式無效', {
-      data: data,
-      dataType: typeof data
     });
   }
 
   budgetTotals[sheetIndex] = categoryTotals;
-
-  console.log('[支出表] loadBudgetForMonth: 載入完成', {
-    sheetIndex: sheetIndex,
-    categoryTotals: categoryTotals,
-    categoryKeys: Object.keys(categoryTotals),
-    categoryCount: Object.keys(categoryTotals).length
-  });
 
   return categoryTotals;
 }
@@ -957,7 +826,6 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
         // 使用時間、項目和金額作為唯一標識，避免重複添加
         const rowKey = `${row[0] || ''}_${row[1] || ''}_${row[8] || ''}`;
         if (processedRowKeys.has(rowKey)) {
-          console.warn('[支出表] processDataFromResponse: 發現重複記錄，跳過:', rowKey, 'key =', key);
           return; // 跳過重複記錄
         }
         processedRowKeys.add(rowKey);
@@ -988,14 +856,6 @@ const updateTotalDisplay = () => {
   
   // 獲取當前選擇的類別
   const selectedCategory = expenseCategorySelect ? expenseCategorySelect.value : '';
-  console.log('[支出表] updateTotalDisplay: 當前選擇的類別', selectedCategory);
-  console.log('[支出表] updateTotalDisplay: 預算表', budgetTotals);
-  console.log('[支出表] updateTotalDisplay: 當前月份', currentSheetIndex);
-  console.log('[支出表] updateTotalDisplay: 當前月份資料', allMonthsData[currentSheetIndex]);
-  console.log('[支出表] updateTotalDisplay: 當前月份資料', allMonthsData[currentSheetIndex].data);
-  console.log('[支出表] updateTotalDisplay: 當前月份資料', allMonthsData[currentSheetIndex].data['當月支出預算']);
-  console.log('[支出表] updateTotalDisplay: 當前月份資料', allMonthsData[currentSheetIndex].data['當月支出預算'].length);
-  console.log('[支出表] updateTotalDisplay: 當前月份資料', allMonthsData[currentSheetIndex].data['當月支出預算'][0]);
   // 如果沒有選擇類別，顯示 0
   if (!selectedCategory) {
     incomeAmount.textContent = '0';
@@ -2511,7 +2371,6 @@ async function showHistoryModal() {
       // 保存到 IndexedDB
       setToIDB(`monthData_${currentSheetIndex}`, monthData).catch(() => {});
     } catch (e) {
-      console.error('[歷史紀錄] 載入資料失敗:', e);
     }
 
     // 移除 spinner
@@ -3378,7 +3237,6 @@ if (dateInput) {
             allMonthsData[currentSheetIndex] = monthData;
             setToIDB(`expense_monthData_${currentSheetIndex}`, monthData).catch(() => {});
           } catch (e) {
-            console.warn('[支出] 載入月份資料失敗:', e);
           }
         }
         updateTotalDisplay();
