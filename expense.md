@@ -650,12 +650,14 @@ async function loadBudgetForMonth(sheetIndex) {
       // 只處理包含「支出」字樣的命名範圍（例如：當月支出預算202512）
       const isExpenseBudget = key.includes('支出');
       if (!isExpenseBudget) {
+        console.log("key: "+ key + " is not expense budget")
         skippedRowsReasons.notExpenseBudget++;
         return;
       }
 
       rows.forEach((row, rowIndex) => {
         if (!row || row.length === 0) {
+          console.log("key: "+ key + " row is empty")
           skippedRowsReasons.emptyRow++;
           return;
         }
@@ -671,6 +673,7 @@ async function loadBudgetForMonth(sheetIndex) {
         if (firstCellStr === '編號' || firstCellStr === '總計' ||
             firstCellStr.toLowerCase() === '編號' || firstCellStr.toLowerCase() === '總計' ||
             firstCellStr.includes('編號') || firstCellStr.includes('總計')) {
+          console.log("key: "+ key + " first cell is header or total")
           skippedRowsReasons.headerOrTotal++;
           return;
         }
@@ -693,10 +696,12 @@ async function loadBudgetForMonth(sheetIndex) {
         const cost = parseFloat(costRaw);
 
         if (!category) {
+          console.log("key: "+ key + " category is empty")
           skippedRowsReasons.noCategory++;
           return;
         }
         if (!Number.isFinite(cost)) {
+          console.log("key: "+ key + " cost is invalid")
           skippedRowsReasons.invalidCost++;
           return;
         }
@@ -711,8 +716,6 @@ async function loadBudgetForMonth(sheetIndex) {
         processedRowsCount++;
       });
     });
-
-    console.log("skippedRowsReasons: "+ skippedRowsReasons)
   }
 
   budgetTotals[sheetIndex] = categoryTotals;
