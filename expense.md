@@ -645,7 +645,6 @@ async function loadBudgetForMonth(sheetIndex) {
 
   if (data && typeof data === 'object') {
     Object.keys(data).forEach(key => {
-      console.log("Key: "+ key)
       const rows = data[key] || [];
 
       // 只處理包含「支出」字樣的命名範圍（例如：當月支出預算202512）
@@ -708,10 +707,12 @@ async function loadBudgetForMonth(sheetIndex) {
         const budgetKey = category; // 只用 category 作為 key
         const oldTotal = categoryTotals[budgetKey] || 0;
         categoryTotals[budgetKey] = oldTotal + cost;
-        console.log('budget:' + budgetKey, 'oldTotal:' + oldTotal, 'cost:' + cost);
+        console.log('key:' + key + ' budget:' + budgetKey, 'oldTotal:' + oldTotal, 'cost:' + cost);
         processedRowsCount++;
       });
     });
+
+    console.log("skippedRowsReasons: "+ skippedRowsReasons)
   }
 
   budgetTotals[sheetIndex] = categoryTotals;
