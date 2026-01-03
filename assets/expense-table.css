@@ -4,7 +4,7 @@
 /* Sticky summary - when record-cost input is focused and summary not visible */
 .total-container.sticky-active {
   position: fixed !important;
-  top: 62px; /* Default, will be overridden by JS for keyboard */
+  top: 56px; /* Default fallback, dynamically set by JS based on actual header height */
   left: 0 !important;
   right: 0 !important;
   z-index: 1999 !important;

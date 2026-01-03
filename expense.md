@@ -3412,13 +3412,19 @@ if (recordCostInput) {
   let stickyActive = false;
   let inputFocused = false;
 
+  // Get actual header height dynamically
+  const getHeaderHeight = () => {
+    const header = document.querySelector('.site-header');
+    return header ? header.offsetHeight : 56;
+  };
+
   // Check if summary is visible in viewport
   const isSummaryVisible = () => {
     if (!placeholder.parentNode) return true; // If no placeholder, check original position
     const rect = placeholder.getBoundingClientRect();
     const vv = window.visualViewport;
     const viewportTop = vv ? vv.offsetTop : 0;
-    const navHeight = 62;
+    const navHeight = getHeaderHeight();
     // Summary is visible if its top is below the nav bar
     return rect.top >= (viewportTop + navHeight);
   };
@@ -3431,6 +3437,8 @@ if (recordCostInput) {
 
     if (shouldBeSticky && !stickyActive) {
       // Make sticky
+      placeholder.style.height = totalContainer.offsetHeight + 'px';
+      placeholder.style.display = 'block';
       totalContainer.classList.add('sticky-active');
       stickyActive = true;
       updateStickyPosition();
@@ -3438,6 +3446,7 @@ if (recordCostInput) {
       // Remove sticky
       totalContainer.classList.remove('sticky-active');
       totalContainer.style.top = '';
+      placeholder.style.display = 'none';
       stickyActive = false;
     }
   };
@@ -3447,6 +3456,7 @@ if (recordCostInput) {
     if (!stickyActive || !totalContainer) return;
 
     const vv = window.visualViewport;
+    const headerHeight = getHeaderHeight();
     if (vv) {
       // Check if keyboard is likely open (viewport height significantly reduced)
       const keyboardOpen = vv.height < window.innerHeight * 0.75;
@@ -3456,8 +3466,10 @@ if (recordCostInput) {
         totalContainer.style.top = vv.offsetTop + 'px';
       } else {
         // Normal: position below nav bar
-        totalContainer.style.top = '62px';
+        totalContainer.style.top = headerHeight + 'px';
       }
+    } else {
+      totalContainer.style.top = headerHeight + 'px';
     }
   };
 
