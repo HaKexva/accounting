@@ -662,7 +662,7 @@ async function loadBudgetForMonth(sheetIndex) {
   if (data && typeof data === 'object') {
     Object.keys(data).forEach(key => {
       const rows = data[key] || [];
-
+      console.log(rows)
       // 只處理包含「支出」字樣的命名範圍（例如：當月支出預算202512）
       const isExpenseBudget = key.includes('支出');
       if (!isExpenseBudget) {
@@ -805,9 +805,6 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
     const monthIndex = effectiveSheetIndex - 2;
     const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length && sheetNames.length > 0) ? sheetNames[monthIndex] : '';
 
-    // 使用 Set 來追蹤已處理的記錄，避免重複添加
-    const processedRowKeys = new Set();
-
     Object.keys(data).forEach(key => {
       const rows = data[key] || [];
 
@@ -864,10 +861,6 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
 
         // 使用時間、項目和金額作為唯一標識，避免重複添加
         const rowKey = `${row[0] || ''}_${row[1] || ''}_${row[8] || ''}`;
-        if (processedRowKeys.has(rowKey)) {
-          return; // 跳過重複記錄
-        }
-        processedRowKeys.add(rowKey);
 
         allRecords.push({ type, row });
       });
