@@ -3,7 +3,7 @@
 
 @import "minima";
 
-/* 防止回彈效果 */
+// Prevent bounce effect
 // html {
 //   overscroll-behavior: none !important;
 //   overscroll-behavior-y: none !important;
@@ -27,27 +27,27 @@
   padding-left: 30px;
 }
 
-/* 讓頁首(header)永遠浮在最上層，避免被內容或懸浮區遮住 */
+// Keep header always floating on top to avoid being covered by content or floating areas
 .site-header {
   position: sticky;
   top: 0;
   z-index: 2000;
-  background-color: #fff; /* 移除透明效果 */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加陰影以區分頁首 */
+  background-color: #fff; // Remove transparent effect
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); // Add shadow to distinguish header
 }
 
-/* 登出按鈕隱藏（不再顯示在右上角） */
+// Hide logout button (no longer displayed in top right corner)
 #user-info {
   display: none !important;
 }
 
-/* 確保漢堡菜單中的登出按鈕樣式 */
+// Ensure logout button style in hamburger menu
 .site-nav .logout-link {
   color: #dc3545 !important;
   font-weight: 500;
 }
 
-/* 手機版：登出按鈕在漢堡菜單底部 */
+// Mobile: logout button at bottom of hamburger menu
 @media (max-width: 600px) {
   .site-nav .trigger {
     display: flex;
@@ -67,7 +67,7 @@
   }
 }
 
-/* 統一導航列（索引列）的字體大小 */
+// Unify navigation bar (index bar) font size
 .site-title,
 .site-title a {
   font-size: 1.5rem;
@@ -79,7 +79,7 @@
   font-weight: 500;
 }
 
-/* 調整導航順序：將支出按鈕移到最左側（漢堡菜單左側） */
+// Adjust navigation order: move expense button to the leftmost (left side of hamburger menu)
 .site-nav {
   display: flex;
 }
@@ -88,7 +88,7 @@
   order: -1;
 }
 
-/* 統一各頁面的主標題（頁首標題）大小與樣式 */
+// Unify main title (header title) size and style for all pages
 .post-title {
   font-size: 2.2rem;
   font-weight: 700;

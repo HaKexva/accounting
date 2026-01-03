@@ -133,11 +133,11 @@ async function loadDropdownOptions() {
       EXPENSE_CATEGORY_OPTIONS = readColumn(colCategory);
       // 如果當前顯示的是支出類別，重新渲染
       const categorySelect = document.getElementById('category-select');
-      if (categorySelect && categorySelect.value === '支出') {
+      if (categorySelect && categorySelect.value === '預計支出') {
         // 保存當前選擇的值（如果有）
         const currentCategorySelect = document.getElementById('expense-category-select');
         const currentValue = currentCategorySelect ? currentCategorySelect.value : '';
-        updateDivVisibility('支出');
+        updateDivVisibility('預計支出');
         // 如果之前有選擇值，嘗試恢復
         if (currentValue) {
           setTimeout(() => {
@@ -255,7 +255,7 @@ function findClosestMonth() {
 function enterNewModeIfEmpty() {
   if (filteredRecords.length > 0) return;
 
-  const currentType = categorySelect ? categorySelect.value : '支出';
+  const currentType = categorySelect ? categorySelect.value : '預計支出';
   let nextNumber = 1;
   const allRecordsOfType = allRecords.filter(r => r.type === currentType);
   if (allRecordsOfType.length > 0) {
@@ -343,7 +343,7 @@ function filterRecordsByType(type) {
     if (noteInput) noteInput.value = '';
 
     // 如果是支出，重置類別選擇
-    if (type === '支出') {
+    if (type === '預計支出') {
       const categorySelectElement = document.getElementById('expense-category-select');
       if (categorySelectElement && categorySelectElement.options.length > 0) {
         categorySelectElement.value = categorySelectElement.options[0].value;
@@ -486,7 +486,7 @@ function showRecord(index) {
 
   // 設定「支出 / 收入」大類（只改畫面，不觸發 change 事件，避免遞迴）
   if (typeof categorySelect !== 'undefined' && typeof categorySelectText !== 'undefined') {
-    const value = type === '收入' || type === '支出' ? type : '支出';
+    const value = type === '收入' || type === '預計支出' ? type : '預計支出';
     categorySelect.value = value;
     categorySelectText.textContent = value;
     // 直接更新欄位顯示
@@ -502,7 +502,7 @@ function showRecord(index) {
     const costInput = document.getElementById('cost-input');
     const noteInput = document.getElementById('note-input');
 
-    if (type === '支出') {
+    if (type === '預計支出') {
       // 支出：[編號, 時間, category, item, cost, note]
       const categorySelectElement = document.getElementById('expense-category-select');
       if (categorySelectElement) {
@@ -585,7 +585,7 @@ const findRecordInData = (data, recordNumber, recordType) => {
   const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
   
   const isIncome = recordType === '收入';
-  const isExpense = recordType === '支出';
+  const isExpense = recordType === '預計支出';
   
   // 查找對應的命名範圍
   for (const key of Object.keys(data)) {
@@ -655,7 +655,7 @@ const processDataFromResponse = (data, shouldFilter = true) => {
 
       const isIncome = key.includes('收入');
       const isExpense = key.includes('支出');
-      const type = isIncome ? '收入' : (isExpense ? '支出' : '');
+      const type = isIncome ? '收入' : (isExpense ? '預計支出' : '');
 
       if (!type) {
         return;
@@ -736,7 +736,7 @@ const processDataFromResponse = (data, shouldFilter = true) => {
         if (type === '收入' && row.length < 5) {
           return;
         }
-        if (type === '支出' && row.length < 6) {
+        if (type === '預計支出' && row.length < 6) {
           return;
         }
 
@@ -786,7 +786,7 @@ const processDataFromResponse = (data, shouldFilter = true) => {
 
   // 根據目前選擇的類型過濾記錄（預設顯示支出）
   if (shouldFilter) {
-    const currentType = categorySelect ? categorySelect.value : '支出';
+    const currentType = categorySelect ? categorySelect.value : '預計支出';
     filterRecordsByType(currentType);
   }
 };
@@ -824,7 +824,7 @@ const updateTotalDisplay = (totalData = null) => {
     // 從當前記錄計算即時總計
     // 重要：一開始全部要加總，只有當用戶修改金額時才要排除舊值加上新值
     const costInput = document.getElementById('cost-input');
-    const currentType = categorySelect ? categorySelect.value : '支出';
+    const currentType = categorySelect ? categorySelect.value : '預計支出';
     
     // 檢查用戶是否正在修改金額（編輯模式且 costInput.value 與當前記錄的金額不同）
     let isEditingAmount = false;
@@ -869,7 +869,7 @@ const updateTotalDisplay = (totalData = null) => {
     }
     
     const incomeRecords = recordsToCalculate.filter(r => r.type === '收入');
-    const expenseRecords = recordsToCalculate.filter(r => r.type === '支出');
+    const expenseRecords = recordsToCalculate.filter(r => r.type === '預計支出');
     // 計算收入總計
     income = incomeRecords.reduce((sum, r) => {
       if (!r || !r.row || !Array.isArray(r.row)) return sum;
@@ -1744,7 +1744,7 @@ const updateDivVisibility = (forceType = null) => {
       if (categorySelectElement) {
         categoryValue = categorySelectElement.value;
       } else {
-        categoryValue = '支出'; // 默認值
+        categoryValue = '預計支出'; // 默認值
       }
     }
   }
@@ -1753,7 +1753,7 @@ const updateDivVisibility = (forceType = null) => {
   div3.innerHTML = '';
   div4.innerHTML = '';
 
-  if (categoryValue === '支出') {
+  if (categoryValue === '預計支出') {
     const categoryRow = createSelectRow('類別：', 'expense-category-select', EXPENSE_CATEGORY_OPTIONS);
     const costRow = createInputRow('金額：', 'cost-input', 'number');
     const noteRow = createTextareaRow('備註：', 'note-input', 3);
@@ -1828,7 +1828,7 @@ const saveData = async () => {
   let category = '';
   let range = 0;
 
-  if (categoryValue === '支出') {
+  if (categoryValue === '預計支出') {
     const div2Display = window.getComputedStyle(div2).display;
     if (div2Display === 'none' || div2Display === '') {
       alert('請等待表單載入完成');
@@ -2218,7 +2218,7 @@ const deleteCurrentRecord = async () => {
   }
 
   // 確定 rangeType (0=支出, 1=收入)
-  const rangeType = recordType === '支出' ? 0 : 1;
+  const rangeType = recordType === '預計支出' ? 0 : 1;
 
   // 鎖定整個頁面，等待後端回傳
   showSpinner();
@@ -2515,7 +2515,7 @@ function switchType(targetType) {
       return; // 如果元素不存在，直接返回
     }
 
-    const currentType = categorySelectElement.value || '支出';
+    const currentType = categorySelectElement.value || '預計支出';
 
     // 如果目標類型與當前類型不同，則切換
     if (currentType !== targetType) {
@@ -2577,7 +2577,7 @@ function switchType(targetType) {
       const newCategorySelectElement = document.getElementById('expense-category-select');
         if (newCategorySelectElement) {
           // 更新新創建的元素的值（如果目標類型是支出，設置第一個選項；如果是收入，不需要設置）
-          if (targetType === '支出' && newCategorySelectElement.options.length > 0) {
+          if (targetType === '預計支出' && newCategorySelectElement.options.length > 0) {
             newCategorySelectElement.value = newCategorySelectElement.options[0].value;
             // 同步更新自訂下拉顯示文字
             const newSelectContainer = newCategorySelectElement.parentElement;
@@ -2640,7 +2640,7 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
     // 向下鍵 = 切換到支出
-    switchType('支出');
+    switchType('預計支出');
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
     // Delete鍵或Backspace鍵 = 刪除當前記錄
@@ -2693,7 +2693,7 @@ categorySelectDisplay.className = 'category-select-display';
 
 const categorySelectText = document.createElement('div');
 categorySelectText.className = 'category-select-text';
-categorySelectText.textContent = '支出';
+categorySelectText.textContent = '預計支出';
 
 const categorySelectArrow = document.createElement('div');
 categorySelectArrow.className = 'category-select-arrow';
@@ -2706,10 +2706,10 @@ const categorySelect = document.createElement('select');
 categorySelect.id = 'category-select'; // 添加 id 以支持 label 關聯
 categorySelect.name = 'category-select'; // 添加 name 屬性以支持自動填充
 categorySelect.style.display = 'none';
-categorySelect.value = '支出';
+categorySelect.value = '預計支出';
 const optionExpense = document.createElement('option');
-optionExpense.value = '支出';
-optionExpense.textContent = '支出';
+optionExpense.value = '預計支出';
+optionExpense.textContent = '預計支出';
 const optionIncome = document.createElement('option');
 optionIncome.value = '收入';
 optionIncome.textContent = '收入';
@@ -2721,11 +2721,11 @@ categoryDropdown.className = 'category-dropdown';
 
 const categoryOption1 = document.createElement('div');
 categoryOption1.className = 'category-option';
-categoryOption1.textContent = '支出';
-categoryOption1.dataset.value = '支出';
+categoryOption1.textContent = '預計支出';
+categoryOption1.dataset.value = '預計支出';
 categoryOption1.addEventListener('click', function() {
-  categorySelectText.textContent = '支出';
-  categorySelect.value = '支出';
+  categorySelectText.textContent = '預計支出';
+  categorySelect.value = '預計支出';
   categoryDropdown.style.display = 'none';
   categorySelectArrow.style.transform = 'rotate(0deg)';
   categorySelect.dispatchEvent(new Event('change'));
@@ -2831,7 +2831,7 @@ expenseColumn.className = 'expense-column';
 
 const expenseTitle = document.createElement('h3');
 expenseTitle.className = 'expense-title';
-expenseTitle.textContent = '支出：';
+expenseTitle.textContent = '預計支出：';
 
 const expenseAmount = document.createElement('div');
 expenseAmount.className = 'expense-amount';
@@ -3633,8 +3633,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       loadDropdownOptions().then(() => {
         // 如果當前顯示的是支出類別，重新渲染
         const categorySelect = document.getElementById('category-select');
-        if (categorySelect && categorySelect.value === '支出') {
-          updateDivVisibility('支出');
+        if (categorySelect && categorySelect.value === '預計支出') {
+          updateDivVisibility('預計支出');
         }
       }).catch(err => {
       });

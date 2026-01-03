@@ -519,12 +519,10 @@ function GetSummary(sheet){
   return result;
 }
 
-/**
- * Batch update dropdown
- * @param {string} itemId - Item ID (category, payment, platform)
- * @param {Array} originalData - Original data array
- * @param {Array} newData - New data array
- */
+// Batch update dropdown
+// @param {string} itemId - Item ID (category, payment, platform)
+// @param {Array} originalData - Original data array
+// @param {Array} newData - New data array
 function BatchUpdateDropdown(itemId, originalData, newData) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dropdownSheet = ss.getSheets()[1]; // Dropdown table

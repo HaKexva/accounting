@@ -520,7 +520,7 @@ function CreateNewTab() {
     month = '0' + parseInt(month);
   }
   if (sheetNames.includes(year.toString() + month.toString())) {
-    return { success: false, message: '隔月試算表已新增，請勿繼續新增' };
+    return { success: false, message: 'Next month spreadsheet already created, please do not add again' };
   } else {
     var destination = SpreadsheetApp.openById('1G-c8fzN38vH02Eu8izCc9TpGAiPQBMYH-z3tUB_4tVM');
     targetSheet.copyTo(destination);
@@ -535,7 +535,7 @@ function CreateNewTab() {
   var range = targetSheet.getRange('G2:L');
   var name = '當月支出預算' + year.toString() + month.toString();
   ss.setNamedRange(name,range);
-  return { success: true, message: '新分頁已成功建立: ' + year + month };
+  return { success: true, message: 'New tab successfully created: ' + year + month };
 }
 
 
@@ -834,17 +834,17 @@ function DeleteData(sheetIndex, rangeType, number) {
   var startRow = 2; // 從第二行開始
   var column, totalColumn;
 
-  if (rangeType === 0) { // 支出
-    column = 6;       // 編號~備註
-    totalColumn = 11; // K欄是支出金額總計
-    var numberCol = 7; // G欄是編號
-  } else { // 收入
-    column = 5;       // 編號~備註
-    totalColumn = 4;  // D欄是收入金額總計
-    var numberCol = 1; // A欄是編號
+  if (rangeType === 0) { // Expense
+    column = 6;       // Number~Note
+    totalColumn = 11; // Column K is expense amount total
+    var numberCol = 7; // Column G is number
+  } else { // Income
+    column = 5;       // Number~Note
+    totalColumn = 4;  // Column D is income amount total
+    var numberCol = 1; // Column A is number
   }
 
-  // 找到要刪除的行
+  // Find row to delete
   var lastRow = sheet.getLastRow();
   var targetRow = -1;
   for (var r = startRow; r <= lastRow; r++) {
@@ -856,7 +856,7 @@ function DeleteData(sheetIndex, rangeType, number) {
   }
 
   if (targetRow === -1) {
-    return { success: false, message: '找不到對應編號資料' };
+    return { success: false, message: 'Cannot find corresponding number data' };
   }
 
   // 刪除該行
@@ -883,7 +883,7 @@ function DeleteData(sheetIndex, rangeType, number) {
     lastDataRow--;
   }
 
-  // 設定新的總計行
+  // Set new total row
   var firstDataRow = startRow;
   if (lastDataRow < firstDataRow) {
     // 沒有資料就設總計為 0
@@ -901,7 +901,7 @@ function DeleteData(sheetIndex, rangeType, number) {
 
   return {
     success: true,
-    message: '資料已成功刪除，總計已更新',
+    message: 'Data successfully deleted, total updated',
     data: ShowTabData(sheetIndex),
     total: GetSummary(sheetIndex)
   };
@@ -913,7 +913,7 @@ function ChangeTabName(sheet,name) {
   var oldName = targetSheet.getSheetName();
   targetSheet.setName(name);
 
-  return { success: true, message: '分頁名稱已從 "' + oldName + '" 更改為 "' + name + '"' };
+  return { success: true, message: 'Tab name changed from "' + oldName + '" to "' + name + '"' };
 }
 
 function GetSummary(sheet){
