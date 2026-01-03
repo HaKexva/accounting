@@ -2285,6 +2285,10 @@ const deleteCurrentRecord = async () => {
 
         // 使用回傳的資料更新記錄和總計
         processDataFromResponse(result.data, false);
+        
+        // 刪除後重新過濾記錄（確保 filteredRecords 更新）
+        const currentType = categorySelect ? categorySelect.value : '預計支出';
+        filterRecordsByType(currentType);
 
         // 立即更新總計（在更新資料後立即更新）
         // 確保總計正確更新（如果後端返回的總計格式正確）

@@ -70,6 +70,23 @@ let PAYMENT_PLATFORM_OPTIONS = [
   { value: '髮果', text: '髮果' }
 ];
 
+// ===== 支付方式關鍵字檢測 =====
+// 檢測是否為信用卡類型的支付方式（包含「信用卡」等關鍵字）
+const isCreditCardPayment = (paymentMethod) => {
+  if (!paymentMethod) return false;
+  const keywords = ['信用卡', '刷卡', 'credit card', 'creditcard'];
+  const lowerPayment = paymentMethod.toLowerCase();
+  return keywords.some(keyword => lowerPayment.includes(keyword.toLowerCase()));
+};
+
+// 檢測是否為存款或儲值類型的支付方式（包含「存款」、「儲值」等關鍵字）
+const isStoredValuePayment = (paymentMethod) => {
+  if (!paymentMethod) return false;
+  const keywords = ['存款', '儲值', '儲值的支出', '預付'];
+  const lowerPayment = paymentMethod.toLowerCase();
+  return keywords.some(keyword => lowerPayment.includes(keyword.toLowerCase()));
+};
+
 // ===== 使用共用快取模組 (SyncStatus) =====
 // 使用 SyncStatus 模組的快取功能 (定義在 assets/sync-status.js)
 const getFromIDB = (key) => SyncStatus.getFromCache(key);
@@ -510,8 +527,8 @@ function fillForm(row) {
       paymentMethodSelect.dispatchEvent(new Event('change'));
     }
 
-    // 信用卡支付方式（如果支付方式是信用卡）
-    if (creditCardPaymentSelect && row[3] === '信用卡支出') {
+    // 信用卡支付方式（如果支付方式是信用卡類型）
+    if (creditCardPaymentSelect && isCreditCardPayment(row[3])) {
       creditCardPaymentSelect.value = row[4] || '';
       // 同步更新自訂下拉顯示文字
       const selectContainer = creditCardPaymentSelect.parentElement;
@@ -527,8 +544,8 @@ function fillForm(row) {
       }
     }
 
-    // 本月/次月支付（如果支付方式是信用卡）
-    if (monthPaymentSelect && row[3] === '信用卡支出') {
+    // 本月/次月支付（如果支付方式是信用卡類型）
+    if (monthPaymentSelect && isCreditCardPayment(row[3])) {
       monthPaymentSelect.value = row[5] || '';
       // 同步更新自訂下拉顯示文字
       const selectContainer = monthPaymentSelect.parentElement;
@@ -544,8 +561,8 @@ function fillForm(row) {
       }
     }
 
-    // 支付平台（如果支付方式是存款或儲值的支出）
-    if (paymentPlatformSelect && row[3] === '存款或儲值的支出：LINE BANK / 悠遊付 / mos card / 髮果 等') {
+    // 支付平台（如果支付方式是存款或儲值類型）
+    if (paymentPlatformSelect && isStoredValuePayment(row[3])) {
       paymentPlatformSelect.value = row[7] || '';
       // 同步更新自訂下拉顯示文字
       const selectContainer = paymentPlatformSelect.parentElement;
@@ -797,9 +814,21 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
       }
 
       // 只處理當前月份的資料（命名範圍名稱應該包含當前月份）
-      // 但如果鍵名是 '當月支出預算' 或 '當月收入'（陣列轉換後的格式），則跳過月份檢查
-      const isGenericKey = key === '當月支出預算' || key === '當月收入' || key.includes('當月支出預算') || key.includes('當月收入');
-      const isCurrentMonth = isGenericKey || (currentMonthName && key.includes(currentMonthName));
+      // 修正：更嚴格的月份檢查，避免不同月份資料混合
+      let isCurrentMonth = false;
+      
+      // 如果沒有月份名稱（初始化階段），只接受完全匹配的通用 key
+      if (!currentMonthName || currentMonthName === '') {
+        // 只接受純通用 key（沒有月份數字的）
+        isCurrentMonth = key === '當月支出預算' || key === '當月收入';
+      } else {
+        // 有月份名稱時，必須精確匹配當前月份
+        // 例如 currentMonthName = '202602'，key 必須是 '當月支出預算202602'
+        const exactMatchKey = key === `當月支出預算${currentMonthName}` || key === `當月收入${currentMonthName}`;
+        const keyContainsMonth = key.includes(currentMonthName);
+        isCurrentMonth = exactMatchKey || keyContainsMonth;
+      }
+      
       if (!isCurrentMonth) {
         return; // 跳過不是當前月份的資料
       }
@@ -1647,10 +1676,10 @@ function getFormData(prefix = '') {
   let monthIndex = '';
   let payment = '';
 
-  if (spendWay === '信用卡支出') {
+  if (isCreditCardPayment(spendWay)) {
     creditCard = creditCardPaymentSelect ? creditCardPaymentSelect.value : '';
     monthIndex = monthPaymentSelect ? monthPaymentSelect.value : '';
-  } else if (spendWay === '存款或儲值的支出：LINE BANK / 悠遊付 / mos card / 髮果 等') {
+  } else if (isStoredValuePayment(spendWay)) {
     payment = paymentPlatformSelect ? paymentPlatformSelect.value : '';
   }
 
@@ -2781,11 +2810,11 @@ function showEditModal(record) {
   if (paymentMethodSelect) {
     paymentMethodSelect.addEventListener('change', () => {
       const paymentMethod = paymentMethodSelect.value;
-      if (paymentMethod === '信用卡支出') {
+      if (isCreditCardPayment(paymentMethod)) {
         creditCardPaymentRow.style.display = 'flex';
         monthPaymentRow.style.display = 'flex';
         paymentPlatformRow.style.display = 'none';
-      } else if (paymentMethod === '存款或儲值的支出：LINE BANK / 悠遊付 / mos card / 髮果 等') {
+      } else if (isStoredValuePayment(paymentMethod)) {
         creditCardPaymentRow.style.display = 'none';
         monthPaymentRow.style.display = 'none';
         paymentPlatformRow.style.display = 'flex';
@@ -2869,11 +2898,11 @@ function showEditModal(record) {
     }
     // 手動設置條件欄位的顯示狀態
     const paymentMethod = row[3] || '';
-    if (paymentMethod === '信用卡支出') {
+    if (isCreditCardPayment(paymentMethod)) {
       creditCardPaymentRow.style.display = 'flex';
       monthPaymentRow.style.display = 'flex';
       paymentPlatformRow.style.display = 'none';
-    } else if (paymentMethod === '存款或儲值的支出：LINE BANK / 悠遊付 / mos card / 髮果 等') {
+    } else if (isStoredValuePayment(paymentMethod)) {
       creditCardPaymentRow.style.display = 'none';
       monthPaymentRow.style.display = 'none';
       paymentPlatformRow.style.display = 'flex';
@@ -2885,8 +2914,8 @@ function showEditModal(record) {
 
     // 等待 DOM 更新後再填充條件欄位
     setTimeout(() => {
-      // 填充信用卡支付方式（如果支付方式是信用卡）
-      if (paymentMethod === '信用卡支出' && creditCardPaymentSelect) {
+      // 填充信用卡支付方式（如果支付方式是信用卡類型）
+      if (isCreditCardPayment(paymentMethod) && creditCardPaymentSelect) {
         creditCardPaymentSelect.value = row[4] || '';
         const selectContainer = creditCardPaymentSelect.parentElement;
         if (selectContainer) {
@@ -2901,8 +2930,8 @@ function showEditModal(record) {
         }
       }
 
-      // 填充本月/次月支付（如果支付方式是信用卡）
-      if (paymentMethod === '信用卡支出' && monthPaymentSelect) {
+      // 填充本月/次月支付（如果支付方式是信用卡類型）
+      if (isCreditCardPayment(paymentMethod) && monthPaymentSelect) {
         monthPaymentSelect.value = row[5] || '';
         const selectContainer = monthPaymentSelect.parentElement;
         if (selectContainer) {
@@ -2917,8 +2946,8 @@ function showEditModal(record) {
         }
       }
 
-      // 填充支付平台（如果支付方式是存款或儲值）
-      if (paymentMethod === '存款或儲值的支出：LINE BANK / 悠遊付 / mos card / 髮果 等' && paymentPlatformSelect) {
+      // 填充支付平台（如果支付方式是存款或儲值類型）
+      if (isStoredValuePayment(paymentMethod) && paymentPlatformSelect) {
         paymentPlatformSelect.value = row[7] || '';
         const selectContainer = paymentPlatformSelect.parentElement;
         if (selectContainer) {
@@ -3475,14 +3504,14 @@ noteRow.appendChild(noteInput);
 const updatePaymentFieldsVisibility = () => {
   const paymentMethod = paymentMethodSelect.value;
 
-  // 如果支付方式是信用卡，顯示信用卡支付方式和本月/次月支付
-  if (paymentMethod === '信用卡支出') {
+  // 如果支付方式名稱含有「信用卡」等關鍵字，顯示信用卡支付方式和本月/次月支付
+  if (isCreditCardPayment(paymentMethod)) {
     creditCardPaymentRow.style.display = 'flex';
     monthPaymentRow.style.display = 'flex';
     paymentPlatformRow.style.display = 'none';
   }
-  // 如果支付方式是存款或儲值的支出，顯示支付平台
-  else if (paymentMethod === '存款或儲值的支出：LINE BANK / 悠遊付 / mos card / 髮果 等') {
+  // 如果支付方式名稱含有「存款」、「儲值」等關鍵字，顯示支付平台
+  else if (isStoredValuePayment(paymentMethod)) {
     creditCardPaymentRow.style.display = 'none';
     monthPaymentRow.style.display = 'none';
     paymentPlatformRow.style.display = 'flex';

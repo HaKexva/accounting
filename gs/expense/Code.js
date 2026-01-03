@@ -110,6 +110,12 @@ function invalidateCache(sheetIndex) {
   cache.remove(getCacheKey('summary', sheetIndex));
 }
 
+// 清除月份列表快取（新增分頁時使用）
+function invalidateTabNamesCache() {
+  var cache = CacheService.getScriptCache();
+  cache.remove(getCacheKey('tabNames'));
+}
+
 function ShowTabName() {
   var cacheKey = getCacheKey('tabNames');
   var cached = getFromCache(cacheKey);
@@ -174,6 +180,8 @@ function CreateNewTab() {
     var copyName = ss.getSheetByName('「空白表」的副本');
     copyName.setName(year + month.toString());
   }
+  // 清除月份列表快取，確保下次載入時取得最新列表
+  invalidateTabNamesCache();
   return { success: true, message: 'New tab successfully created: ' + year + month };
 }
 
