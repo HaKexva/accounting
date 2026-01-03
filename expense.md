@@ -1242,7 +1242,7 @@ const loadContentFromMemory = async () => {
   // 如果記憶體中沒有，嘗試從快取讀取
   if (!monthData) {
     try {
-      const storedData = await getFromIDB(`expense_monthData_${currentSheetIndex}`);
+      const storedData = await getFromIDB(`monthData_${currentSheetIndex}`);
       if (storedData) {
         monthData = storedData;
         // 明確標記為從快取載入
@@ -2053,22 +2053,10 @@ async function showMonthSelect() {
   } else {
     months.forEach((month, index) => {
       const option = document.createElement('option');
-      // sheetIndex 的計算：使用參考點 202512=index3 來推算
-      // 參考點：202512 = index 3
-      const referenceYear = 2025;
-      const referenceMonth = 12;
-      const referenceIndex = 3;
-
-      // 計算目標月份與參考月份的月份差
-      const calculateMonthDiff = (targetYear, targetMonth) => {
-        return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
-      };
-
-      // 從月份名稱（例如 "202601"）提取年份和月份
-      const yearNum = parseInt(month.substring(0, 4));
-      const monthNum = parseInt(month.substring(4, 6));
-      const monthDiff = calculateMonthDiff(yearNum, monthNum);
-      const sheetIndex = referenceIndex + monthDiff;
+      // 修正：直接使用陣列索引計算 sheetIndex
+      // sheetNames 已跳過前兩個無效項目（空白表、下拉選單）
+      // 所以 sheetIndex = index + 2
+      const sheetIndex = index + 2;
 
       option.value = sheetIndex;
       option.textContent = month;
@@ -2277,7 +2265,7 @@ function loadHistoryListFromCache(sheetIndex) {
 }
 
 // 找到最接近的月份（當前月份或最新月份）
-// 使用參考點：202512 = index 3，從此開始推算
+// 修正：直接從 sheetNames 陣列查找，避免硬編碼參考點造成的錯誤
 function findClosestMonth() {
   // 根據現在的年月選擇最接近的月份
   const now = new Date();
@@ -2285,44 +2273,45 @@ function findClosestMonth() {
   const currentMonth = now.getMonth() + 1;
   const currentMonthStr = `${currentYear}${String(currentMonth).padStart(2, '0')}`;
 
-  // 參考點：202512 = index 3
-  const referenceYear = 2025;
-  const referenceMonth = 12;
-  const referenceIndex = 3;
-
-  // 計算目標月份與參考月份的月份差
-  const calculateMonthDiff = (targetYear, targetMonth) => {
-    return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
-  };
-
-  // 計算當前月份的索引
-  const currentYearNum = parseInt(currentMonthStr.substring(0, 4));
-  const currentMonthNum = parseInt(currentMonthStr.substring(4, 6));
-  const currentMonthDiff = calculateMonthDiff(currentYearNum, currentMonthNum);
-  const calculatedIndex = referenceIndex + currentMonthDiff;
-
-  // 確保索引不小於 2（因為前兩個是「空白表」和「下拉選單」）
-  if (calculatedIndex < 2) {
-    return 2;
-  }
-
-  // 如果 sheetNames 有資料，驗證計算出的索引是否在有效範圍內
+  // 如果 sheetNames 有資料，從陣列中查找
   if (sheetNames.length > 0) {
-    // 檢查計算出的索引對應的月份是否存在於 sheetNames 中
-    // 如果不存在，嘗試在 sheetNames 中找到當前月份
+    // 嘗試找到當前月份
     const currentIndex = sheetNames.findIndex(name => name === currentMonthStr);
     if (currentIndex !== -1) {
-      // 如果 hasInvalidFirstTwoSheets 為 true，表示 sheetNames 已經跳過了前兩個無效項目
-      // 所以索引需要加上 2
-      // 如果 hasInvalidFirstTwoSheets 為 false，表示 sheetNames 包含所有數據
-      // 所以索引就是 currentIndex（從 0 開始）
-      const sheetIndex = hasInvalidFirstTwoSheets ? currentIndex + 2 : currentIndex;
-      // 如果計算出的索引和從 sheetNames 找到的索引不一致，使用計算出的索引（因為計算更準確）
-      return calculatedIndex;
+      // sheetNames 已經跳過了前兩個無效項目（空白表、下拉選單）
+      // 所以實際的 sheet 索引是 currentIndex + 2
+      return currentIndex + 2;
     }
+
+    // 如果當前月份不存在，找最接近的月份（優先選擇最新的）
+    // 將月份字串轉為數字進行比較
+    const monthNumbers = sheetNames.map(name => parseInt(name, 10)).filter(n => !isNaN(n));
+    const currentMonthNum = parseInt(currentMonthStr, 10);
+
+    // 找到小於等於當前月份的最大值（最接近的過去或當前月份）
+    let closestMonth = null;
+    let closestIndex = -1;
+    for (let i = 0; i < sheetNames.length; i++) {
+      const monthNum = parseInt(sheetNames[i], 10);
+      if (!isNaN(monthNum) && monthNum <= currentMonthNum) {
+        if (closestMonth === null || monthNum > closestMonth) {
+          closestMonth = monthNum;
+          closestIndex = i;
+        }
+      }
+    }
+
+    // 如果找到了，返回對應的 sheet 索引
+    if (closestIndex !== -1) {
+      return closestIndex + 2;
+    }
+
+    // 如果都沒找到，返回最後一個（最新的）月份
+    return sheetNames.length - 1 + 2;
   }
 
-  return calculatedIndex;
+  // 如果 sheetNames 沒有資料，返回預設值
+  return 2;
 }
 
 // 顯示歷史紀錄彈出視窗（包含月份選擇）
@@ -2417,7 +2406,7 @@ async function showHistoryModal() {
   let hasCachedData = false;
   if (!allMonthsData[currentSheetIndex]) {
     try {
-      const storedData = await getFromIDB(`expense_monthData_${currentSheetIndex}`);
+      const storedData = await getFromIDB(`monthData_${currentSheetIndex}`);
       if (storedData) {
         allMonthsData[currentSheetIndex] = storedData;
         hasCachedData = true;
@@ -3313,7 +3302,7 @@ if (dateInput) {
           try {
             const monthData = await loadMonthData(currentSheetIndex);
             allMonthsData[currentSheetIndex] = monthData;
-            setToIDB(`expense_monthData_${currentSheetIndex}`, monthData).catch(() => {});
+            setToIDB(`monthData_${currentSheetIndex}`, monthData).catch(() => {});
           } catch (e) {
           }
         }
@@ -3669,19 +3658,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       const select = existingModal.querySelector('#month-select');
       if (select) {
         select.innerHTML = '';
-        sheetNames.forEach((month) => {
+        sheetNames.forEach((month, index) => {
           const option = document.createElement('option');
-          // 使用參考點 202512=index3 來推算
-          const referenceYear = 2025;
-          const referenceMonth = 12;
-          const referenceIndex = 3;
-          const calculateMonthDiff = (targetYear, targetMonth) => {
-            return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
-          };
-          const yearNum = parseInt(month.substring(0, 4));
-          const monthNum = parseInt(month.substring(4, 6));
-          const monthDiff = calculateMonthDiff(yearNum, monthNum);
-          const sheetIndex = referenceIndex + monthDiff;
+          // 修正：直接使用陣列索引計算 sheetIndex
+          // sheetNames 已跳過前兩個無效項目（空白表、下拉選單）
+          // 所以 sheetIndex = index + 2
+          const sheetIndex = index + 2;
 
           option.value = sheetIndex;
           option.textContent = month;

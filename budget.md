@@ -3035,28 +3035,14 @@ const initMonthSelect = async () => {
     }
     const nextMonthStr = `${nextYear}${String(nextMonth).padStart(2, '0')}`;
 
-    // 已知：202512在index=3，以此為參考點推算目標月份的索引
-    // 計算月份差來推算索引
-    const referenceYear = 2025;
-    const referenceMonth = 12;
-    const referenceIndex = 3;
+    // 修正：直接從 sheetNames 陣列查找月份索引，避免硬編碼參考點造成的錯誤
+    // 計算下一個月的索引
+    const nextMonthArrayIndex = sheetNames.findIndex(name => name === nextMonthStr);
+    const nextMonthIndex = nextMonthArrayIndex !== -1 ? nextMonthArrayIndex + 2 : -1;
 
-    // 計算目標月份與參考月份的月份差
-    const calculateMonthDiff = (targetYear, targetMonth) => {
-      return (targetYear - referenceYear) * 12 + (targetMonth - referenceMonth);
-    };
-
-    // 先計算下一個月的索引
-    const nextYearNum = parseInt(nextMonthStr.substring(0, 4));
-    const nextMonthNum = parseInt(nextMonthStr.substring(4, 6));
-    const nextMonthDiff = calculateMonthDiff(nextYearNum, nextMonthNum);
-    const nextMonthIndex = referenceIndex + nextMonthDiff;
-
-    // 再計算當前月份的索引
-    const currentYearNum = parseInt(currentMonthStr.substring(0, 4));
-    const currentMonthNum = parseInt(currentMonthStr.substring(4, 6));
-    const currentMonthDiff = calculateMonthDiff(currentYearNum, currentMonthNum);
-    const currentMonthIndex = referenceIndex + currentMonthDiff;
+    // 計算當前月份的索引
+    const currentMonthArrayIndex = sheetNames.findIndex(name => name === currentMonthStr);
+    const currentMonthIndex = currentMonthArrayIndex !== -1 ? currentMonthArrayIndex + 2 : -1;
     let targetSheetIndex = null;
     let targetMonthName = null;
 
