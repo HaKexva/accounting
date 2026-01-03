@@ -1834,8 +1834,8 @@ const saveData = async () => {
       setToIDB(`monthData_${currentSheetIndex}`, allMonthsData[currentSheetIndex]).catch(() => {});
     }
 
-    // 更新總計顯示（使用最新資料重新計算）
-    updateTotalDisplay();
+    // 更新總計顯示（確保預算資料已載入）
+    await loadTotal();
 
     // 儲存完成後清空表單，準備下一筆新增
     clearForm();
@@ -3669,7 +3669,6 @@ budgetCardsContainer.appendChild(submitContainer);
   submitContainer.appendChild(mainSaveButton);
 
 mainSaveButton.addEventListener('click', saveData);
-mainSaveButton.addEventListener('click', loadTotal);
 
 document.addEventListener('DOMContentLoaded', async function() {
   // 顯示進度條載入下拉選單（第一個請求）
