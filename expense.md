@@ -773,7 +773,11 @@ const processDataFromResponse = (data, shouldFilter = true, sheetIndexForContext
       }
     });
 
-    if (expenseRows.length > 0) convertedData['當月支出預算'] = expenseRows;
+    // key 需要包含月份名稱以便後續過濾
+    const effectiveSheetIndex = (sheetIndexForContext !== undefined && sheetIndexForContext !== null) ? sheetIndexForContext : currentSheetIndex;
+    const monthIdx = effectiveSheetIndex - 2;
+    const monthName = (monthIdx >= 0 && monthIdx < sheetNames.length) ? sheetNames[monthIdx] : '';
+    if (expenseRows.length > 0) convertedData[`當月支出預算${monthName}`] = expenseRows;
 
     data = convertedData;
   }
@@ -1011,13 +1015,15 @@ const loadMonthData = async (sheetIndex) => {
       }
     });
 
-    // 構建物件格式，使用一個通用的鍵名
+    // 構建物件格式，key 需要包含月份名稱以便後續過濾
+    const monthIndex = sheetIndex - 2;
+    const monthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
     if (expenseRows.length > 0) {
-      // 使用一個包含 "支出" 的鍵名，以便後續處理邏輯識別
-      convertedData['當月支出預算'] = expenseRows;
+      // key 包含月份名稱，例如 "當月支出預算202601"
+      convertedData[`當月支出預算${monthName}`] = expenseRows;
     }
     if (incomeRows.length > 0) {
-      convertedData['當月收入'] = incomeRows;
+      convertedData[`當月收入${monthName}`] = incomeRows;
     }
     data = convertedData; // 將轉換後的數據賦值回去
   } else {
