@@ -448,12 +448,15 @@ function ShowTabData(sheet) {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var targetSheet = ss.getSheets()[sheet];
-  var ranges = targetSheet.getNamedRanges();
+  var allRanges = ss.getNamedRanges();  // Get ALL named ranges from spreadsheet
   var res = {};
-  ranges.forEach(function(range) {
-    var title = range.getName();
-    var rng = range.getRange();
-    res[title] = cleanValues(rng.getValues());
+  allRanges.forEach(function(namedRange) {
+    var rng = namedRange.getRange();
+    // Only include ranges that belong to the target sheet
+    if (rng.getSheet().getSheetId() === targetSheet.getSheetId()) {
+      var title = namedRange.getName();
+      res[title] = cleanValues(rng.getValues());
+    }
   });
 
   function isEmpty(v) {
