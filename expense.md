@@ -1994,7 +1994,7 @@ async function showMonthSelect() {
   const content = document.createElement('div');
   content.className = 'month-select-modal-content';
   content.style.cssText = `
-    background-color: #fff;
+    background: linear-gradient(135deg, #fff8f5 0%, #fffaf8 50%, #fff5f0 100%);
     border-radius: 12px;
     padding: 30px;
     max-width: 400px;
@@ -2363,7 +2363,7 @@ async function showHistoryModal() {
   const content = document.createElement('div');
   content.className = 'history-modal-content';
   content.style.cssText = `
-    background-color: #fff;
+    background: linear-gradient(135deg, #fff8f5 0%, #fffaf8 50%, #fff5f0 100%);
     border-radius: 12px;
     padding: 0 20px 20px 20px; /* 上緣貼齊，移除頂部內距 */
     max-width: 600px;

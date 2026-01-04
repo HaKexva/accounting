@@ -1902,13 +1902,13 @@ const saveData = async () => {
     }
 
     // 如果不是新增模式，必須傳送 updateRow 參數來更新現有記錄
-    // updateRow 是行號 = 編號 + 2（第一行是標題，資料從第二行開始）
+    // updateRow 是行號 = 編號 + 1（第一行是標題，資料從第二行開始）
     if (!isNewMode) {
       if (filteredRecords.length > 0 && currentRecordIndex < filteredRecords.length) {
         const currentRecord = filteredRecords[currentRecordIndex];
         const recordNum = parseInt(currentRecord.row[0], 10);
         if (Number.isFinite(recordNum) && recordNum > 0) {
-          postData.updateRow = recordNum + 2;
+          postData.updateRow = recordNum + 1;
         } else {
           alert('無法更新記錄：找不到記錄編號');
           return;

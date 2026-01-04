@@ -3,6 +3,43 @@
 
 @import "minima";
 
+// ===== Page-specific background colors =====
+// Home page - light sky blue
+body.page-index {
+  background: linear-gradient(135deg, #e8f4fc 0%, #f0f8ff 50%, #e6f2ff 100%);
+  min-height: 100vh;
+}
+
+// Budget page - light mint green
+body.page-budget {
+  background: linear-gradient(135deg, #e8f8f0 0%, #f0fff5 50%, #e6fff0 100%);
+  min-height: 100vh;
+}
+
+// Expense page - light peach/coral
+body.page-expense {
+  background: linear-gradient(135deg, #fff5f0 0%, #fff8f5 50%, #fff0eb 100%);
+  min-height: 100vh;
+}
+
+// Settings page - light lavender
+body.page-settings {
+  background: linear-gradient(135deg, #f5f0ff 0%, #f8f5ff 50%, #f0ebff 100%);
+  min-height: 100vh;
+}
+
+// Login page - light warm gray
+body.page-login {
+  background: linear-gradient(135deg, #f8f6f4 0%, #faf8f6 50%, #f5f3f0 100%);
+  min-height: 100vh;
+}
+
+// Unauthorized page - light rose
+body.page-unauthorized {
+  background: linear-gradient(135deg, #fff0f3 0%, #fff5f7 50%, #ffebef 100%);
+  min-height: 100vh;
+}
+
 // Prevent bounce effect
 // html {
 //   overscroll-behavior: none !important;

@@ -718,11 +718,10 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       var oldCostValue = sheet.getRange(updateRow, 11).getValue(); // K欄是金額
       var oldCostNum = parseFloat(oldCostValue) || 0;
       
-      // ===== 關鍵：先刪除舊總計行，然後清除舊值，再更新資料，最後重新計算總計 =====
-      // 1. 先刪除舊總計行（在更新資料之前，確保總計正確）
-      RemoveSummaryRow(sheet, startRow, 7); // 刪除舊總計行（G欄）
+      // ===== 關鍵：清除舊值，再更新資料，最後重新計算總計 =====
+      // Note: RemoveSummaryRow was already called at the start of UpsertData
       
-      // 2. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
+      // 1. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
       sheet.getRange(updateRow, 11).clearContent(); // 清除 K欄金額（重要：先刪除舊值）
       
       // 3. 確保 cost 是數字類型
@@ -734,7 +733,8 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       }
       
       // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
-      var values = [updateRow - 2, timeOutput, category, item, costValue, note];
+      // updateRow = recordNum + 1, so recordNum = updateRow - 1
+      var values = [updateRow - 1, timeOutput, category, item, costValue, note];
       sheet.getRange(updateRow, 7, 1, column).setValues([values]);
       
       // 找到最後一筆支出資料行（跳過總計行）
@@ -767,11 +767,10 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       var oldCostValue = sheet.getRange(updateRow, 4).getValue(); // D欄是金額
       var oldCostNum = parseFloat(oldCostValue) || 0;
       
-      // ===== 關鍵：先刪除舊總計行，然後清除舊值，再更新資料，最後重新計算總計 =====
-      // 1. 先刪除舊總計行（在更新資料之前，確保總計正確）
-      RemoveSummaryRow(sheet, startRow, 1); // 刪除舊總計行（A欄）
+      // ===== 關鍵：清除舊值，再更新資料，最後重新計算總計 =====
+      // Note: RemoveSummaryRow was already called at the start of UpsertData
       
-      // 2. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
+      // 1. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
       sheet.getRange(updateRow, 4).clearContent(); // 清除 D欄金額（重要：先刪除舊值）
       
       // 3. 確保 cost 是數字類型
@@ -783,7 +782,8 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       }
       
       // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
-      var values = [updateRow - 2, timeOutput, item, costValue, note];
+      // updateRow = recordNum + 1, so recordNum = updateRow - 1
+      var values = [updateRow - 1, timeOutput, item, costValue, note];
       sheet.getRange(updateRow, 1, 1, column).setValues([values]);
       
       // 找到最後一筆收入資料行（跳過總計行）
@@ -817,12 +817,25 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
   return { success: true, message: '資料已成功新增', data: ShowTabData(sheetIndex), total: GetSummary(sheetIndex) };
 }
 
-// ===== 補充：刪除舊總計行 =====
+// ===== 補充：清除舊總計行（只清除特定區塊的欄位，不刪除整行） =====
 function RemoveSummaryRow(sheet, startRow, labelCol) {
   var lastRow = sheet.getLastRow();
   if (lastRow < startRow) return;
-  if (sheet.getRange(lastRow, labelCol).getValue() === '總計') {
-    sheet.deleteRow(lastRow);
+  
+  // Find the summary row for this block (search from bottom up within the block)
+  for (var r = lastRow; r >= startRow; r--) {
+    var cellValue = sheet.getRange(r, labelCol).getValue();
+    if (cellValue === '總計') {
+      // Clear only the specific columns for this block, not the entire row
+      if (labelCol === 1) {
+        // Income block: columns A-E (1-5)
+        sheet.getRange(r, 1, 1, 5).clearContent();
+      } else if (labelCol === 7) {
+        // Expense block: columns G-L (7-12)
+        sheet.getRange(r, 7, 1, 6).clearContent();
+      }
+      return;
+    }
   }
 }
 
@@ -840,30 +853,39 @@ function DeleteData(sheetIndex, rangeType, number) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheets()[sheetIndex];
   var startRow = 2; // 從第二行開始
-  var column, totalColumn;
+  var column, totalColumn, startCol, numberCol;
 
   if (rangeType === 0) { // Expense
-    column = 6;       // Number~Note
+    column = 6;       // Number~Note (6 columns)
     totalColumn = 11; // Column K is expense amount total
-    var numberCol = 7; // Column G is number
+    numberCol = 7;    // Column G is number
+    startCol = 7;     // Expense starts at column G
   } else { // Income
-    column = 5;       // Number~Note
+    column = 5;       // Number~Note (5 columns)
     totalColumn = 4;  // Column D is income amount total
-    var numberCol = 1; // Column A is number
+    numberCol = 1;    // Column A is number
+    startCol = 1;     // Income starts at column A
   }
 
-  // Find row to delete
+  // Find all data rows for this block (to find the one to delete and shift others up)
   var lastRow = sheet.getLastRow();
   var targetRow = -1;
-  // Convert number to integer for comparison (handle both string and number input)
   var targetNumber = parseInt(number, 10);
+  var dataRows = []; // Store all data rows for this block
+  var summaryRow = -1;
+  
   for (var r = startRow; r <= lastRow; r++) {
     var cellVal = sheet.getRange(r, numberCol).getValue();
-    // Compare as numbers to handle type mismatch
+    if (cellVal === '總計') {
+      summaryRow = r;
+      continue;
+    }
     var cellNum = parseInt(cellVal, 10);
-    if (!isNaN(cellNum) && !isNaN(targetNumber) && cellNum === targetNumber) {
-      targetRow = r;
-      break;
+    if (!isNaN(cellNum) && cellNum > 0) {
+      dataRows.push({ row: r, num: cellNum });
+      if (cellNum === targetNumber) {
+        targetRow = r;
+      }
     }
   }
 
@@ -871,40 +893,55 @@ function DeleteData(sheetIndex, rangeType, number) {
     return { success: false, message: 'Cannot find corresponding number data' };
   }
 
-  // 刪除該行
-  sheet.deleteRow(targetRow);
-
-  // 更新總計
-  lastRow = sheet.getLastRow();
-  // 刪掉舊總計行（如果存在）
-  if (lastRow >= startRow && sheet.getRange(lastRow, numberCol).getValue() === '總計') {
-    sheet.deleteRow(lastRow);
-    lastRow--;
+  // Find the index of the target row in dataRows
+  var targetIndex = -1;
+  for (var i = 0; i < dataRows.length; i++) {
+    if (dataRows[i].row === targetRow) {
+      targetIndex = i;
+      break;
+    }
   }
 
-  // 找到最後一筆資料行（跳過總計行）
-  var lastDataRow = lastRow;
-  while (lastDataRow >= startRow) {
-    var cellValue = sheet.getRange(lastDataRow, numberCol).getValue();
-    if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-      var numValue = Number(cellValue);
-      if (!isNaN(numValue) && numValue > 0) {
-        break; // 找到最後一筆資料行
-      }
-    }
-    lastDataRow--;
+  // Shift data up: copy each row below the target to one row above
+  for (var i = targetIndex; i < dataRows.length - 1; i++) {
+    var currentRow = dataRows[i].row;
+    var nextRow = dataRows[i + 1].row;
+    var nextData = sheet.getRange(nextRow, startCol, 1, column).getValues()[0];
+    sheet.getRange(currentRow, startCol, 1, column).setValues([nextData]);
+  }
+
+  // Clear the last data row (it's now a duplicate)
+  if (dataRows.length > 0) {
+    var lastDataRowNum = dataRows[dataRows.length - 1].row;
+    sheet.getRange(lastDataRowNum, startCol, 1, column).clearContent();
+  }
+
+  // Clear old summary row if exists
+  if (summaryRow > 0) {
+    sheet.getRange(summaryRow, startCol, 1, column).clearContent();
+  }
+
+  // Renumber the remaining records and find the new last data row
+  var newLastDataRow = -1;
+  var newNumber = 1;
+  for (var i = 0; i < dataRows.length - 1; i++) { // -1 because we deleted one
+    var rowNum = dataRows[i].row;
+    sheet.getRange(rowNum, numberCol).setValue(newNumber);
+    newLastDataRow = rowNum;
+    newNumber++;
   }
 
   // Set new total row
-  var firstDataRow = startRow;
-  if (lastDataRow < firstDataRow) {
-    // 沒有資料就設總計為 0
-    sheet.getRange(firstDataRow, numberCol).setValue('總計');
-    sheet.getRange(firstDataRow, totalColumn).setValue(0);
+  if (newLastDataRow < startRow) {
+    // No data left, set total to 0 at startRow
+    sheet.getRange(startRow, numberCol).setValue('總計');
+    sheet.getRange(startRow, totalColumn).setValue(0);
   } else {
-    sheet.getRange(lastDataRow + 1, numberCol).setValue('總計');
-    sheet.getRange(lastDataRow + 1, totalColumn).setFormula(
-      `=SUM(${sheet.getRange(firstDataRow, totalColumn).getA1Notation()}:${sheet.getRange(lastDataRow, totalColumn).getA1Notation()})`
+    // Add total row after the last data row
+    var newSummaryRow = newLastDataRow + 1;
+    sheet.getRange(newSummaryRow, numberCol).setValue('總計');
+    sheet.getRange(newSummaryRow, totalColumn).setFormula(
+      `=SUM(${sheet.getRange(startRow, totalColumn).getA1Notation()}:${sheet.getRange(newLastDataRow, totalColumn).getA1Notation()})`
     );
   }
 

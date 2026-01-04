@@ -12,4 +12,23 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="{{ "/assets/sync-status.js" | relative_url }}?v={{ site.time | date: '%s' }}"></script>
   <script src="{{ "/assets/auth.js" | relative_url }}?v={{ site.time | date: '%s' }}"></script>
+  <script>
+    // Add page-specific body class for background colors
+    document.addEventListener('DOMContentLoaded', function() {
+      const path = window.location.pathname;
+      let pageClass = 'page-index';
+      if (path.includes('/budget')) {
+        pageClass = 'page-budget';
+      } else if (path.includes('/expense')) {
+        pageClass = 'page-expense';
+      } else if (path.includes('/settings')) {
+        pageClass = 'page-settings';
+      } else if (path.includes('/login')) {
+        pageClass = 'page-login';
+      } else if (path.includes('/unauthorized')) {
+        pageClass = 'page-unauthorized';
+      }
+      document.body.classList.add(pageClass);
+    });
+  </script>
 </head>
