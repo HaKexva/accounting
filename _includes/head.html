@@ -13,22 +13,41 @@
   <script src="{{ "/assets/sync-status.js" | relative_url }}?v={{ site.time | date: '%s' }}"></script>
   <script src="{{ "/assets/auth.js" | relative_url }}?v={{ site.time | date: '%s' }}"></script>
   <script>
-    // Add page-specific body class for background colors
-    document.addEventListener('DOMContentLoaded', function() {
+    // Add page-specific background color immediately (before page loads)
+    (function() {
       const path = window.location.pathname;
+      let bgColor = 'linear-gradient(135deg, #e8f4fc 0%, #f0f8ff 50%, #e6f2ff 100%)'; // default: index
       let pageClass = 'page-index';
+      
       if (path.includes('/budget')) {
+        bgColor = 'linear-gradient(135deg, #e8f8f0 0%, #f0fff5 50%, #e6fff0 100%)';
         pageClass = 'page-budget';
       } else if (path.includes('/expense')) {
+        bgColor = 'linear-gradient(135deg, #fff5f0 0%, #fff8f5 50%, #fff0eb 100%)';
         pageClass = 'page-expense';
       } else if (path.includes('/settings')) {
+        bgColor = 'linear-gradient(135deg, #f5f0ff 0%, #f8f5ff 50%, #f0ebff 100%)';
         pageClass = 'page-settings';
       } else if (path.includes('/login')) {
+        bgColor = 'linear-gradient(135deg, #f8f6f4 0%, #faf8f6 50%, #f5f3f0 100%)';
         pageClass = 'page-login';
       } else if (path.includes('/unauthorized')) {
+        bgColor = 'linear-gradient(135deg, #fff0f3 0%, #fff5f7 50%, #ffebef 100%)';
         pageClass = 'page-unauthorized';
       }
-      document.body.classList.add(pageClass);
-    });
+      
+      // Apply background to html element immediately (works before body exists)
+      document.documentElement.style.background = bgColor;
+      document.documentElement.style.minHeight = '100vh';
+      
+      // Also add body class when body is available
+      if (document.body) {
+        document.body.classList.add(pageClass);
+      } else {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.body.classList.add(pageClass);
+        });
+      }
+    })();
   </script>
 </head>

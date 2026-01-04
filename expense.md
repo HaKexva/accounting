@@ -2525,8 +2525,10 @@ async function showHistoryModal() {
     margin-bottom: 20px;
     position: sticky;
     top: 0;
-    background-color: #fff;
-    padding: 10px 0;
+    background: linear-gradient(135deg, #fff8f5 0%, #fffaf8 50%, #fff5f0 100%);
+    padding: 15px 20px;
+    margin-left: -20px;
+    margin-right: -20px;
     z-index: 10;
     border-bottom: 1px solid #eee;
   `;
