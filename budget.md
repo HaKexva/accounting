@@ -14,24 +14,24 @@ permalink: /budget_table/
 // Budget
 const baseBudget = "https://script.google.com/macros/s/AKfycbxkOKU5YxZWP1XTCFCF7a62Ar71fUz4Qw7tjF3MvMGkLTt6QzzhGLnDsD7wVI_cgpAR/exec";
 
-// ===== 全域狀態變數 =====
-let currentSheetIndex = 2; // 目前選擇的試算表分頁索引（2 代表第三個分頁）
-let sheetNames = []; // 所有月份分頁名稱（不含前兩個「空白表」、「下拉選單」）
-let allMonthsData = {}; // 預先載入的所有月份資料（key: sheetIndex, value: { data, total }）
-let allRecords = []; // 目前選擇月份的記錄（收入 + 支出）
-let filteredRecords = []; // 目前類型過濾後的記錄
+// ===== Global State Variables =====
+let currentSheetIndex = 2; // Currently selected spreadsheet tab index (2 represents the third tab)
+let sheetNames = []; // All month tab names (excluding first two: "blank sheet", "dropdown")
+let allMonthsData = {}; // Pre-loaded data for all months (key: sheetIndex, value: { data, total })
+let allRecords = []; // Records for currently selected month (income + expense)
+let filteredRecords = []; // Records filtered by current type
 let currentRecordIndex = 0;
-let isNewMode = false; // 是否在新增模式
-let currentRecordNumber = null; // 目前顯示的記錄編號
-let isSwitchingMonth = false; // 防止快速連續切換月份
-let monthSelectChangeHandler = null; // 儲存月份選擇事件處理器，用於移除
-let currentAbortController = null; // 用於取消正在進行的請求
-let timeUpdateInterval = null; // 用於更新新增模式的時間
-let hasUnsavedChanges = false; // 追蹤是否有未儲存的變更
-let originalValues = null; // 儲存原始值，用於比較是否有變更
+let isNewMode = false; // Whether in add new mode
+let currentRecordNumber = null; // Currently displayed record number
+let isSwitchingMonth = false; // Prevent rapid consecutive month switching
+let monthSelectChangeHandler = null; // Store month select event handler for removal
+let currentAbortController = null; // Used to cancel ongoing requests
+let timeUpdateInterval = null; // Used to update time in add new mode
+let hasUnsavedChanges = false; // Track if there are unsaved changes
+let originalValues = null; // Store original values for comparison
 
-// ===== 使用共用快取模組 (SyncStatus) =====
-// 使用 SyncStatus 模組的快取功能 (定義在 assets/sync-status.js)
+// ===== Using Shared Cache Module (SyncStatus) =====
+// Using SyncStatus module's cache functionality (defined in assets/sync-status.js)
 const getFromCache = async (key) => {
   try {
     return await SyncStatus.getFromCache(key);
@@ -44,7 +44,7 @@ const setToCache = async (key, value) => {
   try {
     await SyncStatus.setToCache(key, value);
   } catch (e) {
-    // 快取可能不可用，忽略錯誤
+    // Cache may be unavailable, ignore error
   }
 };
 
@@ -52,11 +52,11 @@ const removeFromCache = async (key) => {
   try {
     await SyncStatus.setToCache(key, null);
   } catch (e) {
-    // 快取可能不可用，忽略錯誤
+    // Cache may be unavailable, ignore error
   }
 };
 
-// ===== 下拉選單選項（從「下拉選單」sheet=1 載入）=====
+// ===== Dropdown Options (loaded from "dropdown" sheet=1) =====
 let EXPENSE_CATEGORY_OPTIONS = [
   { value: '生活花費：食', text: '生活花費：食' },
   { value: '生活花費：衣與外貌', text: '生活花費：衣與外貌' },
@@ -70,8 +70,8 @@ let EXPENSE_CATEGORY_OPTIONS = [
   { value: '家人：過年紅包、紀念日', text: '家人：過年紅包、紀念日' }
 ];
 
-// 從「下拉選單」sheet=1 載入最新選項
-// API URL（支出表）
+// Load latest options from "dropdown" sheet=1
+// API URL (expense table)
 const baseExpense = "https://script.google.com/macros/s/AKfycbxpBh0QVSVTjylhh9cj7JG9d6aJi7L7y6pQPW88EbAsNtcd5ckucLagH8XpSAGa8IZt/exec";
 
 async function loadDropdownOptions() {
@@ -88,16 +88,16 @@ async function loadDropdownOptions() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const responseData = await res.json();
-    // 處理不同的資料格式
+    // Handle different data formats
     let data = null;
 
-    // 如果是陣列，直接使用
+    // If it's an array, use directly
     if (Array.isArray(responseData)) {
       data = responseData;
     }
-    // 如果是物件，可能是命名範圍的格式，嘗試找到第一個陣列值
+    // If it's an object, might be named range format, try to find first array value
     else if (typeof responseData === 'object' && responseData !== null) {
-      // 尋找第一個值是陣列的鍵
+      // Find the first key whose value is an array
       for (const key in responseData) {
         if (Array.isArray(responseData[key]) && responseData[key].length > 0) {
           data = responseData[key];
@@ -111,7 +111,7 @@ async function loadDropdownOptions() {
     }
 
     const headerRow = data[0];
-    // 找對應欄位（預算表使用「支出－項目」）
+    // Find corresponding column (budget table uses "expense-item")
     const colCategory = findHeaderColumn(headerRow, ['支出－項目', '支出-項目', '消費類別', '類別']);
     const readColumn = (col) => {
       const arr = [];
@@ -132,20 +132,20 @@ async function loadDropdownOptions() {
 
     if (colCategory >= 0) {
       EXPENSE_CATEGORY_OPTIONS = readColumn(colCategory);
-      // 如果當前顯示的是支出類別，重新渲染
+      // If currently showing expense category, re-render
       const categorySelect = document.getElementById('category-select');
       if (categorySelect && categorySelect.value === '預計支出') {
-        // 保存當前選擇的值（如果有）
+        // Save current selected value (if any)
         const currentCategorySelect = document.getElementById('expense-category-select');
         const currentValue = currentCategorySelect ? currentCategorySelect.value : '';
         updateDivVisibility('預計支出');
-        // 如果之前有選擇值，嘗試恢復
+        // If there was a previous selected value, try to restore it
         if (currentValue) {
           setTimeout(() => {
             const newCategorySelect = document.getElementById('expense-category-select');
             if (newCategorySelect && newCategorySelect.querySelector(`option[value="${currentValue}"]`)) {
               newCategorySelect.value = currentValue;
-              // 同步更新自訂下拉顯示文字
+              // Sync update custom dropdown display text
               const selectContainer = newCategorySelect.parentElement;
               if (selectContainer) {
                 const selectDisplay = selectContainer.querySelector('.select-display');
@@ -177,14 +177,14 @@ function findHeaderColumn(headerRow, keywords) {
   return -1;
 }
 
-// ===== 統一的 API 調用函數 =====
+// ===== Unified API Call Function =====
 async function callAPI(postData) {
-  // 取消之前的請求（如果存在）
+  // Cancel previous request (if exists)
   if (currentAbortController) {
     currentAbortController.abort();
   }
 
-  // 創建新的 AbortController
+  // Create new AbortController
   currentAbortController = new AbortController();
   const signal = currentAbortController.signal;
 
@@ -194,7 +194,7 @@ async function callAPI(postData) {
       redirect: "follow",
       mode: "cors",
       keepalive: true,
-      signal: signal, // 添加 abort signal
+      signal: signal, // Add abort signal
       body: JSON.stringify(postData)
     });
 
@@ -217,25 +217,25 @@ async function callAPI(postData) {
       throw new Error(result.message || result.error || '操作失敗');
     }
 
-    // 請求成功後，清除快取以確保下次載入時取得最新資料
+    // After successful request, clear cache to ensure latest data on next load
     removeFromCache(`budget_monthData_${currentSheetIndex}`);
     delete allMonthsData[currentSheetIndex];
 
-    // 請求成功後，清除 AbortController
+    // After successful request, clear AbortController
     currentAbortController = null;
     return result;
   } catch (error) {
-    // 如果是取消請求，不拋出錯誤
+    // If request was cancelled, don't throw error
     if (error.name === 'AbortError') {
       currentAbortController = null;
-      throw new Error('請求已取消');
+      throw new Error('Request cancelled');
     }
     currentAbortController = null;
     throw error;
   }
 }
 
-// ===== 找到最接近的月份（當前月份或最新月份）=====
+// ===== Find the Closest Month (current month or latest month) =====
 function findClosestMonth() {
   if (sheetNames.length === 0) return 2;
 
@@ -249,10 +249,10 @@ function findClosestMonth() {
     return currentIndex + 2;
   }
 
-  return sheetNames.length + 1; // 最後一個月份的 sheetIndex
+  return sheetNames.length + 1; // sheetIndex of the last month
 }
 
-// ===== 如果沒有記錄，進入新增模式 =====
+// ===== Enter Add New Mode if No Records =====
 function enterNewModeIfEmpty() {
   if (filteredRecords.length > 0) return;
 
@@ -271,14 +271,14 @@ function enterNewModeIfEmpty() {
   }
   isNewMode = true;
   if (typeof recordNumber !== 'undefined') {
-    recordNumber.textContent = ''; // 新增模式不顯示編號
-    recordNumber.style.display = 'none'; // 隱藏編號
+    recordNumber.textContent = ''; // Don't show number in add new mode
+    recordNumber.style.display = 'none'; // Hide number
   }
   if (typeof recordDate !== 'undefined') {
     recordDate.textContent = getNowFormattedDateTime();
   }
 
-  // 啟動時間更新定時器（每秒更新一次）
+  // Start time update timer (updates every second)
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
   }
@@ -286,7 +286,7 @@ function enterNewModeIfEmpty() {
     if (isNewMode && typeof recordDate !== 'undefined') {
       recordDate.textContent = getNowFormattedDateTime();
     } else {
-      // 不在新增模式時停止定時器
+      // Stop timer when not in add new mode
       if (timeUpdateInterval) {
         clearInterval(timeUpdateInterval);
         timeUpdateInterval = null;
@@ -301,24 +301,24 @@ function enterNewModeIfEmpty() {
   if (noteInput) noteInput.value = '';
   updateDeleteButton();
   updateArrowButtons();
-  // 儲存空值作為原始值（新增模式）
+  // Store empty values as original values (add new mode)
   storeOriginalValues();
 }
 
-// 根據目前選擇的類型過濾記錄
+// Filter records by currently selected type
 function filterRecordsByType(type) {
   filteredRecords = allRecords.filter(r => r.type === type);
 
-  // 確保 currentRecordIndex 在有效範圍內
+  // Ensure currentRecordIndex is within valid range
   if (currentRecordIndex >= filteredRecords.length && filteredRecords.length > 0) {
     currentRecordIndex = filteredRecords.length - 1;
   } else if (filteredRecords.length === 0) {
     currentRecordIndex = 0;
   }
 
-  //  新增模式：切換收入 / 支出模式：重新計算該類型的下一個編號
+  // Add new mode: switching income/expense mode: recalculate next number for this type
   if (isNewMode) {
-    // 計算新類型中最大的編號 + 1
+    // Calculate max number + 1 in new type
     let nextNumber = 1;
     if (filteredRecords.length > 0) {
       const maxNum = Math.max(
@@ -331,13 +331,13 @@ function filterRecordsByType(type) {
       }
     }
 
-    // 新增模式不顯示編號
+    // Don't show number in add new mode
     if (typeof recordNumber !== 'undefined') {
-      recordNumber.textContent = ''; // 新增模式不顯示編號
-      recordNumber.style.display = 'none'; // 隱藏編號
+      recordNumber.textContent = ''; // Don't show number in add new mode
+      recordNumber.style.display = 'none'; // Hide number
     }
 
-    // 清空表單，準備新增
+    // Clear form, prepare for new entry
     const itemInput = document.getElementById('item-input');
     const costInput = document.getElementById('cost-input');
     const noteInput = document.getElementById('note-input');
@@ -345,7 +345,7 @@ function filterRecordsByType(type) {
     if (costInput) costInput.value = '';
     if (noteInput) noteInput.value = '';
 
-    // 如果是支出，重置類別選擇
+    // If expense, reset category selection
     if (type === '預計支出') {
       const categorySelectElement = document.getElementById('expense-category-select');
       if (categorySelectElement && categorySelectElement.options.length > 0) {
@@ -364,11 +364,11 @@ function filterRecordsByType(type) {
     }
 
     updateArrowButtons();
-    updateDeleteButton(); // 更新刪除按鈕顯示
+    updateDeleteButton(); // Update delete button display
     return;
   }
 
-  // 嘗試找到相同編號的記錄
+  // Try to find record with same number
   if (currentRecordNumber !== null && filteredRecords.length > 0) {
     const sameNumberIndex = filteredRecords.findIndex(r => {
       const num = parseInt(r.row[0], 10);
@@ -383,12 +383,12 @@ function filterRecordsByType(type) {
     }
   }
 
-  // 如果找不到相同編號，顯示第一筆
+  // If same number not found, show first record
   currentRecordIndex = 0;
   if (filteredRecords.length > 0) {
     showRecord(0);
   } else {
-    // 沒有記錄時，清空表單並更新按鈕
+    // When no records, clear form and update buttons
     const itemInput = document.getElementById('item-input');
     const costInput = document.getElementById('cost-input');
     const noteInput = document.getElementById('note-input');
@@ -396,15 +396,15 @@ function filterRecordsByType(type) {
     if (costInput) costInput.value = '';
     if (noteInput) noteInput.value = '';
     if (typeof recordNumber !== 'undefined') {
-      recordNumber.textContent = ''; // 新增模式不顯示編號
-      recordNumber.style.display = 'none'; // 隱藏編號
+      recordNumber.textContent = ''; // Don't show number in add new mode
+      recordNumber.style.display = 'none'; // Hide number
     }
     updateArrowButtons();
-    updateDeleteButton(); // 更新刪除按鈕顯示
+    updateDeleteButton(); // Update delete button display
   }
 }
 
-// 取得現在時間並格式化為 YYYY/MM/DD HH:MM
+// Get current time and format as YYYY/MM/DD HH:MM
 function getNowFormattedDateTime() {
   const now = new Date();
   const year = now.getFullYear();
@@ -415,14 +415,14 @@ function getNowFormattedDateTime() {
   return `${year}/${month}/${day} ${hours}:${minutes}`;
 }
 
-// 將各種時間字串格式統一轉為 YYYY/MM/DD HH:MM
+// Convert various time string formats to YYYY/MM/DD HH:MM
 function formatRecordDateTime(raw) {
   if (!raw) return '';
 
-  // 嘗試以 Date 解析（支援 ISO 例如 2025-11-30T12:34:56Z）
+  // Try to parse as Date (supports ISO format like 2025-11-30T12:34:56Z)
   const dt = new Date(raw);
   if (Number.isNaN(dt.getTime())) {
-    // 解析失敗時，保留原字串（例如已經是 2025/11/30 12:34）
+    // On parse failure, keep original string (e.g., already 2025/11/30 12:34)
     return raw;
   }
 
@@ -434,33 +434,33 @@ function formatRecordDateTime(raw) {
   return `${year}/${month}/${day} ${hours}:${minutes}`;
 }
 
-// 顯示第 index 筆記錄到卡片上的輸入欄位
+// Display record at index to card input fields
 function showRecord(index) {
   if (!filteredRecords.length) return;
 
-  // 確保 index 在有效範圍內
+  // Ensure index is within valid range
   if (index < 0 || index >= filteredRecords.length) {
     index = Math.max(0, Math.min(index, filteredRecords.length - 1));
   }
 
-  currentRecordIndex = index; // 更新當前索引
+  currentRecordIndex = index; // Update current index
   const { type, row } = filteredRecords[index];
-  isNewMode = false; // 顯示記錄時退出新增模式
+  isNewMode = false; // Exit add new mode when showing record
 
-  // 停止時間更新定時器
+  // Stop time update timer
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
     timeUpdateInterval = null;
   }
 
-  updateDeleteButton(); // 更新刪除按鈕顯示
-  markAsSaved(); // 顯示記錄時重置為未變更狀態
+  updateDeleteButton(); // Update delete button display
+  markAsSaved(); // Reset to unchanged state when showing record
 
-  // 更新左上角編號：只顯示該記錄自己的編號（row[0]），不顯示收入/支出
-  // 確保編號元素存在且正確顯示
+  // Update top-left number: only show the record's own number (row[0]), not income/expense
+  // Ensure number element exists and displays correctly
   let recordNumberEl = document.getElementById('record-number');
   
-  // 如果找不到元素，嘗試使用全局變數
+  // If element not found, try using global variable
   if (!recordNumberEl && typeof recordNumber !== 'undefined' && recordNumber) {
     recordNumberEl = recordNumber;
   }
@@ -470,116 +470,129 @@ function showRecord(index) {
     const recordNum = Number.isFinite(num) && num > 0 ? num : (index + 1);
     const numberText = `#${String(recordNum).padStart(3, '0')}`;
     
-    // 強制設置編號內容和樣式（使用 !important 覆蓋 CSS 的 display: none）
+    // Force set number content and style (use !important to override CSS display: none)
     recordNumberEl.textContent = numberText;
     recordNumberEl.setAttribute('style', 'display: block !important; visibility: visible !important; opacity: 1 !important;');
-    recordNumberEl.removeAttribute('hidden'); // 移除 hidden 屬性
+    recordNumberEl.removeAttribute('hidden'); // Remove hidden attribute
     
-    // 記錄目前編號
+    // Record current number
     currentRecordNumber = recordNum;
     
-    // 調試日誌
+    // Debug log
   } else {
   }
 
-  // 更新右上角「資料時間」：使用每筆記錄的時間欄位（row[1]，通常為試算表中的時間 / 最後修正時間）
+  // Update top-right "data time": use each record's time field (row[1], usually timestamp/last modified time)
   if (typeof recordDate !== 'undefined') {
     recordDate.textContent = formatRecordDateTime(row[1] || '');
   }
 
-  // 設定「支出 / 收入」大類（只改畫面，不觸發 change 事件，避免遞迴）
+  // Set "expense/income" category (only change display, don't trigger change event to avoid recursion)
   if (typeof categorySelect !== 'undefined' && typeof categorySelectText !== 'undefined') {
     const value = type === '收入' || type === '預計支出' ? type : '預計支出';
     categorySelect.value = value;
     categorySelectText.textContent = value;
-    // 直接更新欄位顯示
+    // Directly update field display
     if (typeof updateDivVisibility === 'function') {
       updateDivVisibility();
     }
   }
 
-  // 等 div2 / div3 / div4 依據類別建立好之後再填資料
-  // 使用較長的延遲，確保 updateDivVisibility 完成
+  // Wait for div2/div3/div4 to be built based on category before filling data
+  // Delay 200ms to ensure updateDivVisibility's clone operation (100ms) is complete
+  // And wait for DOM to stabilize before setting values
   setTimeout(() => {
-    const itemInput = document.getElementById('item-input');
-    const costInput = document.getElementById('cost-input');
-    const noteInput = document.getElementById('note-input');
+    // Function to set input field values
+    const setInputValues = () => {
+      const itemInput = document.getElementById('item-input');
+      const costInput = document.getElementById('cost-input');
+      const noteInput = document.getElementById('note-input');
 
-    if (type === '預計支出') {
-      // 支出：[編號, 時間, category, item, cost, note]
-      const categorySelectElement = document.getElementById('expense-category-select');
-      if (categorySelectElement) {
-        categorySelectElement.value = row[2] || '';
-        // 同步更新自訂下拉顯示文字（若存在）
-        const selectContainer = categorySelectElement.parentElement;
-        if (selectContainer) {
-          const selectDisplay = selectContainer.querySelector('div');
-          if (selectDisplay) {
-            const selectText = selectDisplay.querySelector('div');
-            if (selectText) {
-              selectText.textContent = row[2] || '';
+      if (type === '預計支出') {
+        // Expense: [number, time, category, item, cost, note]
+        const categorySelectElement = document.getElementById('expense-category-select');
+        if (categorySelectElement) {
+          categorySelectElement.value = row[2] || '';
+          // Sync update custom dropdown display text (if exists)
+          const selectContainer = categorySelectElement.parentElement;
+          if (selectContainer) {
+            const selectDisplay = selectContainer.querySelector('div');
+            if (selectDisplay) {
+              const selectText = selectDisplay.querySelector('div');
+              if (selectText) {
+                selectText.textContent = row[2] || '';
+              }
             }
           }
         }
-      }
-      if (itemInput) {
-        itemInput.value = row[3] || '';
-        // 確保值已設定（避免 placeholder 顯示）
-        if (itemInput.value === '' && row[3]) {
-          itemInput.value = row[3];
+        if (itemInput) {
+          itemInput.value = row[3] || '';
+          // Ensure value is set (avoid placeholder showing)
+          if (itemInput.value === '' && row[3]) {
+            itemInput.value = row[3];
+          }
         }
-      }
-      // 確保金額正確顯示（轉換為數字再轉回字串，避免格式問題）
-      if (costInput) {
-        const costValue = row[4];
-        if (costValue !== undefined && costValue !== null && costValue !== '') {
-          const numCost = parseFloat(costValue);
-          costInput.value = Number.isFinite(numCost) ? numCost.toString() : '';
-        } else {
-          costInput.value = '';
+        // Ensure amount displays correctly (convert to number then back to string to avoid format issues)
+        if (costInput) {
+          const costValue = row[4];
+          // Handle same as income: support displaying number 0
+          if (costValue !== undefined && costValue !== null && costValue !== '') {
+            const numCost = parseFloat(costValue);
+            costInput.value = Number.isFinite(numCost) ? numCost.toString() : '';
+          } else if (costValue === 0 || costValue === '0') {
+            // Show even if 0
+            costInput.value = '0';
+          } else {
+            costInput.value = '';
+          }
         }
-      }
-      if (noteInput) noteInput.value = row[5] || '';
-    } else {
-      // 收入：[編號, 時間, item, cost, note]
-      if (itemInput) {
-        itemInput.value = row[2] || '';
-        // 確保值已設定（避免 placeholder 顯示）
-        if (itemInput.value === '' && row[2]) {
-          itemInput.value = row[2];
-        }
-      }
-      // 確保金額正確顯示（轉換為數字再轉回字串，避免格式問題）
-      if (costInput) {
-        const costValue = row[3];
-        // 收入金額在 row[3]，即使為 0 或空也要顯示
-        // 確保所有情況都能正確顯示
-        if (costValue !== undefined && costValue !== null && costValue !== '') {
-          const numCost = parseFloat(costValue);
-          const finalValue = Number.isFinite(numCost) ? numCost.toString() : String(costValue);
-          costInput.value = finalValue;
-        } else if (costValue === 0 || costValue === '0') {
-          // 即使是 0 也要顯示
-          costInput.value = '0';
-        } else {
-          // 如果是空字符串或 null/undefined，顯示空字符串
-          costInput.value = '';
-        }
-        // 再次確認值是否正確設定
+        if (noteInput) noteInput.value = row[5] || '';
       } else {
+        // Income: [number, time, item, cost, note]
+        if (itemInput) {
+          itemInput.value = row[2] || '';
+          // Ensure value is set (avoid placeholder showing)
+          if (itemInput.value === '' && row[2]) {
+            itemInput.value = row[2];
+          }
+        }
+        // Ensure amount displays correctly (convert to number then back to string to avoid format issues)
+        if (costInput) {
+          const costValue = row[3];
+          // Income amount in row[3], show even if 0 or empty
+          // Ensure all cases display correctly
+          if (costValue !== undefined && costValue !== null && costValue !== '') {
+            const numCost = parseFloat(costValue);
+            const finalValue = Number.isFinite(numCost) ? numCost.toString() : String(costValue);
+            costInput.value = finalValue;
+          } else if (costValue === 0 || costValue === '0') {
+            // Show even if 0
+            costInput.value = '0';
+          } else {
+            // If empty string or null/undefined, show empty string
+            costInput.value = '';
+          }
+        }
+        if (noteInput) noteInput.value = row[4] || '';
       }
-      if (noteInput) noteInput.value = row[4] || '';
-    }
 
-    // 更新箭頭按鈕狀態
-    updateArrowButtons();
+      // Update arrow button states
+      updateArrowButtons();
+      
+      // Store original values (after input fields are set)
+      storeOriginalValues();
+    };
     
-    // 儲存原始值（在輸入欄位設定完成後）
-    storeOriginalValues();
-  }, 150);
+    // Try setting values first
+    setInputValues();
+    
+    // Delay another 50ms to set values, ensure correct display after clone operation
+    // This handles cases where updateDivVisibility's clone operation (100ms) may complete late
+    setTimeout(setInputValues, 50);
+  }, 200);
 }
 
-// 從 data 中查找指定編號和類型的記錄
+// Find record with specified number and type from data
 const findRecordInData = (data, recordNumber, recordType) => {
   if (!data || typeof data !== 'object') return null;
   
@@ -589,32 +602,32 @@ const findRecordInData = (data, recordNumber, recordType) => {
   const isIncome = recordType === '收入';
   const isExpense = recordType === '預計支出';
   
-  // 查找對應的命名範圍
+  // Find corresponding named range
   for (const key of Object.keys(data)) {
     const rows = data[key] || [];
     const keyIsIncome = key.includes('收入');
     const keyIsExpense = key.includes('支出');
     
-    // 檢查類型是否匹配
+    // Check if type matches
     if ((isIncome && !keyIsIncome) || (isExpense && !keyIsExpense)) {
       continue;
     }
     
-    // 檢查月份是否匹配
+    // Check if month matches
     if (currentMonthName && !key.includes(currentMonthName)) {
       continue;
     }
     
-    // 在 rows 中查找對應編號的記錄
+    // Find record with matching number in rows
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       if (!row || !Array.isArray(row) || row.length === 0) continue;
       
       const num = parseInt(row[0], 10);
       if (Number.isFinite(num) && num > 0 && num === recordNumber) {
-        // 找到對應的記錄
+        // Found corresponding record
         const expectedLength = isIncome ? 5 : 6;
-        const processedRow = [...row]; // 複製陣列
+        const processedRow = [...row]; // Copy array
         if (processedRow.length < expectedLength) {
           while (processedRow.length < expectedLength) {
             processedRow.push('');
@@ -628,31 +641,31 @@ const findRecordInData = (data, recordNumber, recordType) => {
   return null;
 };
 
-// 處理從 Apps Script 回傳的資料（用於更新 allRecords）
+// Process data returned from Apps Script (for updating allRecords)
 const processDataFromResponse = (data, shouldFilter = true) => {
-  // 調試：記錄載入的資料
+  // Debug: log loaded data
   const monthIndex = currentSheetIndex - 2;
-  const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '未知';
-  console.log(`[預算] 載入月份: ${currentMonthName} (sheetIndex: ${currentSheetIndex})`);
-  console.log('[預算] 原始資料:', data);
+  const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : 'unknown';
+  console.log(`[Budget] Loading month: ${currentMonthName} (sheetIndex: ${currentSheetIndex})`);
+  console.log('[Budget] Raw data:', data);
   
-  // 先清空目前的記錄
+  // First clear current records
   allRecords = [];
 
   if (!data) {
     return;
   }
 
-  // 使用 Set 追蹤已處理的記錄，避免重複
+  // Use Set to track processed records, avoid duplicates
   const processedRecords = new Set();
   let processedCount = 0;
   let totalRowsCount = 0;
 
-  // 預算表只處理物件格式的資料（命名範圍格式）
-  // 命名範圍：當月收入202506、當月支出預算202506
-  // 預算格式：收入 [編號, 時間, item, cost, note] (5欄)，支出 [編號, 時間, category, item, cost, note] (6欄)
+  // Budget table only processes object format data (named range format)
+  // Named ranges: CurrentMonthIncome202506, CurrentMonthExpenseBudget202506
+  // Budget format: Income [number, time, item, cost, note] (5 cols), Expense [number, time, category, item, cost, note] (6 cols)
   if (data && typeof data === 'object' && !Array.isArray(data)) {
-    // 處理物件格式的資料（命名範圍格式）
+    // Process object format data (named range format)
     Object.keys(data).forEach(key => {
       const rows = data[key] || [];
       totalRowsCount += rows.length;
@@ -665,22 +678,22 @@ const processDataFromResponse = (data, shouldFilter = true) => {
         return;
       }
 
-      // 只處理當前月份的資料（命名範圍名稱應該包含當前月份）
-      // 如果月份名稱存在，則必須匹配；如果不存在，則處理所有符合類型的資料（用於初始化）
+      // Only process current month's data (named range name should contain current month)
+      // If month name exists, must match; if not, process all matching type data (for initialization)
       let isCurrentMonth = false;
       if (!currentMonthName || currentMonthName === '') {
-        // 如果沒有月份名稱，處理所有符合類型的資料（可能是初始化階段）
+        // If no month name, process all matching type data (might be initialization stage)
         isCurrentMonth = true;
       } else {
-        // 檢查 key 是否包含當前月份名稱
+        // Check if key contains current month name
         isCurrentMonth = key.includes(currentMonthName);
-        // 如果直接匹配失敗，嘗試檢查是否包含月份數字（例如 202506）
+        // If direct match fails, try checking if it contains month number (e.g., 202506)
         if (!isCurrentMonth && currentMonthName.length >= 6) {
-          // 嘗試提取月份數字部分（例如從 "202506" 提取 "202506"）
-          const monthNum = currentMonthName.substring(0, 6); // 取前6位（YYYYMM）
+          // Try extracting month number part (e.g., from "202506" extract "202506")
+          const monthNum = currentMonthName.substring(0, 6); // Get first 6 chars (YYYYMM)
           isCurrentMonth = key.includes(monthNum);
         }
-        // 如果還是失敗，嘗試只匹配年份和月份（例如 "2025" + "06"）
+        // If still fails, try matching only year and month (e.g., "2025" + "06")
         if (!isCurrentMonth && currentMonthName.length >= 6) {
           const year = currentMonthName.substring(0, 4);
           const month = currentMonthName.substring(4, 6);
@@ -696,33 +709,33 @@ const processDataFromResponse = (data, shouldFilter = true) => {
           return;
         }
 
-        // 先檢查第一欄是否是有效的數字編號（優先檢查，避免錯誤跳過數據行）
+        // First check if first column is a valid number (priority check to avoid wrongly skipping data rows)
         const firstCell = row[0];
-        // 嘗試多種方式解析編號
+        // Try multiple ways to parse number
         let num = parseInt(firstCell, 10);
         if (isNaN(num)) {
-          // 如果 parseInt 失敗，嘗試 parseFloat
+          // If parseInt fails, try parseFloat
           num = parseFloat(firstCell);
         }
         const isValidNumber = Number.isFinite(num) && num > 0;
         
-        // 調試：記錄每行的處理情況
+        // Debug: log processing status of each row
         if (!isValidNumber) {
         }
 
-        // 如果是有效的數字編號，則視為數據行（即使欄位數量不足或其他檢查可能誤判）
+        // If valid number, treat as data row (even if column count is insufficient or other checks might misjudge)
         if (isValidNumber) {
-          // 預算格式檢查：收入應該是5欄，支出應該是6欄
-          // 但如果編號有效，即使欄位數量不足也接受（可能是部分數據）
+          // Budget format check: income should be 5 cols, expense should be 6 cols
+          // But if number is valid, accept even if column count is insufficient (might be partial data)
           const expectedLength = type === '收入' ? 5 : 6;
           if (row.length < expectedLength) {
-            // 如果欄位不足，補齊到預期長度
+            // If columns insufficient, pad to expected length
             while (row.length < expectedLength) {
               row.push('');
             }
           }
 
-          // 使用編號+時間作為唯一標識，避免重複
+          // Use number+time as unique identifier to avoid duplicates
           const recordKey = `${type}_${num}_${row[1] || ''}`;
           if (processedRecords.has(recordKey)) {
             return;
@@ -731,12 +744,12 @@ const processDataFromResponse = (data, shouldFilter = true) => {
 
           allRecords.push({ type, row });
           processedCount++;
-          return; // 跳過後續檢查，繼續處理下一行
+          return; // Skip subsequent checks, continue to next row
         }
 
-        // 如果不是有效數字，檢查欄位數量（可能是不完整的數據）
-        // 預算格式檢查：收入應該是5欄，支出應該是6欄
-        // 但允許欄位數量稍微寬鬆（可能有些欄位為空）
+        // If not valid number, check column count (might be incomplete data)
+        // Budget format check: income should be 5 cols, expense should be 6 cols
+        // But allow slightly relaxed column count (some columns might be empty)
         if (type === '收入' && row.length < 5) {
           return;
         }
@@ -744,10 +757,10 @@ const processDataFromResponse = (data, shouldFilter = true) => {
           return;
         }
 
-        // 如果不是有效數字，再檢查是否是標題行或總計行
+        // If not valid number, also check if it's header or total row
         const firstCellStr = String(firstCell || '').trim();
         const firstCellLower = firstCellStr.toLowerCase();
-        // 檢查是否為標題行（包含常見的標題關鍵字）
+        // Check if header row (contains common header keywords)
         if (firstCellLower === '交易日期' || firstCellLower === '編號' || firstCellLower === '日期' ||
             firstCellLower === '時間' || firstCellLower === '總計' || firstCellStr === '' ||
             firstCellLower.includes('項目') || firstCellLower.includes('金額') ||
@@ -755,12 +768,12 @@ const processDataFromResponse = (data, shouldFilter = true) => {
           return;
         }
 
-        // 如果既不是有效數字，也不是標題/總計行，可能是格式錯誤的數據行
-        // 為了避免遺漏數據，如果第一欄不是空字符串，嘗試解析為數字
+        // If neither valid number nor header/total row, might be malformed data row
+        // To avoid missing data, if first column is not empty string, try parsing as number
         if (firstCellStr !== '') {
           const altNum = parseFloat(firstCellStr);
           if (Number.isFinite(altNum) && altNum > 0) {
-            // 補齊欄位到預期長度
+            // Pad columns to expected length
             const expectedLength = type === '收入' ? 5 : 6;
             if (row.length < expectedLength) {
               while (row.length < expectedLength) {
@@ -778,45 +791,45 @@ const processDataFromResponse = (data, shouldFilter = true) => {
       });
     });
     
-    // 調試：記錄處理完成的資料
-    console.log(`[預算] 處理完成，共 ${allRecords.length} 筆記錄`);
+    // Debug: log processed data
+    console.log(`[Budget] Processing complete, total ${allRecords.length} records`);
     if (allRecords.length > 0) {
-      console.log('[預算] 記錄列表:', allRecords.map(r => ({
+      console.log('[Budget] Record list:', allRecords.map(r => ({
         type: r.type,
-        編號: r.row[0],
-        時間: r.row[1],
-        類別: r.type === '預計支出' ? r.row[2] : '收入',
-        項目: r.type === '預計支出' ? r.row[3] : r.row[2],
-        金額: r.type === '預計支出' ? r.row[4] : r.row[3]
+        number: r.row[0],
+        time: r.row[1],
+        category: r.type === '預計支出' ? r.row[2] : 'income',
+        item: r.type === '預計支出' ? r.row[3] : r.row[2],
+        amount: r.type === '預計支出' ? r.row[4] : r.row[3]
       })));
     }
   } else if (Array.isArray(data)) {
-    // 如果資料是陣列格式，嘗試轉換為物件格式
-    // 這種情況應該很少見，因為預算表使用命名範圍格式
-    // 但為了健壯性，我們還是處理一下
-    // 可以嘗試將陣列轉換為物件，但需要知道資料結構
-    // 暫時跳過，因為預算表應該總是返回物件格式
+    // If data is array format, try converting to object format
+    // This case should be rare since budget table uses named range format
+    // But for robustness, we still handle it
+    // Can try converting array to object, but need to know data structure
+    // Skip for now since budget table should always return object format
   } else {
   }
 
-  // 根據目前選擇的類型過濾記錄（預設顯示支出）
+  // Filter records by currently selected type (default show expense)
   if (shouldFilter) {
     const currentType = categorySelect ? categorySelect.value : '預計支出';
     filterRecordsByType(currentType);
   }
 };
 
-// 如果 totalData 為 null 或 undefined，則從當前記錄計算即時總計
+// If totalData is null or undefined, calculate live total from current records
 const updateTotalDisplay = (totalData = null) => {
   let income = 0;
   let expense = 0;
   let total = 0;
-  // 重要：無論是否有後端返回的總計，都從 allRecords 重新計算，確保編輯金額時正確計算（總計-舊值+新值）
-  // 因為編輯金額時，allRecords 已經更新為新值，所以從 allRecords 計算會得到正確的總計
+  // Important: Regardless of backend returned total, recalculate from allRecords to ensure correct calculation when editing amount (total - old value + new value)
+  // Because when editing amount, allRecords is already updated to new value, so calculating from allRecords gives correct total
   if (false && totalData && Array.isArray(totalData) && totalData.length >= 3) {
-    // 暫時不使用後端返回的總計，改為從 allRecords 計算
-    // 使用後端返回的總計
-    // 驗證每個值是否為有效數字
+    // Temporarily not using backend returned total, calculate from allRecords instead
+    // Use backend returned total
+    // Validate if each value is valid number
     const incomeRaw = totalData[0];
     const expenseRaw = totalData[1];
     const totalRaw = totalData[2];
@@ -825,7 +838,7 @@ const updateTotalDisplay = (totalData = null) => {
     expense = parseFloat(expenseRaw);
     total = parseFloat(totalRaw);
     
-    // 如果解析失敗，使用 0
+    // If parse fails, use 0
     if (isNaN(income)) {
       income = 0;
     }
@@ -833,15 +846,15 @@ const updateTotalDisplay = (totalData = null) => {
       expense = 0;
     }
     if (isNaN(total)) {
-      total = income - expense; // 使用計算值
+      total = income - expense; // Use calculated value
     }
   } else {
-    // 從當前記錄計算即時總計
-    // 重要：一開始全部要加總，只有當用戶修改金額時才要排除舊值加上新值
+    // Calculate live total from current records
+    // Important: Initially sum all, only exclude old value and add new value when user modifies amount
     const costInput = document.getElementById('cost-input');
     const currentType = categorySelect ? categorySelect.value : '預計支出';
     
-    // 檢查用戶是否正在修改金額（編輯模式且 costInput.value 與當前記錄的金額不同）
+    // Check if user is editing amount (edit mode and costInput.value differs from current record amount)
     let isEditingAmount = false;
     let currentRecord = null;
     let oldAmount = 0;
@@ -850,59 +863,59 @@ const updateTotalDisplay = (totalData = null) => {
       currentRecord = filteredRecords[currentRecordIndex];
       const currentRecordNumber = parseInt(currentRecord.row[0], 10);
       
-      // 獲取當前記錄的舊金額
+      // Get old amount of current record
       if (currentRecord.type === '收入') {
         oldAmount = parseFloat(currentRecord.row[3] || 0) || 0;
       } else {
         oldAmount = parseFloat(currentRecord.row[4] || 0) || 0;
       }
       
-      // 檢查用戶是否正在修改金額
+      // Check if user is editing amount
       if (costInput && costInput.value !== undefined && costInput.value !== null && costInput.value !== '') {
         const newAmount = parseFloat(costInput.value) || 0;
-        // 如果新金額與舊金額不同，表示用戶正在修改
+        // If new amount differs from old amount, user is editing
         if (Math.abs(newAmount - oldAmount) > 0.01) {
           isEditingAmount = true;
         }
       }
     }
     
-    // 如果用戶正在修改金額，需要排除舊記錄（舊值），然後加上新值（costInput.value）
-    // 否則，全部加總（包括當前記錄）
+    // If user is editing amount, need to exclude old record (old value), then add new value (costInput.value)
+    // Otherwise, sum all (including current record)
     let recordsToCalculate = allRecords;
     if (isEditingAmount && currentRecord) {
       const currentRecordNumber = parseInt(currentRecord.row[0], 10);
       
-      // 從 allRecords 中排除當前正在編輯的記錄（舊值）
+      // Exclude currently editing record (old value) from allRecords
       recordsToCalculate = allRecords.filter(r => {
         const num = parseInt(r.row[0], 10);
         return !(Number.isFinite(num) && num > 0 && num === currentRecordNumber && r.type === currentRecord.type);
       });
     } else {
-      // 一開始全部要加總（包括當前記錄），不加上 costInput.value
+      // Initially sum all (including current record), don't add costInput.value
       recordsToCalculate = allRecords;
     }
     
     const incomeRecords = recordsToCalculate.filter(r => r.type === '收入');
     const expenseRecords = recordsToCalculate.filter(r => r.type === '預計支出');
-    // 計算收入總計
+    // Calculate income total
     income = incomeRecords.reduce((sum, r) => {
       if (!r || !r.row || !Array.isArray(r.row)) return sum;
-      const cost = parseFloat(r.row[3] || 0) || 0; // 收入：row[3] 是金額
+      const cost = parseFloat(r.row[3] || 0) || 0; // Income: row[3] is amount
       return sum + cost;
     }, 0);
 
-    // 計算支出總計
+    // Calculate expense total
     expense = expenseRecords.reduce((sum, r) => {
       if (!r || !r.row || !Array.isArray(r.row)) return sum;
-      const cost = parseFloat(r.row[4] || 0) || 0; // 支出：row[4] 是金額
+      const cost = parseFloat(r.row[4] || 0) || 0; // Expense: row[4] is amount
       return sum + cost;
     }, 0);
 
-    // 加上即時輸入的金額（新值）
-    // 新增模式：加上 costInput.value（因為新值還沒有在 allRecords 中）
-    // 編輯模式且正在修改金額：加上 costInput.value（因為已經從 allRecords 中排除了舊值）
-    // 編輯模式但沒有修改金額：不加上 costInput.value（因為值已經在 allRecords 中了）
+    // Add live input amount (new value)
+    // Add new mode: add costInput.value (because new value not yet in allRecords)
+    // Edit mode and editing amount: add costInput.value (because old value already excluded from allRecords)
+    // Edit mode but not editing amount: don't add costInput.value (because value already in allRecords)
     if (isNewMode || isEditingAmount) {
       if (costInput && costInput.value) {
         const liveCost = parseFloat(costInput.value) || 0;
@@ -924,32 +937,32 @@ const updateTotalDisplay = (totalData = null) => {
   updateTotalColor(total);
 };
 
-// 載入單個月份的資料和總計
+// Load single month's data and total
 const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
-  // 驗證 sheetIndex 是否有效
+  // Validate if sheetIndex is valid
   if (!Number.isFinite(sheetIndex) || sheetIndex < 2) {
-    throw new Error(`無效的 sheet 索引: ${sheetIndex}`);
+    throw new Error(`Invalid sheet index: ${sheetIndex}`);
   }
 
   let signal;
   let abortController;
 
   if (useGlobalAbortController) {
-    // 取消之前的請求（如果存在）
+    // Cancel previous request (if exists)
     if (currentAbortController) {
       currentAbortController.abort();
     }
 
-    // 創建新的 AbortController
+    // Create new AbortController
     currentAbortController = new AbortController();
     signal = currentAbortController.signal;
   } else {
-    // 為預載入任務創建獨立的 AbortController
+    // Create independent AbortController for preload tasks
     abortController = new AbortController();
     signal = abortController.signal;
   }
 
-  // 從試算表抓出「當月收入 / 支出」等資料 - 添加時間戳避免快取
+  // Fetch "current month income/expense" data from spreadsheet - add timestamp to avoid cache
   const monthIndex = sheetIndex - 2;
   const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
 
@@ -962,8 +975,8 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
       method: "GET",
       redirect: "follow",
       mode: "cors",
-      cache: "no-store", // 強制不使用快取
-      signal: signal // 添加 abort signal
+      cache: "no-store", // Force no cache
+      signal: signal // Add abort signal
     });
 
     if (!res.ok) {
@@ -972,13 +985,13 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
 
     data = await res.json();
 
-    // 在 console 顯示回傳資料
-    // 如果資料是陣列格式，需要轉換成命名範圍格式
+    // Display returned data in console
+    // If data is array format, need to convert to named range format
     if (Array.isArray(data)) {
 
-      // 將陣列轉換為命名範圍格式
-      // 預算格式：收入 [編號, 時間, item, cost, note] (5欄)
-      //          支出 [編號, 時間, category, item, cost, note] (6欄)
+      // Convert array to named range format
+      // Budget format: Income [number, time, item, cost, note] (5 cols)
+      //          Expense [number, time, category, item, cost, note] (6 cols)
       const convertedData = {};
       let incomeRows = [];
       let expenseRows = [];
@@ -986,25 +999,25 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
       data.forEach((row, rowIndex) => {
         if (!row || !Array.isArray(row) || row.length === 0) return;
 
-        // 跳過標題行和總計行
+        // Skip header row and total row
         const firstCell = String(row[0] || '').trim();
         if (firstCell === '交易日期' || firstCell === '編號' || firstCell === '總計' || firstCell === '') {
           return;
         }
 
-        // 根據欄位數量判斷類型
+        // Determine type based on column count
         if (row.length === 5) {
-          // 收入格式：[編號, 時間, item, cost, note]
+          // Income format: [number, time, item, cost, note]
           incomeRows.push(row);
         } else if (row.length === 6) {
-          // 支出格式：[編號, 時間, category, item, cost, note]
+          // Expense format: [number, time, category, item, cost, note]
           expenseRows.push(row);
         } else {
-          // 其他格式（如10欄的支出記錄）跳過，因為預算表只需要預算資料
+          // Other formats (like 10-col expense records) skip, budget table only needs budget data
         }
       });
 
-      // 轉換為命名範圍格式
+      // Convert to named range format
       if (incomeRows.length > 0) {
         convertedData[`當月收入${currentMonthName}`] = incomeRows;
       }
@@ -1014,7 +1027,7 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
 
       data = convertedData;
     } else {
-      // 物件格式（命名範圍格式），檢查命名範圍是否存在
+      // Object format (named range format), check if named range exists
       const expectedIncomeKey = `當月收入${currentMonthName}`;
       const expectedExpenseKey = `當月支出預算${currentMonthName}`;
       const hasIncome = data.hasOwnProperty(expectedIncomeKey);
@@ -1027,15 +1040,15 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
     throw error;
   }
 
-  // 載入總計 - 添加時間戳避免快取
+  // Load total - add timestamp to avoid cache
   const TotalParams = { name: "Show Total", sheet: sheetIndex, _t: Date.now() };
   const Totalurl = `${baseBudget}?${new URLSearchParams(TotalParams)}`;
   const Totalres = await fetch(Totalurl, {
     method: "GET",
     redirect: "follow",
     mode: "cors",
-    cache: "no-store", // 強制不使用快取
-    signal: signal // 添加 abort signal
+    cache: "no-store", // Force no cache
+    signal: signal // Add abort signal
   });
 
   if (!Totalres.ok) {
@@ -1049,19 +1062,19 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
     throw new Error('解析總計資料失敗: ' + e.message);
   }
 
-  // 驗證總計資料格式
+  // Validate total data format
   if (!Array.isArray(totalData) || totalData.length < 3) {
-    // 如果格式錯誤，使用 [0, 0, 0] 作為預設值
+    // If format error, use [0, 0, 0] as default value
     totalData = [0, 0, 0];
   }
 
-  // 驗證總計資料的值是否為有效數字
+  // Validate if total data values are valid numbers
   const income = parseFloat(totalData[0]);
   const expense = parseFloat(totalData[1]);
   const total = parseFloat(totalData[2]);
   
   if (isNaN(income) || isNaN(expense) || isNaN(total)) {
-    // 如果包含無效數字，使用 0 作為預設值
+    // If contains invalid number, use 0 as default value
     totalData = [
       Number.isFinite(income) ? income : 0,
       Number.isFinite(expense) ? expense : 0,
@@ -1069,47 +1082,47 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
     ];
   }
 
-  // 在 console 顯示回傳的總計資料
-  // 請求成功後，清除 AbortController（僅當使用全局 AbortController 時）
+  // Display returned total data in console
+  // After successful request, clear AbortController (only when using global AbortController)
   if (useGlobalAbortController) {
     currentAbortController = null;
   }
 
-  // 根據資料計算總計（因為 Google Apps Script 的總計可能有問題）
+  // Calculate total from data (because Google Apps Script total may have issues)
   let calculatedIncome = 0;
   let calculatedExpense = 0;
   let incomeCount = 0;
   let expenseCount = 0;
 
-  // 使用 Set 來追蹤已處理的記錄，避免重複計算
+  // Use Set to track processed records, avoid duplicate calculations
   const processedIncomeRecords = new Set();
   const processedExpenseRecords = new Set();
 
   if (data && typeof data === 'object') {
-    // 調試：檢查 202506 月份的資料過濾
-    // 根據新的 Apps Script，數據格式是：
-    // key 是命名範圍名稱（如 "當月收入202506"、"當月支出預算202506"）
-    // value 是 2D 數組（已過濾空行）
+    // Debug: check 202506 month data filtering
+    // Based on new Apps Script, data format is:
+    // key is named range name (e.g., "CurrentMonthIncome202506", "CurrentMonthExpenseBudget202506")
+    // value is 2D array (empty rows filtered)
     Object.keys(data).forEach(key => {
       const rows = data[key] || [];
 
-      // 根據命名範圍名稱判斷類型
-      // 命名範圍格式：當月收入202506 或 當月支出預算202506
+      // Determine type based on named range name
+      // Named range format: CurrentMonthIncome202506 or CurrentMonthExpenseBudget202506
       const isIncome = key.includes('收入');
       const isExpense = key.includes('支出');
 
       if (!isIncome && !isExpense) {
-        return; // 跳過不是收入或支出的資料
+        return; // Skip data that is not income or expense
       }
 
-      // 只處理當前月份的資料（命名範圍名稱應該包含當前月份）
+      // Only process current month's data (named range name should contain current month)
       const isCurrentMonth = currentMonthName && key.includes(currentMonthName);
       if (!isCurrentMonth) {
-        return; // 跳過不是當前月份的資料
+        return; // Skip data that is not current month
       }
 
       rows.forEach((row, rowIndex) => {
-        // 確保 row 是陣列
+        // Ensure row is array
         if (!row || !Array.isArray(row) || row.length === 0) return;
 
         // 檢查是否為空行（所有欄位都是空）
@@ -1800,9 +1813,17 @@ const updateDivVisibility = (forceType = null) => {
   setTimeout(() => {
     const costInput = document.getElementById('cost-input');
     if (costInput) {
+      // 保存當前值（如果有的話）
+      const currentValue = costInput.value;
+      
       // 移除舊的監聽器（如果有的話），避免重複添加
       const newCostInput = costInput.cloneNode(true);
       costInput.parentNode.replaceChild(newCostInput, costInput);
+      
+      // 恢復之前的值（cloneNode 應該已經保留，但為保險起見再設置一次）
+      if (currentValue) {
+        newCostInput.value = currentValue;
+      }
 
       // 添加新的監聽器
       newCostInput.addEventListener('input', () => {
@@ -1990,9 +2011,14 @@ const saveData = async () => {
         // 重要：無論是新增還是修改，都重新處理所有數據，確保不會少一筆資料
         // 因為後端已經正確處理了總計（先刪除舊值再重新計算），所以前端也應該重新處理所有數據
         processDataFromResponse(result.data, false);
+        
+        // 重要：在計算總計前，必須先退出新增模式
+        // 因為 allRecords 已經包含新記錄，如果 isNewMode 還是 true，
+        // updateTotalDisplay 會把 costInput.value 再加一次，導致總計翻倍
+        isNewMode = false;
+        
         // 確保總計正確更新
-        // 重要：編輯金額時，應該從 allRecords 重新計算總計，而不是使用後端返回的總計
-        // 因為 allRecords 已經更新為新值，從 allRecords 計算會得到正確的總計（總計-舊值+新值）
+        // 從 allRecords 重新計算總計（allRecords 已經是最新的資料）
         updateTotalDisplay(null); // 傳入 null，強制從 allRecords 計算
 
         // 根據保存的類型重新過濾記錄
