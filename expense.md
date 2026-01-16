@@ -1421,7 +1421,7 @@ const showSpinner = (coverHeader = false) => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: linear-gradient(135deg, rgba(255, 245, 240, 0.97) 0%, rgba(255, 248, 245, 0.97) 50%, rgba(255, 240, 235, 0.97) 100%);
     z-index: ${zIndexValue};
     display: flex;
     flex-direction: column;

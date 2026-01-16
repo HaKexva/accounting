@@ -219,6 +219,7 @@ function createPanel(item) {
   const panel = document.createElement('div');
   panel.id = `panel-${item.id}`;
   panel.className = 'content-panel';
+  panel.dataset.panel = item.id; // For panel-specific background colors
 
   panel.innerHTML = `
     <div class="panel-header">

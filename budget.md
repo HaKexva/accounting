@@ -1542,7 +1542,7 @@ const showSpinner = (coverHeader = false) => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: linear-gradient(135deg, rgba(232, 248, 240, 0.97) 0%, rgba(240, 255, 245, 0.97) 50%, rgba(230, 255, 240, 0.97) 100%);
     z-index: ${coverHeader ? '2000' : '1500'}; /* 如果覆蓋頁首，z-index 要高於頁首 */
     display: flex;
     flex-direction: column;
