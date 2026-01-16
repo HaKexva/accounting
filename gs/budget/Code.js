@@ -550,7 +550,7 @@ function CreateNewTab() {
 function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheets()[sheetIndex];
-  var startRow = 2; // 從第二行開始
+  var startRow = 3; // 從第三行開始（Row1: 類型標題, Row2: 欄位標題, Row3: 資料開始）
   var column, totalColumn;
 
   var now = new Date();
@@ -733,8 +733,8 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       }
       
       // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
-      // updateRow = recordNum + 1, so recordNum = updateRow - 1
-      var values = [updateRow - 1, timeOutput, category, item, costValue, note];
+      // updateRow = recordNum + 2 (Row1: 類型標題, Row2: 欄位標題), so recordNum = updateRow - 2
+      var values = [updateRow - 2, timeOutput, category, item, costValue, note];
       sheet.getRange(updateRow, 7, 1, column).setValues([values]);
       
       // 找到最後一筆支出資料行（跳過總計行）
@@ -782,8 +782,8 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       }
       
       // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
-      // updateRow = recordNum + 1, so recordNum = updateRow - 1
-      var values = [updateRow - 1, timeOutput, item, costValue, note];
+      // updateRow = recordNum + 2 (Row1: 類型標題, Row2: 欄位標題), so recordNum = updateRow - 2
+      var values = [updateRow - 2, timeOutput, item, costValue, note];
       sheet.getRange(updateRow, 1, 1, column).setValues([values]);
       
       // 找到最後一筆收入資料行（跳過總計行）
@@ -852,7 +852,7 @@ function DeleteTab(sheet) {
 function DeleteData(sheetIndex, rangeType, number) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheets()[sheetIndex];
-  var startRow = 2; // 從第二行開始
+  var startRow = 3; // 從第三行開始（Row1: 類型標題, Row2: 欄位標題, Row3: 資料開始）
   var column, totalColumn, startCol, numberCol;
 
   if (rangeType === 0) { // Expense

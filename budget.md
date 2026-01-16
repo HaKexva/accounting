@@ -1907,8 +1907,9 @@ const saveData = async () => {
       if (filteredRecords.length > 0 && currentRecordIndex < filteredRecords.length) {
         const currentRecord = filteredRecords[currentRecordIndex];
         const recordNum = parseInt(currentRecord.row[0], 10);
+        console.log('[預算] 更新記錄 - recordNum:', recordNum, 'row[0]:', currentRecord.row[0], 'updateRow:', recordNum + 2);
         if (Number.isFinite(recordNum) && recordNum > 0) {
-          postData.updateRow = recordNum + 1;
+          postData.updateRow = recordNum + 2; // Row 1: 類型標題, Row 2: 欄位標題, Row 3+: 資料
         } else {
           alert('無法更新記錄：找不到記錄編號');
           return;
