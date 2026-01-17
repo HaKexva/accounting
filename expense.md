@@ -1807,11 +1807,24 @@ const saveData = async () => {
     const formData = getFormData();
     const monthIndex = currentSheetIndex - 2;
     const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
-    const result = await callAPI({
+    
+    // Convert monthIndex to month for backend API (backend expects 'month' not 'monthIndex')
+    const apiData = {
       name: "Upsert Data",
       sheet: currentSheetIndex,
-      ...formData
-    });
+      date: formData.date,
+      item: formData.item,
+      category: formData.category,
+      spendWay: formData.spendWay,
+      creditCard: formData.creditCard,
+      month: formData.monthIndex, // Backend expects 'month' but frontend uses 'monthIndex'
+      actualCost: formData.actualCost,
+      payment: formData.payment,
+      recordCost: formData.recordCost,
+      note: formData.note
+    };
+    
+    const result = await callAPI(apiData);
 
     // 等待後端回傳後才顯示成功訊息
     alert('資料已成功儲存！');
@@ -2146,10 +2159,17 @@ function createHistoryItem(record, listElement) {
 
   const itemTitle = document.createElement('div');
   itemTitle.textContent = record.row[1] || '(無標題)';
-  itemTitle.style.cssText = 'font-size: 16px; font-weight: 500; color: #333;';
+  itemTitle.style.cssText = 'font-size: 16px; font-weight: 500; color: #333; margin-bottom: 4px;';
+
+  // Add cost display (列账消费金额 - recordCost)
+  const cost = document.createElement('div');
+  const recordCost = parseFloat(record.row[8]) || 0;
+  cost.textContent = `金額：${recordCost.toLocaleString('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  cost.style.cssText = 'font-size: 14px; color: #e74c3c; font-weight: 500;';
 
   itemContent.appendChild(date);
   itemContent.appendChild(itemTitle);
+  itemContent.appendChild(cost);
 
   // 刪除按鈕
   const deleteBtn = document.createElement('button');

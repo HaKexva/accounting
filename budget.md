@@ -1728,6 +1728,34 @@ const createSelectRow = (labelText, selectId, options) => {
   selectDisplay.addEventListener('click', function(e) {
     e.stopPropagation();
     const isOpen = dropdown.style.display === 'block';
+    
+    // Close all other dropdowns before opening this one
+    if (!isOpen) {
+      // Close category dropdown
+      const categoryDropdown = document.querySelector('.category-dropdown');
+      if (categoryDropdown) {
+        categoryDropdown.style.display = 'none';
+        const categoryArrow = document.querySelector('.category-select-arrow');
+        if (categoryArrow) {
+          categoryArrow.style.transform = 'rotate(0deg)';
+        }
+      }
+      
+      // Close all other select dropdowns
+      document.querySelectorAll('.select-dropdown').forEach(otherDropdown => {
+        if (otherDropdown !== dropdown) {
+          otherDropdown.style.display = 'none';
+          const otherContainer = otherDropdown.closest('.select-container');
+          if (otherContainer) {
+            const otherArrow = otherContainer.querySelector('.select-arrow');
+            if (otherArrow) {
+              otherArrow.style.transform = 'rotate(0deg)';
+            }
+          }
+        }
+      });
+    }
+    
     dropdown.style.display = isOpen ? 'none' : 'block';
     selectArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
   });
@@ -2785,6 +2813,22 @@ categoryDropdown.appendChild(categoryOption2);
 categorySelectDisplay.addEventListener('click', function(e) {
   e.stopPropagation();
   const isOpen = categoryDropdown.style.display === 'block';
+  
+  // Close all other dropdowns before opening this one
+  if (!isOpen) {
+    // Close all select dropdowns
+    document.querySelectorAll('.select-dropdown').forEach(otherDropdown => {
+      otherDropdown.style.display = 'none';
+      const otherContainer = otherDropdown.closest('.select-container');
+      if (otherContainer) {
+        const otherArrow = otherContainer.querySelector('.select-arrow');
+        if (otherArrow) {
+          otherArrow.style.transform = 'rotate(0deg)';
+        }
+      }
+    });
+  }
+  
   categoryDropdown.style.display = isOpen ? 'none' : 'block';
   categorySelectArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
 });
