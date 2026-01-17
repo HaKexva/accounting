@@ -1673,16 +1673,25 @@ function getFormData(prefix = '') {
   if (!category) throw new Error('請選擇類別');
   if (!spendWay) throw new Error('請選擇支付方式');
 
-  const actualCost = parseFloat(actualCostValue) || 0;
-  const recordCost = parseFloat(recordCostValue) || 0;
-
-  if (!actualCostValue || isNaN(actualCost) || actualCost <= 0) {
-    throw new Error('請輸入有效實際消費金額');
+  // Allow 0 values, but ensure they are valid numbers (not negative)
+  let actualCost = 0;
+  let recordCost = 0;
+  
+  if (actualCostValue && actualCostValue.trim() !== '') {
+    actualCost = parseFloat(actualCostValue);
+    if (isNaN(actualCost) || actualCost < 0) {
+      throw new Error('請輸入有效實際消費金額（不能為負數）');
+    }
   }
-
-  if (!recordCostValue || isNaN(recordCost) || recordCost <= 0) {
-    throw new Error('請輸入有效列帳消費金額');
+  
+  if (recordCostValue && recordCostValue.trim() !== '') {
+    recordCost = parseFloat(recordCostValue);
+    if (isNaN(recordCost) || recordCost < 0) {
+      throw new Error('請輸入有效列帳消費金額（不能為負數）');
+    }
   }
+  
+  // Both can be 0 or empty (will default to 0)
 
   let creditCard = '';
   let monthIndex = '';
@@ -1823,13 +1832,27 @@ const saveData = async () => {
   if (historyButton) historyButton.disabled = true;
 
   try {
-    const formData = getFormData();
-    const monthIndex = currentSheetIndex - 2;
-    const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
+    // Get payment method first to check if it's credit card
+    const paymentMethodValue = paymentMethodSelect ? paymentMethodSelect.value : '';
     
-    // Validate credit card payment requires month selection
-    if (isCreditCardPayment(formData.spendWay)) {
-      if (!formData.monthIndex || formData.monthIndex.trim() === '') {
+    // If credit card, ensure month payment select value is obtained correctly
+    let monthValue = '';
+    if (isCreditCardPayment(paymentMethodValue)) {
+      // Directly get the hidden select element value
+      const monthSelectElement = document.getElementById('month-payment-select');
+      if (monthSelectElement && monthSelectElement.tagName === 'SELECT') {
+        monthValue = monthSelectElement.value || '';
+        console.log('[Expense] Directly getting month payment value:', {
+          element: monthSelectElement,
+          value: monthValue,
+          selectedIndex: monthSelectElement.selectedIndex,
+          options: Array.from(monthSelectElement.options).map(o => ({ value: o.value, text: o.text, selected: o.selected }))
+        });
+      } else {
+        console.warn('[Expense] month-payment-select element not found or not a SELECT:', monthSelectElement);
+      }
+      
+      if (!monthValue || monthValue.trim() === '') {
         alert('請選擇「本月支付」或「次月支付」');
         // Restore button state
         mainSaveButton.textContent = '儲存';
@@ -1850,6 +1873,15 @@ const saveData = async () => {
         hideSpinner();
         return;
       }
+    }
+    
+    const formData = getFormData();
+    const monthIndex = currentSheetIndex - 2;
+    const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
+    
+    // Override monthIndex with directly obtained value if it's credit card payment
+    if (isCreditCardPayment(formData.spendWay) && monthValue) {
+      formData.monthIndex = monthValue;
     }
     
     // Convert monthIndex to month for backend API (backend expects 'month' not 'monthIndex')
@@ -1875,6 +1907,7 @@ const saveData = async () => {
         creditCard: formData.creditCard,
         monthIndex: formData.monthIndex,
         month: apiData.month,
+        monthValue: monthValue,
         apiData: apiData
       });
     }
@@ -2851,6 +2884,8 @@ function showEditModal(record) {
   formContainer.className = 'edit-form-container';
 
   // 重新創建表單元素（避免ID衝突）
+  // 日期欄位（可編輯）
+  const dateRow = createInputRow('日期：', 'edit-date-input', 'date');
   const itemRow = createInputRow('項目：', 'edit-item-input');
   const expenseCategoryRow = createSelectRow('類別：', 'edit-expense-category-select', EXPENSE_CATEGORY_OPTIONS);
 
@@ -2904,6 +2939,7 @@ function showEditModal(record) {
     });
   }
 
+  formContainer.appendChild(dateRow);
   formContainer.appendChild(itemRow);
   formContainer.appendChild(expenseCategoryRow);
   formContainer.appendChild(paymentMethodRow);
@@ -2926,6 +2962,7 @@ function showEditModal(record) {
     // 使用完整記錄數據填充表單
     const row = fullRecord.row;
 
+  const dateInput = document.getElementById('edit-date-input');
   const itemInput = document.getElementById('edit-item-input');
   const expenseCategorySelect = document.getElementById('edit-expense-category-select');
   // paymentMethodSelect 已經在第 1858 行聲明，不需要重複聲明
@@ -2935,6 +2972,35 @@ function showEditModal(record) {
   const actualCostInput = document.getElementById('edit-actual-cost-input');
   const recordCostInput = document.getElementById('edit-record-cost-input');
   const noteInput = document.getElementById('edit-note-input'); // 重新獲取，確保元素已存在
+
+  // 填充日期（確保可以編輯）
+  if (dateInput) {
+    // 日期格式轉換：將 "YYYY/MM/DD" 或 "YYYY-MM-DD" 轉換為 "YYYY-MM-DD"
+    const dateValue = row[0] || '';
+    let formattedDate = '';
+    if (dateValue) {
+      // 處理 "YYYY/MM/DD" 格式
+      if (dateValue.includes('/')) {
+        const [year, month, day] = dateValue.split('/');
+        formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      } else if (dateValue.includes('-')) {
+        // 已經是 "YYYY-MM-DD" 格式
+        formattedDate = dateValue;
+      } else {
+        // 嘗試解析其他格式
+        const dateObj = new Date(dateValue);
+        if (!isNaN(dateObj.getTime())) {
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          formattedDate = `${year}-${month}-${day}`;
+        }
+      }
+    }
+    dateInput.value = formattedDate;
+    dateInput.readOnly = false; // 確保可以編輯
+    dateInput.disabled = false; // 確保可以編輯
+  }
 
   // 填充項目（確保可以編輯）
   if (itemInput) {
@@ -3077,6 +3143,7 @@ function showEditModal(record) {
     editModalSaveButton.disabled = true;
 
     // 禁用所有輸入和按鈕
+    const editDateInput = document.getElementById('edit-date-input');
     const editItemInput = document.getElementById('edit-item-input');
     const editExpenseCategorySelect = document.getElementById('edit-expense-category-select');
     const editPaymentMethodSelect = document.getElementById('edit-payment-method-select');
@@ -3086,6 +3153,7 @@ function showEditModal(record) {
     const editActualCostInput = document.getElementById('edit-actual-cost-input');
     const editRecordCostInput = document.getElementById('edit-record-cost-input');
     const editNoteInput = document.getElementById('edit-note-input');
+    if (editDateInput) editDateInput.disabled = true;
     if (editItemInput) editItemInput.disabled = true;
     if (editExpenseCategorySelect) editExpenseCategorySelect.disabled = true;
     if (editPaymentMethodSelect) editPaymentMethodSelect.disabled = true;
@@ -3156,6 +3224,7 @@ function showEditModal(record) {
       editModalSaveButton.disabled = false;
 
       // 恢復編輯 modal 的輸入
+      if (editDateInput) editDateInput.disabled = false;
       if (editItemInput) editItemInput.disabled = false;
       if (editExpenseCategorySelect) editExpenseCategorySelect.disabled = false;
       if (editPaymentMethodSelect) editPaymentMethodSelect.disabled = false;
