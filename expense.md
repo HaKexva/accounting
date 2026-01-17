@@ -2592,16 +2592,52 @@ async function showHistoryModal() {
     historyButton.disabled = false; // 重新啟用按鈕
   };
 
-  // 更新記錄列表顯示的函數
+  // 篩選狀態（在函數作用域內，需要保存當前的記錄引用）
+  let currentFilterRecords = records; // 保存當前用於篩選的記錄
+  let filterType = 'none'; // 'none', 'date', 'category'
+  let filterValue = '';
+
+  // 更新記錄列表顯示的函數（支持篩選）
   const updateHistoryList = (listElement, recordsToShow) => {
     listElement.innerHTML = '';
 
     // 顯示所有記錄（過濾標題行）
-    const displayRecords = recordsToShow.filter(r => !isHeaderRecord(r));
+    let displayRecords = recordsToShow.filter(r => !isHeaderRecord(r));
+
+    // 應用篩選
+    if (filterType === 'date' && filterValue) {
+      displayRecords = displayRecords.filter(record => {
+        const recordDate = record.row[0] || '';
+        // 將日期轉換為可比較的格式
+        let recordDateStr = '';
+        if (recordDate instanceof Date) {
+          recordDateStr = recordDate.toISOString().split('T')[0];
+        } else {
+          const dateStr = String(recordDate);
+          if (dateStr.includes('/')) {
+            const [year, month, day] = dateStr.split('/');
+            recordDateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          } else if (dateStr.includes('-')) {
+            recordDateStr = dateStr.split('T')[0].split(' ')[0];
+          } else {
+            const dateObj = new Date(recordDate);
+            if (!isNaN(dateObj.getTime())) {
+              recordDateStr = dateObj.toISOString().split('T')[0];
+            }
+          }
+        }
+        return recordDateStr === filterValue;
+      });
+    } else if (filterType === 'category' && filterValue) {
+      displayRecords = displayRecords.filter(record => {
+        const recordCategory = (record.row[2] || '').trim();
+        return recordCategory === filterValue;
+      });
+    }
 
     if (displayRecords.length === 0) {
       const emptyMsg = document.createElement('div');
-      emptyMsg.textContent = '尚無歷史紀錄';
+      emptyMsg.textContent = filterType !== 'none' ? '沒有符合篩選條件的記錄' : '尚無歷史紀錄';
       emptyMsg.style.cssText = 'text-align: center; padding: 40px; color: #999;';
       listElement.appendChild(emptyMsg);
   } else {
@@ -2755,6 +2791,15 @@ async function showHistoryModal() {
 
     // 從暫存區重新載入該月份的記錄
     const newRecords = loadHistoryListFromCache(currentSheetIndex);
+    
+    // 更新當前記錄引用
+    currentFilterRecords = newRecords;
+    
+    // 重置篩選並更新篩選選項（使用新的記錄）
+    filterType = 'none';
+    filterValue = '';
+    filterTypeSelect.value = 'none';
+    updateFilterValueOptions(newRecords);
 
     // 更新記錄列表顯示
     updateHistoryList(list, newRecords);
@@ -2776,6 +2821,188 @@ async function showHistoryModal() {
   headerContainer.appendChild(headerLeftContainer);
   headerContainer.appendChild(closeBtn);
 
+  // 篩選器容器（放在標題下面，頁首裡面）
+  const filterContainer = document.createElement('div');
+  filterContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid #eee;
+    margin-top: 12px;
+  `;
+
+  // 左邊：篩選方式選擇
+  const filterTypeContainer = document.createElement('div');
+  filterTypeContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  `;
+
+  const filterTypeLabel = document.createElement('label');
+  filterTypeLabel.textContent = '篩選方式：';
+  filterTypeLabel.style.cssText = 'font-size: 14px; color: #666; white-space: nowrap;';
+
+  const filterTypeSelect = document.createElement('select');
+  filterTypeSelect.id = 'history-filter-type-select';
+  filterTypeSelect.style.cssText = `
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 100px;
+  `;
+
+  const filterTypeOptions = [
+    { value: 'none', text: '無篩選' },
+    { value: 'date', text: '日期' },
+    { value: 'category', text: '消費類別' }
+  ];
+
+  filterTypeOptions.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.text;
+    filterTypeSelect.appendChild(option);
+  });
+
+  filterTypeContainer.appendChild(filterTypeLabel);
+  filterTypeContainer.appendChild(filterTypeSelect);
+
+  // 右邊：篩選值選擇（根據篩選方式動態更新）
+  const filterValueContainer = document.createElement('div');
+  filterValueContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+  `;
+
+  const filterValueLabel = document.createElement('label');
+  filterValueLabel.textContent = '篩選值：';
+  filterValueLabel.style.cssText = 'font-size: 14px; color: #666; white-space: nowrap;';
+
+  const filterValueSelect = document.createElement('select');
+  filterValueSelect.id = 'history-filter-value-select';
+  filterValueSelect.style.cssText = `
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    flex: 1;
+    max-width: 300px;
+  `;
+
+  // 更新篩選值選項的函數（使用當前月份的記錄）
+  const updateFilterValueOptions = (currentRecords) => {
+    // 如果提供了記錄，更新當前記錄引用
+    if (currentRecords) {
+      currentFilterRecords = currentRecords;
+    }
+    
+    filterValueSelect.innerHTML = '';
+    filterValue = '';
+
+    if (filterType === 'date') {
+      // 日期篩選：獲取所有記錄中的唯一日期
+      const allDates = new Set();
+      currentFilterRecords.filter(r => !isHeaderRecord(r)).forEach(record => {
+        const recordDate = record.row[0] || '';
+        if (recordDate) {
+          let dateStr = '';
+          if (recordDate instanceof Date) {
+            dateStr = recordDate.toISOString().split('T')[0];
+          } else {
+            const dateString = String(recordDate);
+            if (dateString.includes('/')) {
+              const [year, month, day] = dateString.split('/');
+              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            } else if (dateString.includes('-')) {
+              dateStr = dateString.split('T')[0].split(' ')[0];
+            } else {
+              const dateObj = new Date(recordDate);
+              if (!isNaN(dateObj.getTime())) {
+                dateStr = dateObj.toISOString().split('T')[0];
+              }
+            }
+          }
+          if (dateStr) {
+            allDates.add(dateStr);
+          }
+        }
+      });
+
+      // 排序日期（從新到舊）
+      const sortedDates = Array.from(allDates).sort().reverse();
+
+      sortedDates.forEach(date => {
+        const option = document.createElement('option');
+        option.value = date;
+        // 格式化顯示：YYYY-MM-DD -> YYYY/MM/DD
+        const [year, month, day] = date.split('-');
+        option.textContent = `${year}/${month}/${day}`;
+        filterValueSelect.appendChild(option);
+      });
+    } else if (filterType === 'category') {
+      // 消費類別篩選：使用 EXPENSE_CATEGORY_OPTIONS
+      EXPENSE_CATEGORY_OPTIONS.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.value;
+        option.textContent = cat.text;
+        filterValueSelect.appendChild(option);
+      });
+    }
+
+    // 如果沒有選項，添加一個提示
+    if (filterValueSelect.options.length === 0 && filterType !== 'none') {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = '無可選項';
+      filterValueSelect.appendChild(option);
+    }
+
+    // 隱藏/顯示篩選值容器
+    if (filterType === 'none') {
+      filterValueContainer.style.display = 'none';
+    } else {
+      filterValueContainer.style.display = 'flex';
+    }
+  };
+
+  filterValueContainer.appendChild(filterValueLabel);
+  filterValueContainer.appendChild(filterValueSelect);
+
+  filterContainer.appendChild(filterTypeContainer);
+  filterContainer.appendChild(filterValueContainer);
+
+  // 篩選方式變更事件
+  filterTypeSelect.addEventListener('change', () => {
+    filterType = filterTypeSelect.value;
+    updateFilterValueOptions(); // 使用當前記錄
+    // 重新應用篩選並更新列表（使用當前記錄）
+    updateHistoryList(list, currentFilterRecords);
+  });
+
+  // 篩選值變更事件
+  filterValueSelect.addEventListener('change', () => {
+    filterValue = filterValueSelect.value;
+    // 重新應用篩選並更新列表（使用當前記錄）
+    updateHistoryList(list, currentFilterRecords);
+  });
+
+  // 初始狀態：隱藏篩選值容器
+  updateFilterValueOptions();
+
   // 記錄列表
   const list = document.createElement('div');
   list.className = 'history-list';
@@ -2785,6 +3012,7 @@ async function showHistoryModal() {
 
   // 只添加一次：headerContainer 已經包含 closeBtn
   content.appendChild(headerContainer);
+  content.appendChild(filterContainer);
   content.appendChild(list);
   modal.appendChild(content);
 
