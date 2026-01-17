@@ -2976,9 +2976,18 @@ function showEditModal(record) {
   // 填充日期（確保可以編輯）
   if (dateInput) {
     // 日期格式轉換：將各種日期格式轉換為 "YYYY-MM-DD"
-    const dateValue = row[0] || '';
+    // row[0] 可能是 Date 對象、字符串或其他格式，需要先轉換為字符串
+    let dateValue = row[0] || '';
+    if (dateValue instanceof Date) {
+      // 如果是 Date 對象，轉換為字符串
+      dateValue = dateValue.toISOString();
+    } else {
+      // 確保是字符串
+      dateValue = String(dateValue);
+    }
+    
     let formattedDate = '';
-    if (dateValue) {
+    if (dateValue && dateValue.trim() !== '') {
       // 處理 ISO 格式（包含時間部分，如 "2026-01-16T16:00:00.000Z"）
       if (dateValue.includes('T') || dateValue.includes('Z')) {
         const dateObj = new Date(dateValue);
@@ -2993,9 +3002,9 @@ function showEditModal(record) {
       else if (dateValue.includes('/')) {
         const parts = dateValue.split('/');
         if (parts.length >= 3) {
-          const year = parts[0];
-          const month = parts[1].padStart(2, '0');
-          const day = parts[2].padStart(2, '0');
+          const year = parts[0].trim();
+          const month = parts[1].trim().padStart(2, '0');
+          const day = parts[2].trim().split(' ')[0].split('T')[0].padStart(2, '0');
           formattedDate = `${year}-${month}-${day}`;
         }
       }
@@ -3005,9 +3014,9 @@ function showEditModal(record) {
         const datePart = dateValue.split(' ')[0].split('T')[0];
         const parts = datePart.split('-');
         if (parts.length >= 3) {
-          const year = parts[0];
-          const month = parts[1].padStart(2, '0');
-          const day = parts[2].padStart(2, '0');
+          const year = parts[0].trim();
+          const month = parts[1].trim().padStart(2, '0');
+          const day = parts[2].trim().padStart(2, '0');
           formattedDate = `${year}-${month}-${day}`;
         }
       } else {
@@ -3021,6 +3030,13 @@ function showEditModal(record) {
         }
       }
     }
+    
+    console.log('[Expense] Date formatting:', {
+      original: row[0],
+      dateValue: dateValue,
+      formattedDate: formattedDate
+    });
+    
     dateInput.value = formattedDate;
     dateInput.readOnly = false; // 確保可以編輯
     dateInput.disabled = false; // 確保可以編輯
@@ -3323,7 +3339,39 @@ async function deleteRecord(record) {
 
 // 編輯模式的儲存函數
 async function saveDataForEdit(record) {
+  // Get payment method first to check if it's credit card
+  const editPaymentMethodSelect = document.getElementById('edit-payment-method-select');
+  const paymentMethodValue = editPaymentMethodSelect ? editPaymentMethodSelect.value : '';
+  
+  // If credit card, ensure month payment select value is obtained correctly
+  let monthValue = '';
+  if (isCreditCardPayment(paymentMethodValue)) {
+    // Directly get the hidden select element value for edit mode
+    const monthSelectElement = document.getElementById('edit-month-payment-select');
+    if (monthSelectElement && monthSelectElement.tagName === 'SELECT') {
+      monthValue = monthSelectElement.value || '';
+      console.log('[Expense] Edit mode - Directly getting month payment value:', {
+        element: monthSelectElement,
+        value: monthValue,
+        selectedIndex: monthSelectElement.selectedIndex,
+        options: Array.from(monthSelectElement.options).map(o => ({ value: o.value, text: o.text, selected: o.selected }))
+      });
+    } else {
+      console.warn('[Expense] Edit mode - edit-month-payment-select element not found or not a SELECT:', monthSelectElement);
+    }
+  }
+  
   const formData = getFormData('edit');
+  
+  // Override monthIndex with directly obtained value if it's credit card payment
+  if (isCreditCardPayment(formData.spendWay) && monthValue) {
+    formData.monthIndex = monthValue;
+    console.log('[Expense] Edit mode - Override monthIndex:', {
+      spendWay: formData.spendWay,
+      monthValue: monthValue,
+      formDataMonthIndex: formData.monthIndex
+    });
+  }
 
   const allRecordsForMonth = loadHistoryListFromCache(currentSheetIndex);
   const recordTime = formatRecordDateTime(record.row[0] || '');
@@ -3343,13 +3391,37 @@ async function saveDataForEdit(record) {
     throw new Error('無法找到對應的記錄位置');
   }
 
-  const result = await callAPI({
+  // Convert monthIndex to month for backend API (backend expects 'month' not 'monthIndex')
+  const apiData = {
     name: "Upsert Data",
     sheet: currentSheetIndex,
-    ...formData,
+    date: formData.date,
+    item: formData.item,
+    category: formData.category,
+    spendWay: formData.spendWay,
+    creditCard: formData.creditCard,
+    month: formData.monthIndex || '', // Backend expects 'month' but frontend uses 'monthIndex'
+    actualCost: formData.actualCost,
+    payment: formData.payment,
+    recordCost: formData.recordCost,
+    note: formData.note,
     // sheet 第 1 列是標題，第 2 列才是第一筆資料，所以要 +2
     updateRow: recordIndex + 2
-  });
+  };
+  
+  // Debug log for edit mode
+  if (isCreditCardPayment(formData.spendWay)) {
+    console.log('[Expense] Edit mode - Saving credit card expense:', {
+      spendWay: formData.spendWay,
+      creditCard: formData.creditCard,
+      monthIndex: formData.monthIndex,
+      month: apiData.month,
+      monthValue: monthValue,
+      apiData: apiData
+    });
+  }
+
+  const result = await callAPI(apiData);
 
   // 更新總計顯示（使用最新資料重新計算）
   updateTotalDisplay();
