@@ -388,19 +388,8 @@ function filterRecordsByType(type) {
   if (filteredRecords.length > 0) {
     showRecord(0);
   } else {
-    // When no records, clear form and update buttons
-    const itemInput = document.getElementById('item-input');
-    const costInput = document.getElementById('cost-input');
-    const noteInput = document.getElementById('note-input');
-    if (itemInput) itemInput.value = '';
-    if (costInput) costInput.value = '';
-    if (noteInput) noteInput.value = '';
-    if (typeof recordNumber !== 'undefined') {
-      recordNumber.textContent = ''; // Don't show number in add new mode
-      recordNumber.style.display = 'none'; // Hide number
-    }
-    updateArrowButtons();
-    updateDeleteButton(); // Update delete button display
+    // When no records, enter new mode so adding works correctly
+    enterNewModeIfEmpty();
   }
 }
 
@@ -1125,16 +1114,16 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
         // Ensure row is array
         if (!row || !Array.isArray(row) || row.length === 0) return;
 
-        // 檢查是否為空行（所有欄位都是空）
+        // Check if empty row (all columns empty)
         const isEmptyRow = row.every(cell => cell === '' || cell === null || cell === undefined);
         if (isEmptyRow) {
           return;
         }
 
-        // 跳過總計行和標題行（更嚴格的檢查）
+        // Skip total row and header row (stricter check)
         const firstCell = String(row[0] || '').trim();
         const firstCellLower = firstCell.toLowerCase();
-        // 檢查是否為標題行或總計行
+        // Check if header row or total row
         if (firstCellLower === '交易日期' || firstCellLower === '總計' || firstCell === '' ||
             firstCell === null || firstCell === undefined ||
             firstCellLower.includes('項目') || firstCellLower.includes('金額') ||
@@ -1143,13 +1132,13 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
           return;
         }
 
-        // 檢查是否為有效記錄（第一欄應該是數字編號）
+        // Check if valid record (first column should be number)
         const num = parseInt(firstCell, 10);
         if (!Number.isFinite(num) || num <= 0) {
           return;
         }
 
-        // 檢查是否已經處理過這筆記錄（使用編號+時間作為唯一標識）
+        // Check if this record already processed (use number+time as unique identifier)
         const recordKey = `${num}_${row[1] || ''}`;
         if (isIncome) {
           if (processedIncomeRecords.has(recordKey)) {
@@ -1163,12 +1152,12 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
           processedExpenseRecords.add(recordKey);
         }
 
-        // 收入：[編號, 時間, item, cost, note] - cost 在索引 3 (D欄)
-        // 支出：[編號, 時間, category, item, cost, note] - cost 在索引 4 (K欄)
+        // Income: [number, time, item, cost, note] - cost at index 3 (column D)
+        // Expense: [number, time, category, item, cost, note] - cost at index 4 (column K)
         const costIndex = isIncome ? 3 : (isExpense ? 4 : -1);
         if (costIndex >= 0 && row[costIndex] !== undefined && row[costIndex] !== null && row[costIndex] !== '') {
           const cost = parseFloat(row[costIndex]);
-          if (Number.isFinite(cost) && cost !== 0) { // 允許負數，但不累加0
+          if (Number.isFinite(cost) && cost !== 0) { // Allow negative, but don't sum 0
             if (isIncome) {
               calculatedIncome += cost;
               incomeCount++;
@@ -1185,49 +1174,49 @@ const loadMonthData = async (sheetIndex, useGlobalAbortController = true) => {
   const calculatedTotal = calculatedIncome - calculatedExpense;
   const calculatedTotalData = [calculatedIncome, calculatedExpense, calculatedTotal];
 
-  // 直接保存原始資料，不需要轉換格式
-  // Apps Script 返回的格式已經是標準格式（如 "當月收入202506"、"當月支出預算202506"）
-  // 保存時保持原樣，讀取時根據月份名稱匹配即可
+  // Save raw data directly, no format conversion needed
+  // Apps Script returns standard format (e.g., "CurrentMonthIncome202506", "CurrentMonthExpenseBudget202506")
+  // Keep as-is when saving, match by month name when reading
 
-  // 驗證 API 返回的總計格式是否正確，優先使用計算的值（特別是當計算值不為 0 時）
-  let finalTotal = calculatedTotalData; // 預設使用計算的總計
+  // Validate if API returned total format is correct, prefer calculated value (especially when calculated value is not 0)
+  let finalTotal = calculatedTotalData; // Default use calculated total
   
   if (totalData && Array.isArray(totalData) && totalData.length >= 3) {
     const apiIncome = parseFloat(totalData[0]) || 0;
     const apiExpense = parseFloat(totalData[1]) || 0;
     const apiTotal = parseFloat(totalData[2]) || 0;
     
-    // 如果計算出有支出記錄（expenseCount > 0），優先使用計算的值
+    // If calculated has expense records (expenseCount > 0), prefer calculated value
     if (expenseCount > 0 || calculatedExpense > 0) {
-      // 有支出記錄，使用計算的值
+      // Has expense records, use calculated value
       finalTotal = calculatedTotalData;
       if (Math.abs(apiExpense - calculatedExpense) > 0.01) {
       }
     } else if (calculatedIncome > 0 || calculatedExpense > 0) {
-      // 計算出有收入或支出，使用計算的值
+      // Calculated has income or expense, use calculated value
       finalTotal = calculatedTotalData;
     } else if (apiExpense === 0 && apiIncome === 0) {
-      // 兩者都是 0，使用 API 的值（可能更準確）
+      // Both are 0, use API value (might be more accurate)
       finalTotal = totalData;
     } else {
-      // 沒有計算出任何值，但 API 有值，使用 API 的值
+      // No calculated value, but API has value, use API value
       finalTotal = totalData;
     }
   } else {
-    // API 返回的總計格式不正確，使用計算的總計
+    // API returned total format incorrect, use calculated total
   }
 
-  // 在 console 顯示最終返回的資料和總計
+  // Display final returned data and total in console
   return { data, total: finalTotal };
 };
 
-// 預先載入其他月份的資料（按順序：先下一個月，然後倒推往前）
+// Preload other months' data (in order: next month first, then backwards)
 const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
   if (sheetNames.length === 0) {
     return;
   }
 
-  // 找出當前月份在 sheetNames 中的索引
+  // Find current month's index in sheetNames
   const currentMonthIdx = sheetNames.findIndex((name, idx) => {
     const sheetIndex = idx + 2;
     return sheetIndex === currentSheetIndex;
@@ -1236,17 +1225,17 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
     return;
   }
 
-  // 構建載入順序：先當前月份（如果還沒載入），然後下一個月及之後的月份，最後是之前的月份
+  // Build load order: current month first (if not loaded), then next month and after, finally previous months
   const loadOrder = [];
 
-  // 先檢查當前月份是否已載入，如果沒有則加入載入順序
+  // First check if current month loaded, if not add to load order
   const currentMonthSheetIndex = currentMonthIdx + 2;
   if (!allMonthsData[currentMonthSheetIndex]) {
     loadOrder.push({ idx: currentMonthIdx, sheetIndex: currentMonthSheetIndex, name: sheetNames[currentMonthIdx] });
   } else {
   }
 
-  // 先加入下一個月及之後的月份（從 currentMonthIdx + 1 開始）
+  // First add next month and subsequent months (starting from currentMonthIdx + 1)
   for (let i = currentMonthIdx + 1; i < sheetNames.length; i++) {
     const sheetIndex = i + 2;
     if (!allMonthsData[sheetIndex]) {
@@ -1255,7 +1244,7 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
     }
   }
 
-  // 然後倒推往前加入之前的月份（從 currentMonthIdx - 1 開始）
+  // Then add previous months backwards (from currentMonthIdx - 1)
   for (let i = currentMonthIdx - 1; i >= 0; i--) {
     const sheetIndex = i + 2;
     if (!allMonthsData[sheetIndex]) {
@@ -1269,167 +1258,167 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
 
   let loadedCount = 0;
 
-  // 按順序載入（一個接一個，不是並發）
+  // Load in order (one by one, not concurrent)
   for (const item of loadOrder) {
-    // 先檢查是否已經有預先存取的資料
+    // First check if pre-fetched data already exists
     if (allMonthsData[item.sheetIndex]) {
       loadedCount++;
       if (totalProgress > 0) {
-        updateProgress(baseProgress + loadedCount, totalProgress, `載入月份 ${item.name}（從快取）`);
+        updateProgress(baseProgress + loadedCount, totalProgress, `Loading month ${item.name} (from cache)`);
       }
-      continue; // 跳過，使用已有的資料
+      continue; // Skip, use existing data
     }
 
     try {
-      // 使用獨立的 AbortController，避免與用戶操作衝突
+      // Use independent AbortController to avoid conflicts with user operations
       const monthData = await loadMonthData(item.sheetIndex, false);
       allMonthsData[item.sheetIndex] = monthData;
 
-      // 保存到快取
+      // Save to cache
       setToCache(`budget_monthData_${item.sheetIndex}`, monthData);
-      // 更新進度條
+      // Update progress bar
       loadedCount++;
       if (totalProgress > 0) {
-        updateProgress(baseProgress + loadedCount, totalProgress, `載入月份 ${item.name}`);
+        updateProgress(baseProgress + loadedCount, totalProgress, `Loading month ${item.name}`);
       }
 
-      // 如果遇到還沒完成的，就跳出（顯示進度條）
-      // 這裡我們繼續載入，但進度條會持續更新
+      // If encounter incomplete, exit (show progress bar)
+      // Here we continue loading, but progress bar keeps updating
     } catch (error) {
-      // 即使失敗也更新進度
+      // Update progress even if failed
       loadedCount++;
       if (totalProgress > 0) {
-        updateProgress(baseProgress + loadedCount, totalProgress, `載入月份 ${item.name}`);
+        updateProgress(baseProgress + loadedCount, totalProgress, `Loading month ${item.name}`);
       }
 
-      // 如果遇到錯誤，繼續載入下一個月份（不中斷）
+      // If error occurs, continue loading next month (don't interrupt)
     }
   }
 };
 
-// 從記憶體載入當前月份的資料（不發送請求）
+// Load current month's data from memory (no request sent)
 const loadContentFromMemory = async () => {
-  // 先清空目前的記錄（確保不同月份的資料不會混在一起）
+  // First clear current records (ensure different months' data don't mix)
   allRecords = [];
   filteredRecords = [];
   currentRecordIndex = 0;
 
-  // 驗證 currentSheetIndex 是否有效
+  // Validate if currentSheetIndex is valid
   if (!Number.isFinite(currentSheetIndex) || currentSheetIndex < 2) {
-    currentSheetIndex = 2; // 預設為第三個分頁
+    currentSheetIndex = 2; // Default to third tab
   }
 
-  // 先從記憶體讀取資料
+  // First read data from memory
   let monthData = allMonthsData[currentSheetIndex];
-  // 如果記憶體中沒有，嘗試從快取讀取
+  // If not in memory, try reading from cache
   if (!monthData) {
     try {
       const storedData = await getFromCache(`budget_monthData_${currentSheetIndex}`);
       if (storedData) {
         monthData = storedData;
-        // 明確標記為從快取載入
+        // Explicitly mark as loaded from cache
         monthData._fromCache = true;
-        // 同時載入到記憶體
+        // Also load to memory
         allMonthsData[currentSheetIndex] = monthData;
       } else {
       }
     } catch (e) {
-      // 快取可能不可用或數據損壞，忽略錯誤
+      // Cache may be unavailable or data corrupted, ignore error
     }
   }
 
   if (!monthData) {
-    return false; // 表示需要重新載入
+    return false; // Indicates need to reload
   }
-  // 從儲存載入時，顯示 loading 並擋住頁首
+  // When loading from storage, show loading and block header
   showSpinner(true);
 
-  // 處理資料（會自動過濾並顯示記錄）
+  // Process data (will auto filter and display records)
   if (monthData.data) {
     processDataFromResponse(monthData.data, true);
-    // 處理資料後立即更新總計（確保總計自動計算）
+    // Update total immediately after processing data (ensure total auto-calculated)
     if (monthData.total && Array.isArray(monthData.total) && monthData.total.length >= 3) {
       updateTotalDisplay(monthData.total);
     } else {
-      // 如果沒有總計或格式不正確，使用即時計算
+      // If no total or format incorrect, use live calculation
       updateTotalDisplay();
     }
   } else {
     allRecords = [];
     filteredRecords = [];
-    // 即使沒有資料，也要更新總計（顯示為0）
+    // Even if no data, update total (display as 0)
     updateTotalDisplay();
   }
-  // 確保顯示第一筆記錄（如果有的話，且不在新增模式）
+  // Ensure first record displayed (if any, and not in add new mode)
   if (filteredRecords.length > 0) {
     showRecord(0);
     updateArrowButtons();
   } else {
-    // 如果沒有記錄，進入新增模式
+    // If no records, enter add new mode
     enterNewModeIfEmpty();
     updateDeleteButton();
     updateArrowButtons();
   }
 
-  // 載入完成後隱藏 spinner
+  // Hide spinner after loading complete
   setTimeout(() => {
     hideSpinner();
   }, 100);
 
-  // 載入完成後重置按鈕狀態
+  // Reset button state after loading complete
   markAsSaved();
 
-  return true; // 表示成功從記憶體載入
+  return true; // Indicates successfully loaded from memory
 };
 
-// 載入當前月份的資料（優先從記憶體讀取，如果沒有則發送請求）
+// Load current month's data (prefer memory, send request if not available)
 const loadContent = async (forceReload = false) => {
-  // 如果不強制重新載入，先嘗試從記憶體讀取
+  // If not forcing reload, try reading from memory first
   if (!forceReload) {
     const loadedFromMemory = await loadContentFromMemory();
     if (loadedFromMemory) {
-      return; // 成功從記憶體載入，直接返回
+      return; // Successfully loaded from memory, return directly
     }
   } else {
   }
 
-  // 如果記憶體中沒有資料，或需要強制重新載入，則發送請求
+  // If no data in memory, or need to force reload, send request
   try {
     const monthData = await loadMonthData(currentSheetIndex);
-    // 更新記憶體中的資料
+    // Update data in memory
     allMonthsData[currentSheetIndex] = monthData;
 
-    // 保存到快取
+    // Save to cache
     setToCache(`budget_monthData_${currentSheetIndex}`, monthData);
-    // 處理資料（會自動過濾並顯示記錄）
+    // Process data (will auto filter and display records)
     if (monthData.data) {
       processDataFromResponse(monthData.data, true);
-      // 處理資料後立即更新總計（確保總計自動計算）
+      // Update total immediately after processing data (ensure total auto-calculated)
       if (monthData.total && Array.isArray(monthData.total) && monthData.total.length >= 3) {
         updateTotalDisplay(monthData.total);
       } else {
-        // 如果沒有總計或格式不正確，使用即時計算
+        // If no total or format incorrect, use live calculation
         updateTotalDisplay();
       }
     } else {
       allRecords = [];
       filteredRecords = [];
-      // 即使沒有資料，也要更新總計（顯示為0）
+      // Even if no data, update total (display as 0)
       updateTotalDisplay();
     }
 
-    // 確保顯示第一筆記錄（如果有的話，且不在新增模式）
+    // Ensure first record displayed (if any, and not in add new mode)
     if (filteredRecords.length > 0) {
       showRecord(0);
       updateArrowButtons();
     } else {
-      // 如果沒有記錄，進入新增模式
+      // If no records, enter add new mode
       enterNewModeIfEmpty();
       updateDeleteButton();
       updateArrowButtons();
     }
     
-    // 載入完成後重置按鈕狀態
+    // Reset button state after loading complete
     markAsSaved();
   } catch (error) {
     throw error;
@@ -1438,19 +1427,19 @@ const loadContent = async (forceReload = false) => {
 
 
 const loadTotal = async () => {
-  // 驗證 currentSheetIndex 是否有效
+  // Validate if currentSheetIndex is valid
   if (!Number.isFinite(currentSheetIndex) || currentSheetIndex < 2) {
-    currentSheetIndex = 2; // 預設為第三個分頁
+    currentSheetIndex = 2; // Default to third tab
   }
 
-  // 優先從記憶體讀取總計
+  // Prefer reading total from memory
   const monthData = allMonthsData[currentSheetIndex];
   if (monthData && monthData.total) {
     updateTotalDisplay(monthData.total);
     return;
   }
 
-  // 如果記憶體中沒有，則發送請求
+  // If not in memory, send request
   try {
     const TotalParams = { name: "Show Total", sheet: currentSheetIndex };
   const Totalurl = `${baseBudget}?${new URLSearchParams(TotalParams)}`;
@@ -1461,35 +1450,35 @@ const loadTotal = async () => {
     });
 
     if (!Totalres.ok) {
-      throw new Error(`載入總計失敗: HTTP ${Totalres.status} ${Totalres.statusText}`);
+      throw new Error(`Failed to load total: HTTP ${Totalres.status} ${Totalres.statusText}`);
     }
 
   const Totaldata = await Totalres.json();
 
-    // 更新記憶體中的總計（如果資料存在）
+    // Update total in memory (if data exists)
     if (allMonthsData[currentSheetIndex]) {
       allMonthsData[currentSheetIndex].total = Totaldata;
     } else {
-      // 如果資料不存在，創建一個新的條目
+      // If data doesn't exist, create a new entry
       allMonthsData[currentSheetIndex] = { total: Totaldata };
     }
 
-    // 保存到快取
+    // Save to cache
     setToCache(`budget_monthData_${currentSheetIndex}`, allMonthsData[currentSheetIndex]);
 
     updateTotalDisplay(Totaldata);
   } catch (error) {
-    // 不拋出錯誤，只記錄，避免影響其他功能
+    // Don't throw error, just log, avoid affecting other functions
   }
 };
 
-// 進度條自動動畫的計時器
+// Timer for progress bar auto animation
 let progressAnimationTimer = null;
 let progressAnimationStartTime = null;
-let progressAnimationTarget = 99; // 自動動畫的目標百分比（99%）
+let progressAnimationTarget = 99; // Auto animation target percentage (99%)
 
-// 更新進度條（實際進度，會覆蓋自動動畫）
-const updateProgress = (current, total, text = '載入中...') => {
+// Update progress bar (actual progress, overrides auto animation)
+const updateProgress = (current, total, text = 'Loading...') => {
   const progressContainer = document.getElementById('loading-progress');
   if (!progressContainer) return;
 
@@ -1498,13 +1487,13 @@ const updateProgress = (current, total, text = '載入中...') => {
 
   if (progressBar) {
     progressBar.style.width = `${percentage}%`;
-    progressAnimationTarget = percentage; // 更新目標，但不會超過99%
+    progressAnimationTarget = percentage; // Update target, but won't exceed 99%
   }
 };
 
-// 啟動進度條自動動畫（10秒內從0%到99%）
+// Start progress bar auto animation (0% to 99% in 10 seconds)
 const startProgressAnimation = () => {
-  // 清除之前的動畫
+  // Clear previous animation
   if (progressAnimationTimer) {
     clearInterval(progressAnimationTimer);
     progressAnimationTimer = null;
@@ -1517,7 +1506,7 @@ const startProgressAnimation = () => {
   if (!progressBar) return;
 
   progressAnimationStartTime = Date.now();
-  const duration = 10000; // 10秒
+  const duration = 10000; // 10 seconds
   const startPercentage = 0;
   const endPercentage = 99;
 
@@ -1526,27 +1515,27 @@ const startProgressAnimation = () => {
     const progress = Math.min(elapsed / duration, 1);
     const currentPercentage = startPercentage + (endPercentage - startPercentage) * progress;
 
-    // 確保不超過實際進度目標
+    // Ensure doesn't exceed actual progress target
     const finalPercentage = Math.min(currentPercentage, progressAnimationTarget);
 
     progressBar.style.width = `${finalPercentage}%`;
 
-    // 如果已經達到99%或超過，停止動畫
+    // If reached 99% or exceeded, stop animation
     if (progress >= 1 || finalPercentage >= 99) {
       clearInterval(progressAnimationTimer);
       progressAnimationTimer = null;
     }
-  }, 16); // 約60fps
+  }, 16); // ~60fps
 };
 
 const showSpinner = (coverHeader = false) => {
-  // 如果已經存在，先移除
+  // If already exists, remove first
   const existingOverlay = document.getElementById('loading-overlay');
   if (existingOverlay) {
     existingOverlay.remove();
   }
 
-  // 創建全屏遮罩（根據 coverHeader 決定是否覆蓋頁首）
+  // Create fullscreen overlay (coverHeader decides whether to cover header)
   const overlay = document.createElement('div');
   overlay.id = 'loading-overlay';
   overlay.style.cssText = `
@@ -1556,7 +1545,7 @@ const showSpinner = (coverHeader = false) => {
     right: 0;
     bottom: 0;
     background: linear-gradient(135deg, rgba(232, 248, 240, 0.97) 0%, rgba(240, 255, 245, 0.97) 50%, rgba(230, 255, 240, 0.97) 100%);
-    z-index: ${coverHeader ? '2000' : '1500'}; /* 如果覆蓋頁首，z-index 要高於頁首 */
+    z-index: ${coverHeader ? '2000' : '1500'}; /* If covering header, z-index should be higher than header */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1569,7 +1558,7 @@ const showSpinner = (coverHeader = false) => {
   const wrapperDiv = document.createElement('div');
   wrapperDiv.style.cssText = 'width: 300px; text-align: center;';
   const progressText = document.createElement('div');
-  progressText.textContent = '載入中...';
+  progressText.textContent = 'Loading...';
   progressText.style.cssText = 'font-size: 16px; margin-bottom: 15px; color: #333;';
   const bgDiv = document.createElement('div');
   bgDiv.style.cssText = 'width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden;';
@@ -1584,14 +1573,14 @@ const showSpinner = (coverHeader = false) => {
   overlay.appendChild(progressContainer);
   document.body.appendChild(overlay);
 
-  // 啟動自動進度條動畫（10秒內從0%到99%）
+  // Start auto progress bar animation (0% to 99% in 10 seconds)
   setTimeout(() => {
     startProgressAnimation();
   }, 50);
 };
 
 const hideSpinner = () => {
-  // 清除自動動畫計時器
+  // Clear auto animation timer
   if (progressAnimationTimer) {
     clearInterval(progressAnimationTimer);
     progressAnimationTimer = null;
@@ -1602,13 +1591,13 @@ const hideSpinner = () => {
     const progressContainer = document.getElementById('loading-progress');
     if (progressContainer) {
       const progressBar = progressContainer.querySelector('.progress-bar');
-      // 先跳到100%，然後再移除
+      // Jump to 100% first, then remove
       if (progressBar) {
         progressBar.style.width = '100%';
       }
     }
 
-    // 稍微延遲後移除遮罩，讓用戶看到100%
+    // Slightly delay before removing overlay to let user see 100%
     setTimeout(() => {
       overlay.remove();
       const spinner = document.getElementById('loading-spinner');
@@ -1619,7 +1608,7 @@ const hideSpinner = () => {
       if (progress) {
         progress.remove();
       }
-      // 重置目標百分比
+      // Reset target percentage
       progressAnimationTarget = 99;
     }, 200);
   } else {
@@ -1640,14 +1629,14 @@ const createInputRow = (labelText, inputId, inputType = 'text') => {
 
   const label = document.createElement('label');
   label.textContent = labelText;
-  label.htmlFor = inputId; // 關聯到 input
+  label.htmlFor = inputId; // Associate with input
 
   const input = document.createElement('input');
   input.id = inputId;
-  input.name = inputId; // 添加 name 屬性以支持自動填充
+  input.name = inputId; // Add name attribute to support autofill
   input.type = inputType;
   
-  // 添加輸入變化監聽器，檢查是否有實際變更
+  // Add input change listener to check for actual changes
   input.addEventListener('input', () => {
     checkForChanges();
   });
@@ -1663,14 +1652,14 @@ const createTextareaRow = (labelText, textareaId, rows = 3) => {
 
   const label = document.createElement('label');
   label.textContent = labelText;
-  label.htmlFor = textareaId; // 關聯到 textarea
+  label.htmlFor = textareaId; // Associate with textarea
 
   const textarea = document.createElement('textarea');
   textarea.id = textareaId;
-  textarea.name = textareaId; // 添加 name 屬性以支持自動填充
+  textarea.name = textareaId; // Add name attribute to support autofill
   textarea.rows = rows;
   
-  // 添加輸入變化監聽器，檢查是否有實際變更
+  // Add input change listener to check for actual changes
   textarea.addEventListener('input', () => {
     checkForChanges();
   });
@@ -1686,7 +1675,7 @@ const createSelectRow = (labelText, selectId, options) => {
 
   const label = document.createElement('label');
   label.textContent = labelText;
-  label.htmlFor = selectId; // 關聯到 select
+  label.htmlFor = selectId; // Associate with select
 
   const selectContainer = document.createElement('div');
   selectContainer.className = 'select-container';
@@ -1707,7 +1696,7 @@ const createSelectRow = (labelText, selectId, options) => {
 
   const hiddenSelect = document.createElement('select');
   hiddenSelect.id = selectId;
-  hiddenSelect.name = selectId; // 添加 name 屬性以支持自動填充
+  hiddenSelect.name = selectId; // Add name attribute to support autofill
   hiddenSelect.style.display = 'none';
   hiddenSelect.value = options[0].value;
 
@@ -1726,7 +1715,7 @@ const createSelectRow = (labelText, selectId, options) => {
       dropdown.style.display = 'none';
       selectArrow.style.transform = 'rotate(0deg)';
       hiddenSelect.dispatchEvent(new Event('change'));
-      checkForChanges(); // 檢查是否有實際變更
+      checkForChanges(); // Check for actual changes
     });
 
     dropdown.appendChild(option);
@@ -1760,19 +1749,19 @@ const createSelectRow = (labelText, selectId, options) => {
 };
 
 const updateDivVisibility = (forceType = null) => {
-  // 如果提供了類型參數，使用它；否則嘗試從 DOM 獲取最新元素的值
+  // If type parameter provided, use it; otherwise try to get latest element value from DOM
   let categoryValue = forceType;
   if (categoryValue === null) {
-    // 先嘗試從全局變數獲取
+    // First try to get from global variable
     if (typeof categorySelect !== 'undefined' && categorySelect.value) {
       categoryValue = categorySelect.value;
     } else {
-      // 如果全局變數不可用，從 DOM 獲取最新元素
+      // If global variable not available, get latest element from DOM
       const categorySelectElement = document.getElementById('category-select');
       if (categorySelectElement) {
         categoryValue = categorySelectElement.value;
       } else {
-        categoryValue = '預計支出'; // 默認值
+        categoryValue = '預計支出'; // Default value
       }
     }
   }
@@ -1809,26 +1798,26 @@ const updateDivVisibility = (forceType = null) => {
     div4.style.display = 'none';
   }
 
-  // 為金額輸入欄位添加即時更新總計的監聽器
+  // Add listener for real-time total update for cost input field
   setTimeout(() => {
     const costInput = document.getElementById('cost-input');
     if (costInput) {
-      // 保存當前值（如果有的話）
+      // Save current value (if any)
       const currentValue = costInput.value;
       
-      // 移除舊的監聽器（如果有的話），避免重複添加
+      // Remove old listener (if any) to avoid duplicate additions
       const newCostInput = costInput.cloneNode(true);
       costInput.parentNode.replaceChild(newCostInput, costInput);
       
-      // 恢復之前的值（cloneNode 應該已經保留，但為保險起見再設置一次）
+      // Restore previous value (cloneNode should have preserved it, but set again for safety)
       if (currentValue) {
         newCostInput.value = currentValue;
       }
 
-      // 添加新的監聽器
+      // Add new listener
       newCostInput.addEventListener('input', () => {
-        updateTotalDisplay(); // 不傳參數，使用即時計算
-        checkForChanges(); // 檢查是否有實際變更
+        updateTotalDisplay(); // No params, use live calculation
+        checkForChanges(); // Check for actual changes
       });
     }
   }, 100);
@@ -1886,14 +1875,14 @@ const saveData = async () => {
   }
 
 
-  // 鎖定整個頁面，等待後端回傳
+  // Lock entire page, wait for backend response
   showSpinner();
   saveButton.textContent = '儲存中...';
   saveButton.disabled = true;
   saveButton.style.opacity = '0.6';
   saveButton.style.cursor = 'not-allowed';
 
-  // 禁用所有輸入和按鈕
+  // Disable all inputs and buttons
   if (itemInput) itemInput.disabled = true;
   if (costInput) costInput.disabled = true;
   if (noteInput) noteInput.disabled = true;
@@ -1905,7 +1894,7 @@ const saveData = async () => {
   deleteButton.disabled = true;
   if (monthSelect) monthSelect.disabled = true;
 
-  let alreadyReset = false; // 確保只在合適時機還原按鈕狀態
+  let alreadyReset = false; // Ensure button state only restored at appropriate time
   try {
     const postData = {
       name: "Upsert Data",
@@ -1917,20 +1906,20 @@ const saveData = async () => {
 
     };
 
-    // 支出時（range === 0）必須發送 category
+    // For expense (range === 0), category must be sent
     if (range === 0) {
       postData.category = category;
     }
 
-    // 如果不是新增模式，必須傳送 updateRow 參數來更新現有記錄
-    // updateRow 是行號 = 編號 + 1（第一行是標題，資料從第二行開始）
+    // If not in add new mode, must send updateRow parameter to update existing record
+    // updateRow is row number = record number + 1 (first row is header, data starts from second row)
     if (!isNewMode) {
       if (filteredRecords.length > 0 && currentRecordIndex < filteredRecords.length) {
         const currentRecord = filteredRecords[currentRecordIndex];
         const recordNum = parseInt(currentRecord.row[0], 10);
-        console.log('[預算] 更新記錄 - recordNum:', recordNum, 'row[0]:', currentRecord.row[0], 'updateRow:', recordNum + 2);
+        console.log('[Budget] Update record - recordNum:', recordNum, 'row[0]:', currentRecord.row[0], 'updateRow:', recordNum + 2);
         if (Number.isFinite(recordNum) && recordNum > 0) {
-          postData.updateRow = recordNum + 2; // Row 1: 類型標題, Row 2: 欄位標題, Row 3+: 資料
+          postData.updateRow = recordNum + 2; // Row 1: type header, Row 2: field header, Row 3+: data
         } else {
           alert('無法更新記錄：找不到記錄編號');
           return;
@@ -1959,30 +1948,30 @@ const saveData = async () => {
     try {
       result = JSON.parse(responseText);
     } catch (e) {
-      throw new Error('後端響應格式錯誤: ' + responseText);
+      throw new Error('Backend response format error: ' + responseText);
     }
 
     if (response.ok && result.success) {
-      // 記錄是否在新增模式
+      // Record whether in add new mode
       const wasInNewMode = isNewMode;
       const savedType = categoryValue;
-      // 記錄目前編輯的記錄編號（用於編輯模式）
+      // Record current editing record number (for edit mode)
       const savedRecordNumber = !wasInNewMode && filteredRecords.length > 0 && currentRecordIndex < filteredRecords.length
         ? parseInt(filteredRecords[currentRecordIndex].row[0], 10)
         : null;
 
       alert('資料已成功儲存！');
 
-      // 在重新載入前，先設定 currentRecordNumber（用於編輯模式）
+      // Before reloading, set currentRecordNumber first (for edit mode)
       if (!wasInNewMode && savedRecordNumber !== null) {
         currentRecordNumber = savedRecordNumber;
       }
 
-      // 如果 Apps Script 回傳了 data 和 total，直接使用，否則重新載入
+      // If Apps Script returned data and total, use directly, otherwise reload
       if (result.data && result.total) {
-        // 如果是修改模式，先從 allRecords 中移除舊記錄（避免總計多一倍）
+        // If in edit mode, remove old record from allRecords first (avoid double total)
         if (!wasInNewMode && savedRecordNumber !== null) {
-          // 找到並移除舊記錄
+          // Find and remove old record
           const oldRecordIndex = allRecords.findIndex(r => {
             const num = parseInt(r.row[0], 10);
             return Number.isFinite(num) && num > 0 && num === savedRecordNumber;
@@ -1993,42 +1982,42 @@ const saveData = async () => {
           }
         }
 
-        // 更新記憶體中當前月份的資料
+        // Update current month's data in memory
         allMonthsData[currentSheetIndex] = {
           data: result.data,
           total: result.total
         };
 
-        // 保存到快取
+        // Save to cache
         setToCache(`budget_monthData_${currentSheetIndex}`, allMonthsData[currentSheetIndex]);
 
-        // 記錄當前顯示的記錄編號（用於更新後重新定位）
+        // Record currently displayed record number (for repositioning after update)
         const currentDisplayedRecordNumber = !wasInNewMode && filteredRecords.length > 0 && currentRecordIndex < filteredRecords.length
           ? parseInt(filteredRecords[currentRecordIndex].row[0], 10)
           : null;
 
-        // 使用回傳的資料更新記錄和總計（不自動過濾，稍後手動過濾）
-        // 重要：無論是新增還是修改，都重新處理所有數據，確保不會少一筆資料
-        // 因為後端已經正確處理了總計（先刪除舊值再重新計算），所以前端也應該重新處理所有數據
+        // Use returned data to update records and total (don't auto filter, filter manually later)
+        // Important: whether adding or editing, reprocess all data to ensure no missing records
+        // Because backend has correctly handled total (delete old value then recalculate), frontend should also reprocess all data
         processDataFromResponse(result.data, false);
         
-        // 重要：在計算總計前，必須先退出新增模式
-        // 因為 allRecords 已經包含新記錄，如果 isNewMode 還是 true，
-        // updateTotalDisplay 會把 costInput.value 再加一次，導致總計翻倍
+        // Important: must exit add new mode before calculating total
+        // Because allRecords already contains new record, if isNewMode is still true,
+        // updateTotalDisplay will add costInput.value again, causing total to double
         isNewMode = false;
         
-        // 確保總計正確更新
-        // 從 allRecords 重新計算總計（allRecords 已經是最新的資料）
-        updateTotalDisplay(null); // 傳入 null，強制從 allRecords 計算
+        // Ensure total correctly updated
+        // Recalculate total from allRecords (allRecords is already latest data)
+        updateTotalDisplay(null); // Pass null to force calculation from allRecords
 
-        // 根據保存的類型重新過濾記錄
+        // Re-filter records based on saved type
         const currentType = categorySelect ? categorySelect.value : savedType;
         filterRecordsByType(currentType);
 
-        // 等待過濾完成
+        // Wait for filtering to complete
         await new Promise(r => setTimeout(r, 100));
 
-        // 如果剛才在編輯模式，嘗試找到剛才編輯的記錄並定位
+        // If was in edit mode, try to find and position to the edited record
         if (!wasInNewMode && currentDisplayedRecordNumber !== null) {
           const recordIndex = filteredRecords.findIndex(r => {
             const num = parseInt(r.row[0], 10);
@@ -2040,7 +2029,7 @@ const saveData = async () => {
             showRecord(recordIndex);
             updateArrowButtons();
           } else {
-            // 如果找不到，顯示第一筆
+            // If not found, show first record
             if (filteredRecords.length > 0) {
               currentRecordIndex = 0;
               showRecord(0);
@@ -2048,21 +2037,21 @@ const saveData = async () => {
             }
           }
         } else if (wasInNewMode) {
-          // 新增模式：找到最後一筆記錄（剛新增的）並顯示
+          // Add new mode: find last record (just added) and display
           if (filteredRecords.length > 0) {
-            // 找到最後一筆記錄（應該是最新新增的）
+            // Find last record (should be newly added)
             const lastIndex = filteredRecords.length - 1;
             currentRecordIndex = lastIndex;
             showRecord(lastIndex);
             updateArrowButtons();
         } else {
-            // 如果沒有記錄，進入新增模式
+            // If no records, enter add new mode
             currentRecordIndex = 0;
             enterNewModeIfEmpty();
             updateArrowButtons();
           }
         } else {
-          // 編輯模式但找不到記錄時，顯示第一筆
+          // Edit mode but record not found, show first record
           currentRecordIndex = 0;
           if (filteredRecords.length > 0) {
             showRecord(0);
@@ -2070,7 +2059,7 @@ const saveData = async () => {
           }
         }
       } else {
-      // 重新載入記錄（避免快取，加入短延遲）
+      // Reload records (avoid cache, add short delay)
       try {
         await new Promise(r => setTimeout(r, 200));
         await loadContent();
@@ -2078,34 +2067,34 @@ const saveData = async () => {
         }
       }
 
-        // 如果剛才在新增模式，顯示剛新增的記錄
+        // If was in add new mode, show the newly added record
         if (wasInNewMode) {
-          // 確保類型正確
+          // Ensure type is correct
           if (categorySelect && categorySelect.value !== savedType) {
             categorySelect.value = savedType;
             categorySelectText.textContent = savedType;
             filterRecordsByType(savedType);
           }
 
-          // 等待過濾完成後，找到並顯示剛新增的記錄
+          // After filtering completes, find and show the newly added record
           setTimeout(() => {
             if (filteredRecords.length > 0) {
-              // 找到最後一筆記錄（應該是最新新增的）
+              // Find last record (should be newly added)
               const lastIndex = filteredRecords.length - 1;
               currentRecordIndex = lastIndex;
               showRecord(lastIndex);
             updateArrowButtons();
             } else {
-              // 如果沒有記錄，進入新增模式
+              // If no records, enter add new mode
               enterNewModeIfEmpty();
               updateArrowButtons();
             }
           }, 150);
         } else {
-          // 如果不是新增模式（編輯模式），重新顯示剛才編輯的記錄
+          // If not add new mode (edit mode), re-display the edited record
           if (savedRecordNumber !== null) {
-            // 等待過濾完成後，找到剛才編輯的記錄並顯示
-            // 使用較長的延遲，確保 loadContent 和 filterRecordsByType 完成
+            // After filtering completes, find and show the edited record
+            // Use longer delay to ensure loadContent and filterRecordsByType complete
             setTimeout(() => {
               const recordIndex = filteredRecords.findIndex(r => {
                 const num = parseInt(r.row[0], 10);
@@ -2117,7 +2106,7 @@ const saveData = async () => {
                 showRecord(recordIndex);
                 updateArrowButtons();
               } else {
-                // 如果找不到，顯示第一筆
+                // If not found, show first record
                 if (filteredRecords.length > 0) {
                   currentRecordIndex = 0;
                   showRecord(0);
@@ -2126,7 +2115,7 @@ const saveData = async () => {
               }
             }, 300);
           } else {
-            // 如果找不到記錄編號，顯示第一筆
+            // If record number not found, show first record
             setTimeout(() => {
               if (filteredRecords.length > 0) {
                 currentRecordIndex = 0;
@@ -2137,39 +2126,39 @@ const saveData = async () => {
           }
         }
 
-      // 總計更新完成後，才還原按鈕狀態
+      // Restore button state after total update completes
       saveButton.textContent = '儲存';
-      markAsSaved(); // 標記為已儲存，禁用按鈕
-      storeOriginalValues(); // 儲存當前值作為新的原始值
+      markAsSaved(); // Mark as saved, disable button
+      storeOriginalValues(); // Store current values as new original values
       alreadyReset = true;
     } else {
       const errorMessage = result.message || result.error || '未知錯誤';
       alert('儲存失敗: ' + errorMessage);
-      // 失敗時還原按鈕狀態（保持啟用，因為有未儲存的變更）
+      // On failure, restore button state (keep enabled due to unsaved changes)
       saveButton.textContent = '儲存';
       if (hasUnsavedChanges) {
         saveButton.disabled = false;
         saveButton.style.opacity = '1';
         saveButton.style.cursor = 'pointer';
       } else {
-        markAsSaved(); // 如果沒有變更，禁用按鈕
+        markAsSaved(); // If no changes, disable button
       }
       alreadyReset = true;
     }
   } catch (error) {
     alert('儲存失敗: ' + error.message);
-    // 例外時還原按鈕狀態
-    saveButton.textContent = '儲存';
+    // On exception, restore button state
+    saveButton.textContent = 'Save';
     if (hasUnsavedChanges) {
       saveButton.disabled = false;
       saveButton.style.opacity = '1';
       saveButton.style.cursor = 'pointer';
     } else {
-      markAsSaved(); // 如果沒有變更，禁用按鈕
+      markAsSaved(); // If no changes, disable button
     }
     alreadyReset = true;
   } finally {
-    // 恢復所有按鈕和輸入
+    // Restore all buttons and inputs
     hideSpinner();
     if (!alreadyReset) {
       saveButton.textContent = '儲存';
@@ -2178,11 +2167,11 @@ const saveData = async () => {
         saveButton.style.opacity = '1';
         saveButton.style.cursor = 'pointer';
       } else {
-        markAsSaved(); // 如果沒有變更，禁用按鈕
+        markAsSaved(); // If no changes, disable button
       }
     }
 
-    // 恢復所有輸入和按鈕
+    // Restore all inputs and buttons
     if (itemInput) itemInput.disabled = false;
     if (costInput) costInput.disabled = false;
     if (noteInput) noteInput.disabled = false;
@@ -2209,18 +2198,18 @@ headerInfo.className = 'header-info';
 const recordNumber = document.createElement('div');
 recordNumber.id = 'record-number';
 recordNumber.textContent = '#001';
-// 使用 !important 覆蓋 CSS 的 display: none
+// Use !important to override CSS display: none
 recordNumber.setAttribute('style', 'display: block !important; visibility: visible !important;');
 
 const recordDate = document.createElement('div');
 recordDate.id = 'record-date';
-recordDate.textContent = ''; // 顯示每筆記錄的時間（例如試算表中的最後修正時間）
+recordDate.textContent = ''; // Display each record's time (e.g., last modified time in spreadsheet)
 
-// recordNumber 現在直接附加到 budgetCardsContainer（在 DOM 建構時）
-// 這樣它的 position: absolute; left: 15px; 才能正確定位
+// recordNumber is now directly appended to budgetCardsContainer (during DOM construction)
+// This way its position: absolute; left: 15px; can be correctly positioned
 headerInfo.appendChild(recordDate);
 
-// 將月份下拉選單放在頁面標題右側（例如「預算表」右邊）
+// Place month dropdown to the right of page title (e.g., right of "Budget Table")
 document.addEventListener('DOMContentLoaded', () => {
   const titleEl = document.querySelector('.post-title');
   if (titleEl && monthSelectWrapper) {
@@ -2228,20 +2217,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// 刪除按鈕
+// Delete button
 const deleteButton = document.createElement('button');
 deleteButton.className = 'delete-button';
 deleteButton.textContent = '刪除';
 
-// 刪除當前記錄的函數（可被按鈕和鍵盤調用）
+// Function to delete current record (can be called by button and keyboard)
 const deleteCurrentRecord = async () => {
-  // 新增模式不能刪除
+  // Cannot delete in add new mode
   if (isNewMode) {
     alert('無法刪除：目前為新增模式');
     return;
   }
 
-  // 確認刪除
+  // Confirm deletion
   if (!confirm('確定要刪除這筆記錄嗎？')) {
     return;
   }
@@ -2260,14 +2249,14 @@ const deleteCurrentRecord = async () => {
     return;
   }
 
-  // 確定 rangeType (0=支出, 1=收入)
+  // Determine rangeType (0=expense, 1=income)
   const rangeType = recordType === '預計支出' ? 0 : 1;
 
-  // 鎖定整個頁面，等待後端回傳
+  // Lock entire page, wait for backend response
   showSpinner();
   deleteButton.disabled = true;
 
-  // 禁用所有輸入和按鈕
+  // Disable all inputs and buttons
   const itemInput = document.getElementById('item-input');
   const costInput = document.getElementById('cost-input');
   const noteInput = document.getElementById('note-input');
@@ -2287,7 +2276,7 @@ const deleteCurrentRecord = async () => {
       name: "Delete Data",
       sheet: currentSheetIndex,
       range: rangeType,
-      number: recordNum.toString() // 確保是字串，因為 Google Apps Script 用字串比較
+      number: recordNum.toString() // Ensure string, as Google Apps Script uses string comparison
     };
 
     const response = await fetch(baseBudget, {
@@ -2306,60 +2295,60 @@ const deleteCurrentRecord = async () => {
     try {
       result = JSON.parse(responseText);
     } catch (e) {
-      throw new Error('後端響應格式錯誤: ' + responseText);
+      throw new Error('Backend response format error: ' + responseText);
     }
 
     if (response.ok && result.success) {
       alert('記錄已成功刪除！');
 
-      // 如果 Apps Script 回傳了 data 和 total，直接使用，否則重新載入
+      // If Apps Script returned data and total, use directly, otherwise reload
       if (result.data && result.total) {
-        // 更新記憶體中當前月份的資料
+        // Update current month's data in memory
         allMonthsData[currentSheetIndex] = {
           data: result.data,
           total: result.total
         };
 
-        // 保存到快取
+        // Save to cache
         setToCache(`budget_monthData_${currentSheetIndex}`, allMonthsData[currentSheetIndex]);
 
-        // 使用回傳的資料更新記錄和總計
+        // Use returned data to update records and total
         processDataFromResponse(result.data, false);
         
-        // 刪除後重新過濾記錄（確保 filteredRecords 更新）
+        // Re-filter records after deletion (ensure filteredRecords updated)
         const currentType = categorySelect ? categorySelect.value : '預計支出';
         filterRecordsByType(currentType);
 
-        // 立即更新總計（在更新資料後立即更新）
-        // 確保總計正確更新（如果後端返回的總計格式正確）
+        // Update total immediately (right after updating data)
+        // Ensure total correctly updated (if backend returned correct format)
         if (result.total && Array.isArray(result.total) && result.total.length >= 3) {
-          // 更新記憶體中的總計
+          // Update total in memory
           allMonthsData[currentSheetIndex].total = result.total;
         updateTotalDisplay(result.total);
         } else {
-          // 如果後端沒有返回總計或格式不正確，先使用即時計算，然後嘗試重新載入
-          updateTotalDisplay(); // 立即使用即時計算更新總計
-          // 然後嘗試重新載入總計（非阻塞）
+          // If backend didn't return total or format incorrect, use live calculation first, then try reloading
+          updateTotalDisplay(); // Immediately use live calculation to update total
+          // Then try reloading total (non-blocking)
           loadTotal().catch(() => {
-            // 如果載入失敗，保持使用即時計算的結果
+            // If load fails, keep using live calculation result
           });
         }
       } else {
-        // 重新載入記錄（並更新記憶體）
+        // Reload records (and update memory)
       await new Promise(r => setTimeout(r, 200));
-        await loadContent(true); // 強制重新載入
+        await loadContent(true); // Force reload
       }
 
-      // 刪除後，顯示第一筆（如果還有記錄）
+      // After deletion, show first record (if any remain)
       await new Promise(r => setTimeout(r, 100));
         if (filteredRecords.length > 0) {
           currentRecordIndex = 0;
           showRecord(0);
           updateArrowButtons();
         } else {
-          // 沒有記錄時，進入新增模式
+          // If no records, enter add new mode
           isNewMode = true;
-          updateDeleteButton(); // 更新刪除按鈕顯示
+          updateDeleteButton(); // Update delete button display
           const itemInput = document.getElementById('item-input');
           const costInput = document.getElementById('cost-input');
           const noteInput = document.getElementById('note-input');
@@ -2367,10 +2356,10 @@ const deleteCurrentRecord = async () => {
           if (costInput) costInput.value = '';
           if (noteInput) noteInput.value = '';
           if (typeof recordNumber !== 'undefined') {
-          recordNumber.textContent = ''; // 新增模式不顯示編號
-          recordNumber.style.display = 'none'; // 隱藏編號
+          recordNumber.textContent = ''; // Don't show number in add new mode
+          recordNumber.style.display = 'none'; // Hide number
           }
-          // 新增模式無資料時，資料時間使用現在時間
+          // In add new mode with no data, data time uses current time
           if (typeof recordDate !== 'undefined') {
           recordDate.value = getNowFormattedDateTime();
           }
@@ -2383,11 +2372,11 @@ const deleteCurrentRecord = async () => {
   } catch (error) {
     alert('刪除失敗: ' + error.message);
   } finally {
-    // 恢復所有按鈕和輸入
+    // Restore all buttons and inputs
     hideSpinner();
     deleteButton.disabled = false;
 
-    // 恢復所有輸入和按鈕
+    // Restore all inputs and buttons
     const itemInput = document.getElementById('item-input');
     const costInput = document.getElementById('cost-input');
     const noteInput = document.getElementById('note-input');
@@ -2404,12 +2393,12 @@ const deleteCurrentRecord = async () => {
   }
 };
 
-// 垃圾桶按鈕點擊事件
+// Delete button click event
 deleteButton.addEventListener('click', deleteCurrentRecord);
 
-// 更新刪除按鈕顯示狀態
+// Update delete button display state
 function updateDeleteButton() {
-  // 新增模式時隱藏刪除按鈕
+  // Hide delete button in add new mode
   if (isNewMode) {
     deleteButton.style.display = 'none';
   } else {
@@ -2425,32 +2414,32 @@ const rightArrow = document.createElement('button');
 rightArrow.className = 'arrow-button right';
 rightArrow.innerHTML = '›';
 
-// 左右鍵切換所有記錄
-// 更新箭頭按鈕狀態
+// Left/right keys switch all records
+// Update arrow button state
 function updateArrowButtons() {
-  // 如果沒有記錄且是新增模式，隱藏所有箭頭
+  // If no records and is add new mode, hide all arrows
   if (!filteredRecords.length && isNewMode) {
     leftArrow.style.display = 'none';
     rightArrow.style.display = 'none';
     return;
   }
 
-  // 如果沒有記錄且不是新增模式，也隱藏所有箭頭
+  // If no records and not in add new mode, also hide all arrows
   if (!filteredRecords.length && !isNewMode) {
     leftArrow.style.display = 'none';
     rightArrow.style.display = 'none';
     return;
   }
 
-  // 如果有記錄，正常顯示箭頭
-  // 如果在新增模式，只顯示左箭頭，右邊加號隱藏
+  // If has records, show arrows normally
+  // If in add new mode, only show left arrow, hide right plus
   if (isNewMode) {
     leftArrow.style.display = 'flex';
     leftArrow.innerHTML = '‹';
     leftArrow.classList.remove('plus');
     rightArrow.style.display = 'none';
   } else {
-    // 如果在第一筆記錄，隱藏左箭頭
+    // If at first record, hide left arrow
     if (currentRecordIndex === 0) {
     leftArrow.style.display = 'none';
   } else {
@@ -2461,7 +2450,7 @@ function updateArrowButtons() {
 
     rightArrow.style.display = 'flex';
 
-    // 如果在最後一筆，右箭頭變成加號
+    // If at last record, right arrow becomes plus
     if (currentRecordIndex === filteredRecords.length - 1) {
       rightArrow.innerHTML = '+';
       rightArrow.classList.add('plus');
@@ -2472,9 +2461,9 @@ function updateArrowButtons() {
   }
 }
 
-// 切換到上一筆記錄
+// Switch to previous record
 function goToPreviousRecord() {
-  // 如果在新增模式，返回到最後一筆記錄
+  // If in add new mode, return to last record
   if (isNewMode && filteredRecords.length > 0) {
     currentRecordIndex = filteredRecords.length - 1;
     showRecord(currentRecordIndex);
@@ -2484,7 +2473,7 @@ function goToPreviousRecord() {
 
   if (!filteredRecords.length) return;
 
-  // 確保 currentRecordIndex 在有效範圍內
+  // Ensure currentRecordIndex is within valid range
   if (currentRecordIndex >= filteredRecords.length) {
     currentRecordIndex = filteredRecords.length - 1;
   }
@@ -2496,21 +2485,21 @@ function goToPreviousRecord() {
     updateArrowButtons();
 }
 
-// 切換到下一筆記錄或進入新增模式
+// Switch to next record or enter add new mode
 function goToNextRecord() {
   if (!filteredRecords.length) return;
 
-  // 確保 currentRecordIndex 在有效範圍內
+  // Ensure currentRecordIndex is within valid range
   if (currentRecordIndex >= filteredRecords.length) {
     currentRecordIndex = filteredRecords.length - 1;
   }
 
-  // 如果在最後一筆或新增模式，進入新增模式
+  // If at last record or add new mode, enter add new mode
   if (currentRecordIndex === filteredRecords.length - 1 || isNewMode) {
-    isNewMode = true; // 進入新增模式
-    updateDeleteButton(); // 更新刪除按鈕顯示
+    isNewMode = true; // Enter add new mode
+    updateDeleteButton(); // Update delete button display
 
-    // 清空表單，準備新增
+    // Clear form, prepare for adding
     const itemInput = document.getElementById('item-input');
     const costInput = document.getElementById('cost-input');
     const noteInput = document.getElementById('note-input');
@@ -2518,7 +2507,7 @@ function goToNextRecord() {
     if (costInput) costInput.value = '';
     if (noteInput) noteInput.value = '';
 
-    // 計算下一個編號（目前類型中最大的編號 + 1）
+    // Calculate next number (max number in current type + 1)
     let nextNumber = 1;
     if (filteredRecords.length > 0) {
       const maxNum = Math.max(
@@ -2531,13 +2520,13 @@ function goToNextRecord() {
       }
     }
 
-    // 新增模式不顯示編號
+    // Don't show number in add new mode
     if (typeof recordNumber !== 'undefined') {
-      recordNumber.textContent = ''; // 新增模式不顯示編號
-      recordNumber.style.display = 'none'; // 隱藏編號
+      recordNumber.textContent = ''; // Don't show number in add new mode
+      recordNumber.style.display = 'none'; // Hide number
     }
 
-    // 新增模式的「資料時間」使用現在時間
+    // "Data time" in add new mode uses current time
     if (typeof recordDate !== 'undefined') {
       recordDate.textContent = getNowFormattedDateTime();
     }
@@ -2550,36 +2539,36 @@ function goToNextRecord() {
   }
 }
 
-// 箭頭按鈕事件
+// Arrow button events
 leftArrow.addEventListener('click', goToPreviousRecord);
 rightArrow.addEventListener('click', goToNextRecord);
 
-// 切換收入/支出類型
+// Switch income/expense type
 function switchType(targetType) {
-    // 確保 categorySelect 元素存在
+    // Ensure categorySelect element exists
     const categorySelectElement = document.getElementById('category-select');
     if (!categorySelectElement) {
-      return; // 如果元素不存在，直接返回
+      return; // If element doesn't exist, return directly
     }
 
     const currentType = categorySelectElement.value || '預計支出';
 
-    // 如果目標類型與當前類型不同，則切換
+    // If target type differs from current type, switch
     if (currentType !== targetType) {
-      // 在非新增模式下，保存當前記錄編號，以便在目標類型中查找相同編號的記錄
-      // 檢查是否為新增模式：如果 isNewMode 為 true 或沒有記錄，則為新增模式
+      // In non-add mode, save current record number to find same number record in target type
+      // Check if in add new mode: if isNewMode is true or no records, then is add new mode
       const isActuallyNewMode = isNewMode || (filteredRecords.length === 0);
 
       if (!isActuallyNewMode) {
-        // 優先從當前記錄獲取編號
+        // Prefer getting number from current record
         if (filteredRecords.length > 0 && currentRecordIndex < filteredRecords.length) {
           const currentRecord = filteredRecords[currentRecordIndex];
           const recordNum = parseInt(currentRecord.row[0], 10);
           if (Number.isFinite(recordNum) && recordNum > 0) {
-            currentRecordNumber = recordNum; // 保存當前編號
+            currentRecordNumber = recordNum; // Save current number
           }
         }
-        // 如果從記錄獲取失敗，嘗試從顯示的編號元素中讀取
+        // If getting from record fails, try reading from displayed number element
         if (currentRecordNumber === null && typeof recordNumber !== 'undefined') {
           const recordNumText = recordNumber.textContent;
           const match = recordNumText.match(/#(\d+)/);
@@ -2592,15 +2581,15 @@ function switchType(targetType) {
         }
       }
 
-      // 先更新全局變數，這樣 updateDivVisibility 才能讀取到正確的值
+      // First update global variable so updateDivVisibility can read correct value
       if (typeof categorySelect !== 'undefined') {
         categorySelect.value = targetType;
       }
 
-      // 更新 DOM 元素
+      // Update DOM element
       categorySelectElement.value = targetType;
 
-      // 更新顯示文字
+      // Update display text
       const selectContainer = categorySelectElement.parentElement;
       if (selectContainer) {
         const selectDisplay = selectContainer.querySelector('div');
@@ -2612,21 +2601,21 @@ function switchType(targetType) {
         }
       }
 
-      // 先更新 UI 元素顯示（特別是支出/收入的欄位切換）
+      // First update UI element display (especially expense/income field switching)
       if (typeof updateDivVisibility === 'function') {
         updateDivVisibility();
       }
 
-      // 然後過濾記錄並更新 UI（filterRecordsByType 會自動處理相同編號的查找）
-      // 使用 setTimeout 確保 updateDivVisibility 完成後再執行
+      // Then filter records and update UI (filterRecordsByType auto handles same number lookup)
+      // Use setTimeout to ensure updateDivVisibility completes before executing
       setTimeout(() => {
-      // updateDivVisibility 會重新創建 expense-category-select 元素，需要重新獲取並更新
+      // updateDivVisibility recreates expense-category-select element, need to re-get and update
       const newCategorySelectElement = document.getElementById('expense-category-select');
         if (newCategorySelectElement) {
-          // 更新新創建的元素的值（如果目標類型是支出，設置第一個選項；如果是收入，不需要設置）
+          // Update newly created element's value (if target type is expense, set first option; if income, no need)
           if (targetType === '預計支出' && newCategorySelectElement.options.length > 0) {
             newCategorySelectElement.value = newCategorySelectElement.options[0].value;
-            // 同步更新自訂下拉顯示文字
+            // Sync update custom dropdown display text
             const newSelectContainer = newCategorySelectElement.parentElement;
             if (newSelectContainer) {
               const newSelectDisplay = newSelectContainer.querySelector('div');
@@ -2639,9 +2628,9 @@ function switchType(targetType) {
             }
           }
 
-          // 更新全局變數的 value 屬性（雖然元素已更換，但我們可以通過更新屬性來保持一致性）
-          // 實際上，由於 categorySelect 是 const，我們需要確保後續代碼使用 getElementById 獲取最新元素
-          // 但為了兼容性，我們也更新全局變數的 value（如果元素還存在的話）
+          // Update global variable's value attribute (though element changed, we can keep consistency by updating attribute)
+          // Actually, since categorySelect is const, we need to ensure subsequent code uses getElementById to get latest element
+          // But for compatibility, we also update global variable's value (if element still exists)
           if (typeof categorySelect !== 'undefined' && categorySelect.parentNode) {
             categorySelect.value = targetType;
           }
@@ -2651,7 +2640,7 @@ function switchType(targetType) {
           filterRecordsByType(targetType);
         }
 
-        // 更新相關 UI 元素
+        // Update related UI elements
         if (typeof updateArrowButtons === 'function') {
           updateArrowButtons();
         }
@@ -2662,12 +2651,12 @@ function switchType(targetType) {
   }
 }
 
-// 鍵盤事件（電腦左右鍵切換記錄，上下鍵切換收入/支出，Delete鍵刪除記錄）
+// Keyboard events (computer left/right keys switch records, up/down keys switch income/expense, Delete key deletes record)
 document.addEventListener('keydown', (e) => {
-  // 如果正在輸入文字，不觸發切換（但Delete鍵除外，因為它本身就是用於刪除的）
+  // If typing text, don't trigger switching (except Delete key, as it's for deletion)
   const activeElement = document.activeElement;
   if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
-    // Delete鍵在輸入框中時，只刪除文字，不觸發記錄刪除
+    // Delete key in input field only deletes text, doesn't trigger record deletion
     if (e.key === 'Delete' || e.key === 'Backspace') {
       return;
     }
@@ -2682,20 +2671,20 @@ document.addEventListener('keydown', (e) => {
     goToNextRecord();
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    // 向上鍵 = 切換到收入
+    // Up key = switch to income
     switchType('收入');
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
-    // 向下鍵 = 切換到支出
+    // Down key = switch to expense
     switchType('預計支出');
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
-    // Delete鍵或Backspace鍵 = 刪除當前記錄
+    // Delete key or Backspace key = delete current record
     deleteCurrentRecord();
   }
 });
 
-// 觸摸滑動事件（手機左右滑動切換記錄）
+// Touch swipe events (phone swipe left/right to switch records)
 let touchStartX = 0;
 let touchEndX = 0;
 let touchStartY = 0;
@@ -2712,13 +2701,13 @@ budgetCardsContainer.addEventListener('touchend', (e) => {
   const deltaX = touchEndX - touchStartX;
   const deltaY = touchEndY - touchStartY;
 
-  // 處理水平滑動（水平距離明顯大於垂直距離，且水平距離大於 50px）
+  // Handle horizontal swipe (horizontal distance clearly greater than vertical, and horizontal > 50px)
   if (Math.abs(deltaX) > Math.abs(deltaY) * 2 && Math.abs(deltaX) > 50) {
     if (deltaX > 0) {
-      // 向右滑動 = 上一筆
+      // Swipe right = previous
       goToPreviousRecord();
     } else {
-      // 向左滑動 = 下一筆
+      // Swipe left = next
       goToNextRecord();
     }
   }
@@ -2730,7 +2719,7 @@ div1.className = 'category-select-row';
 const categoryLabel = document.createElement('label');
 categoryLabel.className = 'category-select-label';
 categoryLabel.textContent = '類別：';
-categoryLabel.htmlFor = 'category-select'; // 關聯到 select
+categoryLabel.htmlFor = 'category-select'; // Associate with select
 
 const categorySelectContainer = document.createElement('div');
 categorySelectContainer.className = 'category-select-container';
@@ -2750,8 +2739,8 @@ categorySelectDisplay.appendChild(categorySelectText);
 categorySelectDisplay.appendChild(categorySelectArrow);
 
 const categorySelect = document.createElement('select');
-categorySelect.id = 'category-select'; // 添加 id 以支持 label 關聯
-categorySelect.name = 'category-select'; // 添加 name 屬性以支持自動填充
+categorySelect.id = 'category-select'; // Add id to support label association
+categorySelect.name = 'category-select'; // Add name attribute to support autofill
 categorySelect.style.display = 'none';
 categorySelect.value = '預計支出';
 const optionExpense = document.createElement('option');
@@ -2817,9 +2806,9 @@ itemContainer.className = 'item-container';
 
 const itemTitleInput = document.createElement('input');
 itemTitleInput.id = 'item-input';
-itemTitleInput.name = 'item-input'; // 添加 name 屬性以支持自動填充
+itemTitleInput.name = 'item-input'; // Add name attribute to support autofill
 itemTitleInput.type = 'text';
-itemTitleInput.placeholder = '輸入項目名稱...';
+itemTitleInput.placeholder = 'Enter item name...';
 
 
 itemContainer.appendChild(itemTitleInput);
@@ -2832,14 +2821,14 @@ const div4 = document.createElement('div');
 div4.style.display = 'none';
 
 const saveButton = document.createElement('button');
-saveButton.textContent = '儲存';
+saveButton.textContent = 'Save';
 saveButton.className = 'save-button';
-// 初始狀態：禁用（灰色）
+// Initial state: disabled (gray)
 saveButton.disabled = true;
 saveButton.style.opacity = '0.5';
 saveButton.style.cursor = 'not-allowed';
 
-// 標記為已變更，啟用儲存按鈕
+// Mark as changed, enable save button
 const markAsChanged = () => {
   hasUnsavedChanges = true;
   if (saveButton) {
@@ -2849,7 +2838,7 @@ const markAsChanged = () => {
   }
 };
 
-// 標記為已儲存，禁用儲存按鈕
+// Mark as saved, disable save button
 const markAsSaved = () => {
   hasUnsavedChanges = false;
   if (saveButton) {
@@ -2859,7 +2848,7 @@ const markAsSaved = () => {
   }
 };
 
-// 儲存當前輸入值作為原始值（用於比較是否有變更）
+// Store current input values as original values (for comparison to detect changes)
 const storeOriginalValues = () => {
   const itemInput = document.getElementById('item-input');
   const costInput = document.getElementById('cost-input');
@@ -2876,15 +2865,15 @@ const storeOriginalValues = () => {
   };
 };
 
-// 檢查是否有變更，根據結果啟用/禁用儲存按鈕
+// Check for changes, enable/disable save button based on result
 const checkForChanges = () => {
-  // 新增模式：任何輸入都視為變更
+  // Add new mode: any input is considered a change
   if (isNewMode) {
     const itemInput = document.getElementById('item-input');
     const costInput = document.getElementById('cost-input');
     const noteInput = document.getElementById('note-input');
     
-    // 檢查是否有任何有效輸入
+    // Check if there's any valid input
     const hasInput = (itemInput && itemInput.value.trim() !== '') ||
                      (costInput && costInput.value.trim() !== '') ||
                      (noteInput && noteInput.value.trim() !== '');
@@ -2902,7 +2891,7 @@ const checkForChanges = () => {
     return;
   }
   
-  // 編輯模式：比較當前值與原始值
+  // Edit mode: compare current values with original values
   if (!originalValues) {
     return;
   }
@@ -2919,7 +2908,7 @@ const checkForChanges = () => {
   const currentExpenseCategory = categorySelectElement ? categorySelectElement.value : '';
   const currentCategory = categorySelect ? categorySelect.value : '';
   
-  // 比較是否有任何欄位變更
+  // Compare if any field has changed
   const hasChanges = 
     currentItem !== originalValues.item ||
     currentCost !== originalValues.cost ||
@@ -2988,7 +2977,7 @@ const updateTotalColor = (value) => {
   }
 };
 
-// 月份選擇下拉
+// Month selection dropdown
 let monthSelect = null;
 const monthSelectWrapper = document.createElement('div');
 monthSelectWrapper.className = 'month-select-wrapper';
@@ -3011,7 +3000,7 @@ submitContainer.style.display = 'flex';
 submitContainer.style.justifyContent = 'center';
 submitContainer.style.padding = '0';
 
-// 載入月份列表
+// Load month names list
 async function loadMonthNames() {
     const params = { name: "Show Tab Name" };
   const url = `${baseBudget}?${new URLSearchParams(params)}&_t=${Date.now()}`;
@@ -3036,37 +3025,37 @@ async function loadMonthNames() {
     return sheetNames;
 }
 
-// 初始化月份下拉選單
+// Initialize month dropdown
 const initMonthSelect = async () => {
   if (!monthSelect) return;
 
-  // 先載入月份列表（如果還沒有載入）
+  // First load month list (if not already loaded)
   if (sheetNames.length === 0) {
     try {
       await loadMonthNames();
-      // 保存到快取
+      // Save to cache
       setToCache('budget_sheetNames', sheetNames);
     } catch (e) {
-      // 如果載入失敗，嘗試從快取讀取
+      // If loading fails, try reading from cache
       try {
         const storedSheetNames = await getFromCache('budget_sheetNames');
         if (storedSheetNames) {
           sheetNames = storedSheetNames;
         }
       } catch (e2) {
-        // 快取可能不可用或數據損壞，忽略錯誤
+        // Cache may be unavailable or data corrupted, ignore error
       }
     }
   }
 
   try {
-    // 直接推斷當前月份和下一個月，不等待表格名字列表
+    // Directly infer current month and next month, don't wait for sheet name list
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
     const currentMonthStr = `${currentYear}${String(currentMonth).padStart(2, '0')}`;
 
-    // 計算下一個月
+    // Calculate next month
     let nextYear = currentYear;
     let nextMonth = currentMonth + 1;
     if (nextMonth > 12) {
@@ -3075,18 +3064,18 @@ const initMonthSelect = async () => {
     }
     const nextMonthStr = `${nextYear}${String(nextMonth).padStart(2, '0')}`;
 
-    // 修正：直接從 sheetNames 陣列查找月份索引，避免硬編碼參考點造成的錯誤
-    // 計算下一個月的索引
+    // Fix: directly find month index from sheetNames array, avoid errors from hardcoded reference points
+    // Calculate next month's index
     const nextMonthArrayIndex = sheetNames.findIndex(name => name === nextMonthStr);
     const nextMonthIndex = nextMonthArrayIndex !== -1 ? nextMonthArrayIndex + 2 : -1;
 
-    // 計算當前月份的索引
+    // Calculate current month's index
     const currentMonthArrayIndex = sheetNames.findIndex(name => name === currentMonthStr);
     const currentMonthIndex = currentMonthArrayIndex !== -1 ? currentMonthArrayIndex + 2 : -1;
     let targetSheetIndex = null;
     let targetMonthName = null;
 
-    // 先嘗試從快取載入所有月份的資料
+    // First try loading all months' data from cache
     const monthsToCheck = [
       { index: nextMonthIndex, name: nextMonthStr },
       { index: currentMonthIndex, name: currentMonthStr }
@@ -3095,15 +3084,15 @@ const initMonthSelect = async () => {
     for (const { index, name } of monthsToCheck) {
       if (index < 2) continue;
 
-      // 先檢查記憶體中是否有資料
+      // First check if data exists in memory
       if (allMonthsData[index]) {
         const testData = allMonthsData[index];
         if (testData && testData.data) {
           const dataKeys = Object.keys(testData.data);
           const hasMonth = dataKeys.some(key => key.includes(name));
           if (hasMonth && !targetSheetIndex) {
-            // 如果資料沒有明確標記來源，假設是從 API 載入的（保守處理）
-            // 這樣可以避免錯誤地顯示 spinner
+            // If data has no explicit source marking, assume loaded from API (conservative approach)
+            // This avoids incorrectly showing spinner
             if (testData._fromApi === undefined) {
               testData._fromApi = true;
             }
@@ -3112,11 +3101,11 @@ const initMonthSelect = async () => {
             break;
           }
         }
-        // 如果已有資料但不符合條件，繼續檢查下一個月份
+        // If has data but doesn't match conditions, continue checking next month
         continue;
       }
 
-      // 嘗試從快取讀取
+      // Try reading from cache
       try {
         const storedData = await getFromCache(`budget_monthData_${index}`);
         if (storedData) {
@@ -3125,40 +3114,40 @@ const initMonthSelect = async () => {
             const dataKeys = Object.keys(testData.data);
             const hasMonth = dataKeys.some(key => key.includes(name));
             if (hasMonth) {
-              // 明確標記為從快取載入
+              // Explicitly mark as loaded from cache
               testData._fromCache = true;
               allMonthsData[index] = testData;
               if (!targetSheetIndex) {
                 targetSheetIndex = index;
                 targetMonthName = name;
-                break; // 找到目標月份，停止檢查
+                break; // Found target month, stop checking
               }
             }
           }
         }
       } catch (e) {
-        // 快取可能不可用或數據損壞，忽略錯誤
+        // Cache may be unavailable or data corrupted, ignore error
       }
     }
 
-    // 如果從快取找不到，才發送 API 請求
-    // 優先嘗試下一個月（推算的索引）
+    // If not found in cache, then send API request
+    // Prefer trying next month (inferred index)
     if (!targetSheetIndex && nextMonthIndex >= 2) {
       try {
         const testData = await loadMonthData(nextMonthIndex);
 
         if (testData && testData.data) {
-          // 驗證返回的資料是否包含下一個月的命名範圍
+          // Verify returned data contains next month's named range
           const dataKeys = Object.keys(testData.data);
           const hasNextMonth = dataKeys.some(key => key.includes(nextMonthStr));
 
           if (hasNextMonth) {
             targetSheetIndex = nextMonthIndex;
             targetMonthName = nextMonthStr;
-            testData._fromApi = true; // 標記為從 API 載入
+            testData._fromApi = true; // Mark as loaded from API
             allMonthsData[nextMonthIndex] = testData;
 
-            // 保存到快取
+            // Save to cache
             setToCache(`budget_monthData_${nextMonthIndex}`, testData);
           }
         }
@@ -3166,7 +3155,7 @@ const initMonthSelect = async () => {
       }
     }
 
-    // 如果下一個月載入失敗，嘗試當前月份
+    // If next month loading failed, try current month
     if (!targetSheetIndex && currentMonthIndex >= 2) {
       try {
         const testData = await loadMonthData(currentMonthIndex);
@@ -3177,10 +3166,10 @@ const initMonthSelect = async () => {
           if (hasCurrentMonth) {
             targetSheetIndex = currentMonthIndex;
             targetMonthName = currentMonthStr;
-            testData._fromApi = true; // 標記為從 API 載入
+            testData._fromApi = true; // Mark as loaded from API
             allMonthsData[currentMonthIndex] = testData;
 
-            // 保存到快取
+            // Save to cache
             setToCache(`budget_monthData_${currentMonthIndex}`, testData);
           }
         }
@@ -3188,8 +3177,8 @@ const initMonthSelect = async () => {
       }
     }
 
-    // 如果找到了目標月份，顯示它
-    // 如果沒有找到目標月份，但當前月份在 sheetNames 中，嘗試使用當前月份
+    // If found target month, display it
+    // If target month not found but current month is in sheetNames, try using current month
     if (!targetSheetIndex && sheetNames.length > 0) {
       const currentMonthInSheetNames = sheetNames.findIndex(name => name === currentMonthStr);
       if (currentMonthInSheetNames >= 0) {
@@ -3198,7 +3187,7 @@ const initMonthSelect = async () => {
           targetSheetIndex = currentMonthSheetIndex;
           targetMonthName = currentMonthStr;
         } else {
-          // 如果當前月份不在記憶體中，嘗試載入
+          // If current month not in memory, try loading
           try {
             const testData = await loadMonthData(currentMonthSheetIndex);
             if (testData && testData.data) {
@@ -3221,78 +3210,78 @@ const initMonthSelect = async () => {
     if (targetSheetIndex && targetMonthName) {
       currentSheetIndex = targetSheetIndex;
       const targetMonthData = allMonthsData[targetSheetIndex];
-      // 檢查資料是否從快取載入（需要擋住頁首）
-      // 只有當 _fromCache 為 true 或 _fromApi 明確為 false 時，才認為是從快取載入
+      // Check if data loaded from cache (needs to cover header)
+      // Only consider loaded from cache when _fromCache is true or _fromApi is explicitly false
       const isFromCache = allMonthsData[targetSheetIndex] &&
                           (targetMonthData._fromCache === true || targetMonthData._fromApi === false);
 
-      // 如果是從快取載入，先隱藏原來的 spinner，然後顯示擋住頁首的 spinner
+      // If loaded from cache, first hide original spinner, then show spinner covering header
       if (isFromCache) {
         hideSpinner();
-        showSpinner(true); // 擋住頁首
+        showSpinner(true); // Cover header
       }
 
-      // 立即處理並顯示目標月份資料
+      // Immediately process and display target month data
       if (targetMonthData.data) {
         processDataFromResponse(targetMonthData.data, true);
 
-        // 處理資料後立即更新總計（確保總計自動計算）
+        // Update total immediately after processing data (ensure total auto-calculated)
         if (targetMonthData.total && Array.isArray(targetMonthData.total) && targetMonthData.total.length >= 3) {
           updateTotalDisplay(targetMonthData.total);
         } else {
-          // 如果沒有總計或格式不正確，重新載入總計
+          // If no total or format incorrect, reload total
           try {
             await loadMonthData(targetSheetIndex, false);
-            // loadMonthData 會自動更新總計
+            // loadMonthData will automatically update total
           } catch (error) {
-            // 如果載入失敗，使用即時計算
+            // If loading fails, use live calculation
             updateTotalDisplay();
           }
         }
       } else {
-        // 如果沒有資料，重新載入
+        // If no data, reload
         try {
           await loadMonthData(targetSheetIndex, false);
         } catch (error) {
           allRecords = [];
           filteredRecords = [];
-          // 即使沒有資料，也要更新總計（顯示為0）
+          // Even if no data, update total (display as 0)
           updateTotalDisplay();
         }
       }
 
-      // 確保顯示第一筆記錄（如果有的話，且不在新增模式）
+      // Ensure first record displayed (if any, and not in add new mode)
       if (filteredRecords.length > 0) {
         showRecord(0);
         updateArrowButtons();
       } else {
-        // 如果沒有記錄，進入新增模式
+        // If no records, enter add new mode
       enterNewModeIfEmpty();
       }
       updateDeleteButton();
 
-      // 如果是從快取載入，延遲隱藏 spinner（讓用戶看到載入過程）
+      // If loaded from cache, delay hiding spinner (let user see loading process)
       if (isFromCache) {
         setTimeout(() => {
       hideSpinner();
         }, 100);
       } else {
-        // 從 API 載入，立即關閉載入遮罩（不擋住頁首）
+        // Loaded from API, immediately close loading overlay (don't cover header)
         hideSpinner();
       }
 
-      // 直接用推算的方式填充下拉選單（限制最多到下一個月）
+      // Directly fill dropdown using inference (limit to at most next month)
       monthSelect.innerHTML = '';
       const monthOptions = [];
 
-      // 添加當前月份
+      // Add current month
       monthOptions.push({ name: currentMonthStr, index: currentMonthIndex });
-      // 添加下一個月（如果不同）
+      // Add next month (if different)
       if (nextMonthStr !== currentMonthStr) {
         monthOptions.push({ name: nextMonthStr, index: nextMonthIndex });
       }
 
-      // 建立選項（按時間順序排序）
+      // Create options (sorted by time)
       monthOptions.sort((a, b) => {
         const yearA = parseInt(a.name.substring(0, 4));
         const monthA = parseInt(a.name.substring(4, 6));
@@ -3304,12 +3293,12 @@ const initMonthSelect = async () => {
 
       monthOptions.forEach((option, idx) => {
         const opt = document.createElement('option');
-        opt.value = String(option.index - 2); // 選項值為 sheetIndex - 2（對應到 sheetNames 的索引）
+        opt.value = String(option.index - 2); // Option value is sheetIndex - 2 (corresponds to sheetNames index)
         opt.textContent = option.name;
         monthSelect.appendChild(opt);
       });
 
-      // 設置當前選擇的月份
+      // Set currently selected month
       if (targetSheetIndex >= 2) {
         const selectIndex = targetSheetIndex - 2;
         const foundOption = monthOptions.findIndex(opt => opt.index === targetSheetIndex);
@@ -3318,9 +3307,9 @@ const initMonthSelect = async () => {
         }
       }
 
-      // 在背景載入完整月份列表並預載其他月份的資料
+      // Load full month list in background and preload other months' data
       loadMonthNames().then(() => {
-        // 使用完整的月份列表更新下拉選單
+        // Update dropdown with complete month list
         monthSelect.innerHTML = '';
         sheetNames.forEach((name, idx) => {
           const opt = document.createElement('option');
@@ -3328,7 +3317,7 @@ const initMonthSelect = async () => {
           opt.textContent = name;
           monthSelect.appendChild(opt);
         });
-        // 更新月份選擇器顯示
+        // Update month selector display
         if (currentSheetIndex >= 2) {
           const selectIndex = currentSheetIndex - 2;
           if (selectIndex >= 0 && selectIndex < sheetNames.length) {
@@ -3336,14 +3325,14 @@ const initMonthSelect = async () => {
           }
         }
 
-        // 開始在背景預載其他月份的資料
+        // Start preloading other months' data in background
         preloadAllMonthsData(0, 0).then(() => {
         }).catch((error) => {
-          // 背景預載失敗不影響用戶操作
+          // Background preload failure doesn't affect user operation
         });
       }).catch((err) => {
-        // 載入月份列表失敗不影響當前顯示
-        // 即使失敗，也嘗試顯示已載入的月份（如果有）
+        // Month list loading failure doesn't affect current display
+        // Even if failed, try showing loaded months (if any)
         if (sheetNames.length > 0) {
           monthSelect.innerHTML = '';
           sheetNames.forEach((name, idx) => {
@@ -3355,7 +3344,7 @@ const initMonthSelect = async () => {
         }
       });
     } else {
-      // 如果都找不到，嘗試從記憶體讀取
+      // If nothing found, try reading from memory
       hideSpinner();
       if (await loadContentFromMemory()) {
         enterNewModeIfEmpty();
@@ -3364,14 +3353,14 @@ const initMonthSelect = async () => {
       }
     }
 
-    // 下拉選單變更時，切換月份（從記憶體讀取，不發送請求）
-    // 先移除舊的事件監聽器（如果存在）
+    // When dropdown changes, switch month (read from memory, no request sent)
+    // First remove old event listener (if exists)
     if (monthSelectChangeHandler) {
       monthSelect.removeEventListener('change', monthSelectChangeHandler);
     }
 
     monthSelectChangeHandler = async () => {
-      // 防止快速連續切換
+      // Prevent rapid consecutive switching
       if (isSwitchingMonth) {
         return;
       }
@@ -3381,7 +3370,7 @@ const initMonthSelect = async () => {
         return;
       }
 
-      // 如果選擇的是當前月份，不需要切換
+      // If selecting current month, no need to switch
       const newSheetIndex = idx + 2;
       const monthName = sheetNames[idx];
 
@@ -3391,9 +3380,9 @@ const initMonthSelect = async () => {
 
       isSwitchingMonth = true;
       const oldSheetIndex = currentSheetIndex;
-      currentSheetIndex = newSheetIndex; // 轉為實際 sheet index（前兩個是「空白表」和「下拉選單」）
+      currentSheetIndex = newSheetIndex; // Convert to actual sheet index (first two are "blank sheet" and "dropdown")
 
-      // 切換月份時，離開新增模式並重置狀態
+      // When switching months, leave add new mode and reset state
       isNewMode = false;
       currentRecordNumber = null;
 
@@ -3403,37 +3392,37 @@ const initMonthSelect = async () => {
       const expenseCategorySelect = document.getElementById('expense-category-select');
 
       try {
-        // 先嘗試從記憶體載入資料（不發送請求、不顯示載入動畫）
+        // First try loading data from memory (no request, no loading animation)
         if (await loadContentFromMemory()) {
-          // 從記憶體載入成功，立即更新 UI
+          // Loaded from memory successfully, immediately update UI
           updateDeleteButton();
           updateArrowButtons();
           enterNewModeIfEmpty();
           isSwitchingMonth = false;
         } else {
-          // 記憶體中沒有資料時，顯示進度條並載入
+          // When no data in memory, show progress bar and load
           showSpinner();
 
           try {
-            // 載入該月份的資料
+            // Load that month's data
             const monthData = await loadMonthData(currentSheetIndex);
             allMonthsData[currentSheetIndex] = monthData;
 
-            // 保存到快取
+            // Save to cache
             setToCache(`budget_monthData_${currentSheetIndex}`, monthData);
 
-            // 處理並顯示資料
+            // Process and display data
             processDataFromResponse(monthData.data);
             updateTotalDisplay(monthData.total);
             updateDeleteButton();
             updateArrowButtons();
             enterNewModeIfEmpty();
 
-            // 載入完成後關閉進度條
+            // Close progress bar after loading complete
             hideSpinner();
           } catch (error) {
             alert(`載入月份 ${monthName} 失敗: ${error.message || error.toString()}`);
-            // 恢復到原來的月份
+            // Restore to original month
             currentSheetIndex = oldSheetIndex;
             if (monthSelect) {
               const oldSelectIndex = oldSheetIndex - 2;
@@ -3447,7 +3436,7 @@ const initMonthSelect = async () => {
           }
         }
       } catch (e) {
-        // 如果載入失敗，恢復原來的月份
+        // If loading fails, restore original month
         currentSheetIndex = oldSheetIndex;
         if (monthSelect) {
           const oldSelectIndex = oldSheetIndex - 2;
@@ -3462,15 +3451,15 @@ const initMonthSelect = async () => {
 
     monthSelect.addEventListener('change', monthSelectChangeHandler);
 
-    // 初始載入目前選擇的月份資料（從記憶體讀取，不需要 spinner）
-    // 如果記憶體中沒有資料，initMonthSelect 已經載入並顯示了
+    // Initially load currently selected month data (read from memory, no spinner needed)
+    // If no data in memory, initMonthSelect has already loaded and displayed
     if (await loadContentFromMemory()) {
-      // 從記憶體載入成功，只需要更新 UI
+      // Loaded from memory successfully, only need to update UI
     updateDeleteButton();
     updateArrowButtons();
     }
   } catch (error) {
-    // CORS / fetch 類錯誤在實際使用上不影響結果，這裡不再彈出提示視窗，避免干擾操作
+    // CORS / fetch type errors don't affect results in actual use, no alert popup here to avoid interfering with operations
   }
 };
 
@@ -3510,9 +3499,9 @@ updateDivVisibility();
 saveButton.addEventListener('click', saveData);
 saveButton.addEventListener('click', loadTotal);
 
-// 為下拉選單容器添加防止回彈（主頁面由 CSS 處理）
+// Add bounce prevention for dropdown container (main page handled by CSS)
 // (function() {
-//   // 檢查是否為拖拽元素
+//   // Check if is drag element
 //   function isDragElement(target) {
 //     return target.closest('.drag-handle') ||
 //            target.closest('.option-item') ||
@@ -3522,20 +3511,20 @@ saveButton.addEventListener('click', loadTotal);
 //            target.hasAttribute('draggable');
 //   }
 
-//   // 硬鎖方案：在 dropdown 開啟時鎖定 body 滾動（防止整頁被拉開）
+//   // Hard lock solution: lock body scroll when dropdown opens (prevent entire page from being pulled)
 //   let bodyScrollLocked = false;
 //   let scrollY = 0;
 
 //   function lockBodyScroll() {
 //     if (!bodyScrollLocked) {
-//       // 記住當前滾動位置
+//       // Remember current scroll position
 //       scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
 
-//       // 同時鎖定 html 和 body（iOS 上真正的 scroll container 有時是 html）
+//       // Lock both html and body (on iOS the actual scroll container is sometimes html)
 //       document.documentElement.style.overflow = 'hidden';
 //       document.body.style.overflow = 'hidden';
 
-//       // 使用 fixed 定位保持視覺位置，避免跳動
+//       // Use fixed positioning to maintain visual position, avoid jumping
 //       document.body.style.position = 'fixed';
 //       document.body.style.top = `-${scrollY}px`;
 //       document.body.style.width = '100%';
@@ -3548,16 +3537,16 @@ saveButton.addEventListener('click', loadTotal);
 //   function unlockBodyScroll() {
 //     if (bodyScrollLocked) {
 
-//       // 還原 html 和 body 的 overflow
+//       // Restore html and body overflow
 //       document.documentElement.style.overflow = '';
 //       document.body.style.overflow = '';
 
-//       // 還原 body 的定位樣式
+//       // Restore body positioning styles
 //       document.body.style.position = '';
 //       document.body.style.top = '';
 //       document.body.style.width = '';
 
-//       // 恢復到原本的滾動位置
+//       // Restore to original scroll position
 //       window.scrollTo(0, scrollY);
 
 //       bodyScrollLocked = false;
@@ -3565,13 +3554,13 @@ saveButton.addEventListener('click', loadTotal);
 //     }
 //   }
 
-//   // 監聽所有下拉選單的顯示/隱藏
+//   // Listen to all dropdown show/hide
 //   let dropdownObserver = null;
 //   let styleObserver = null;
 //   const observedDropdowns = new Set();
 
 //   function checkDropdownsAndLock() {
-//     // 重新查詢所有下拉選單（因為是動態創建的）
+//     // Re-query all dropdowns (because they're dynamically created)
 //     const dropdowns = document.querySelectorAll('.category-dropdown, .select-dropdown');
 
 //     let anyOpen = false;
@@ -3585,7 +3574,7 @@ saveButton.addEventListener('click', loadTotal);
 //         openDropdowns.push(index);
 //       }
 
-//       // 為新創建的下拉選單設置監聽
+//       // Set up listeners for newly created dropdowns
 //       if (!observedDropdowns.has(dropdown)) {
 //         observedDropdowns.add(dropdown);
 //         if (styleObserver) {
@@ -3609,12 +3598,12 @@ saveButton.addEventListener('click', loadTotal);
 
 //   function setupBodyScrollLock() {
 
-//     // 創建監聽下拉選單樣式變化的 observer
+//     // Create observer to listen for dropdown style changes
 //     styleObserver = new MutationObserver(() => {
 //       checkDropdownsAndLock();
 //     });
 
-//     // 創建監聽 DOM 變化的 observer（當有新的 dropdown 被創建時）
+//     // Create observer to listen for DOM changes (when new dropdown is created)
 //     dropdownObserver = new MutationObserver((mutations) => {
 //       let hasNewDropdown = false;
 //       mutations.forEach(mutation => {
@@ -3626,7 +3615,7 @@ saveButton.addEventListener('click', loadTotal);
 //             )) {
 //               hasNewDropdown = true;
 //             }
-//             // 檢查子節點
+//             // Check child nodes
 //             if (node.querySelectorAll) {
 //               const childDropdowns = node.querySelectorAll('.category-dropdown, .select-dropdown');
 //               if (childDropdowns.length > 0) {
@@ -3642,22 +3631,22 @@ saveButton.addEventListener('click', loadTotal);
 //       }
 //     });
 
-//     // 監聽整個 body 的變化
+//     // Listen to entire body changes
 //     dropdownObserver.observe(document.body, {
 //       childList: true,
 //       subtree: true
 //     });
 
-//     // 初始檢查一次
+//     // Initial check once
 //     checkDropdownsAndLock();
 
 //   }
 
-//   // 為所有下拉選單容器添加防止回彈
+//   // Add bounce prevention for all dropdown containers
 //   function setupDropdownPrevention() {
 //     const dropdowns = document.querySelectorAll('.category-dropdown, .select-dropdown, .options-list, .select-options');
 //     dropdowns.forEach(dropdown => {
-//       // 避免重複綁定
+//       // Avoid duplicate binding
 //       if (dropdown.dataset.bouncePrevented) return;
 //       dropdown.dataset.bouncePrevented = 'true';
 
@@ -3681,19 +3670,19 @@ saveButton.addEventListener('click', loadTotal);
 //         const scrollHeight = dropdown.scrollHeight;
 //         const clientHeight = dropdown.clientHeight;
 
-//         // 精準判斷：只在邊界且繼續向邊界方向滑動時阻止
-//         // 使用 <= 1 而不是 === 0 以處理負值和次像素捨入（與設定頁保持一致）
+//         // Precise judgment: only prevent when at boundary and continuing to slide toward boundary
+//         // Use <= 1 instead of === 0 to handle negative values and sub-pixel rounding (consistent with settings page)
 //         const isAtTop = currentScrollTop <= 1;
 //         const isAtBottom = currentScrollTop + clientHeight >= scrollHeight - 1;
 
-//         // 在頂部且向下拉（deltaY > 0）時阻止
+//         // Prevent when at top and pulling down (deltaY > 0)
 //         if (isAtTop && deltaY > 0) {
 //           if (e.cancelable) {
 //             e.preventDefault();
 //           }
 //           dropdown.scrollTop = 0;
 //         }
-//         // 在底部且向上拉（deltaY < 0）時阻止
+//         // Prevent when at bottom and pulling up (deltaY < 0)
 //         else if (isAtBottom && deltaY < 0) {
 //           if (e.cancelable) {
 //             e.preventDefault();
@@ -3704,47 +3693,47 @@ saveButton.addEventListener('click', loadTotal);
 //     });
 //   }
 
-//   // 頁面載入後設置下拉選單
+//   // Set up dropdowns after page loads
 //   if (document.readyState === 'loading') {
 //     document.addEventListener('DOMContentLoaded', () => {
 //       setupDropdownPrevention();
-//       // 啟用硬鎖方案（防止整頁被拉開）
+//       // Enable hard lock solution (prevent entire page from being pulled)
 //       setupBodyScrollLock();
 //     });
 //   } else {
 //     setupDropdownPrevention();
-//     // 啟用硬鎖方案（防止整頁被拉開）
+//     // Enable hard lock solution (prevent entire page from being pulled)
 //     setupBodyScrollLock();
 //   }
 
-//   // 監聽動態添加的下拉選單
+//   // Listen to dynamically added dropdowns
 //   const observer = new MutationObserver(setupDropdownPrevention);
 //   observer.observe(document.body, { childList: true, subtree: true });
 // })();
 
 document.addEventListener('DOMContentLoaded', async function() {
-  // 清除舊的快取資料，強制從 API 重新載入
-  // 清除記憶體中的資料
+  // Clear old cache data, force reload from API
+  // Clear data in memory
   Object.keys(allMonthsData).forEach(key => delete allMonthsData[key]);
 
-  // 立即顯示載入動畫，讓用戶知道頁面正在載入
+  // Immediately show loading animation to let user know page is loading
   showSpinner();
 
-  // 一進到頁面就發送 Create Tab
+  // Send Create Tab request as soon as page loads
   try {
     await callAPI({ name: "Create Tab" });
   } catch (e) {
-    // 建立失敗，忽略錯誤（可能已經存在）
+    // Creation failed, ignore error (may already exist)
   }
 
   document.getElementsByClassName('post-content')[0].appendChild(totalContainer);
   document.getElementsByClassName('post-content')[0].appendChild(budgetCardsContainer);
 
   try {
-    // 非阻塞載入「下拉選單」sheet 的最新選項
+    // Non-blocking load latest options from "dropdown" sheet
     const refreshDropdowns = () => {
       loadDropdownOptions().then(() => {
-        // 如果當前顯示的是支出類別，重新渲染
+        // If currently showing expense category, re-render
         const categorySelect = document.getElementById('category-select');
         if (categorySelect && categorySelect.value === '預計支出') {
           updateDivVisibility('預計支出');
@@ -3755,27 +3744,27 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     refreshDropdowns();
 
-    // 監聽設定頁的更新通知（當設定頁更新下拉選單後，自動重新載入）
+    // Listen for settings page update notifications (auto-reload after settings page updates dropdown)
     window.addEventListener('storage', (e) => {
       if (e.key === 'dropdownUpdated') {
         refreshDropdowns();
       }
     });
 
-    // 監聽手動同步請求（從導航列的同步圖示觸發）
+    // Listen for manual sync requests (triggered from sync icon in navigation bar)
     window.addEventListener('syncRequested', async () => {
       try {
         SyncStatus.startSync();
-        // 清除記憶體快取並重新載入當前月份
+        // Clear memory cache and reload current month
         delete allMonthsData[currentSheetIndex];
-        await loadContent(true); // 強制重新載入
+        await loadContent(true); // Force reload
         SyncStatus.endSync(true);
       } catch (e) {
         SyncStatus.endSync(false);
       }
     });
 
-    // 也監聽同頁面的 storage 事件（因為 storage 事件只在其他標籤頁觸發）
+    // Also listen for storage events on the same page (because storage events only fire on other tabs)
     let lastUpdateTime = localStorage.getItem('dropdownUpdated');
     setInterval(() => {
       const current = localStorage.getItem('dropdownUpdated');
@@ -3783,13 +3772,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         lastUpdateTime = current;
         refreshDropdowns();
       }
-    }, 1000); // 每秒檢查一次
+    }, 1000); // Check every second
 
-    // initMonthSelect 內部會處理載入並在完成時隱藏 spinner
-    await initMonthSelect(); // 先載入月份清單並載入對應月份資料
-    updateDeleteButton(); // 初始化刪除按鈕顯示狀態
+    // initMonthSelect internally handles loading and hides spinner when complete
+    await initMonthSelect(); // First load month list and corresponding month data
+    updateDeleteButton(); // Initialize delete button display state
   } catch (error) {
-    hideSpinner(); // 確保錯誤時也隱藏 spinner
+    hideSpinner(); // Ensure spinner is hidden on error
     const errorContainer = document.createElement('div');
     errorContainer.innerHTML = '載入失敗: ' + error.message;
     errorContainer.style.color = 'red';

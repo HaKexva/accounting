@@ -29,10 +29,10 @@ function doPost(e) {
   var newValue = contents.newValue
   var itemId = contents.itemId
   var action = contents.action
-  // 新增：接收拖拽排序的索引
+  // New: receive drag-and-drop sort indices
   var oldIndex = contents.oldIndex;
   var newIndex = contents.newIndex;
-  // 新增：接收批次更新的資料
+  // New: receive batch update data
   var originalData = contents.originalData;
   var newData = contents.newData;
 
@@ -109,7 +109,7 @@ function invalidateCache(sheetIndex) {
   cache.remove(getCacheKey('summary', sheetIndex));
 }
 
-// 清除月份列表快取（新增分頁時使用）
+// Clear month list cache (used when adding new tab)
 function invalidateTabNamesCache() {
   var cache = CacheService.getScriptCache();
   cache.remove(getCacheKey('tabNames'));
@@ -124,8 +124,8 @@ function ShowTabName() {
   var allSheets = ss.getSheets();
   var sheetNames = [];
   
-  // 從索引 2 開始（跳過前兩個「空白表」、「下拉選單」）
-  // slice(2) 會包含從索引 2 開始到最後的所有元素
+  // Start from index 2 (skip first two: "blank sheet", "dropdown")
+  // slice(2) will include all elements from index 2 to the end
   var sheetsToProcess = allSheets.slice(2);
   sheetsToProcess.forEach(function(sheet){
     sheetNames.push(sheet.getSheetName());
@@ -135,7 +135,7 @@ function ShowTabName() {
   return sheetNames;
 }
 
-// 批次更新下拉選單
+// Batch update dropdown
 function BatchUpdateDropdown(itemId, originalData, newData) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dropdownSheet = ss.getSheets()[1];
@@ -148,7 +148,7 @@ function BatchUpdateDropdown(itemId, originalData, newData) {
   var headerRow = data[0];
   var colIndex = -1;
 
-  // 找到對應欄位
+  // Find corresponding column
   if (itemId === 'category') {
     colIndex = FindHeaderColumn(headerRow, ['支出－項目', '支出-項目', '消費類別', '類別']);
   } else if (itemId === 'payment') {
@@ -161,22 +161,22 @@ function BatchUpdateDropdown(itemId, originalData, newData) {
     return { success: false, message: '找不到對應欄位' };
   }
 
-  // 驗證資料
+  // Validate data
   if (!Array.isArray(originalData) || !Array.isArray(newData)) {
     return { success: false, message: 'originalData 和 newData 必須是陣列' };
   }
 
-  // 找出被刪除的項目（在原始資料中但不在新資料中）
+  // Find deleted items (in original data but not in new data)
   var removedItems = originalData.filter(function(item) {
     return newData.indexOf(item) === -1;
   });
 
-  // 找出新增的項目（在新資料中但不在原始資料中）
+  // Find added items (in new data but not in original data)
   var addedItems = newData.filter(function(item) {
     return originalData.indexOf(item) === -1;
   });
 
-  // 偵測重新命名：如果刪除和新增數量相同，假設是重新命名
+  // Detect rename: if deleted and added counts are the same, assume it's a rename
   var renames = [];
   if (removedItems.length === addedItems.length && removedItems.length > 0) {
     for (var i = 0; i < removedItems.length; i++) {
@@ -187,24 +187,24 @@ function BatchUpdateDropdown(itemId, originalData, newData) {
     }
   }
 
-  // 1. 更新下拉選單表：清除該欄位並寫入新資料
+  // 1. Update dropdown table: clear the column and write new data
   var maxRows = dropdownSheet.getMaxRows();
   if (maxRows > 1) {
     dropdownSheet.getRange(2, colIndex + 1, maxRows - 1, 1).clearContent();
   }
 
-  // 寫入新資料
+  // Write new data
   if (newData.length > 0) {
     var writeData = newData.map(function(item) { return [item]; });
     dropdownSheet.getRange(2, colIndex + 1, newData.length, 1).setValues(writeData);
   }
 
-  // 2. 如果是 category，更新所有月份表格中的歷史資料
+  // 2. If it's category, update historical data in all monthly sheets
   var historicalUpdates = 0;
   if (itemId === 'category' && renames.length > 0) {
     var allSheets = ss.getSheets();
-    var categoryColumnIndex = 8; // I 欄（類別）
-    var expenseStartColumnIndex = 6; // G 欄（支出記錄的起始欄位，編號）
+    var categoryColumnIndex = 8; // Column I (category)
+    var expenseStartColumnIndex = 6; // Column G (expense record start column, number)
 
     for (var s = 2; s < allSheets.length; s++) {
       var monthSheet = allSheets[s];
@@ -233,7 +233,7 @@ function BatchUpdateDropdown(itemId, originalData, newData) {
     }
   }
 
-  // 組裝回傳訊息
+  // Assemble return message
   var message = '下拉選單已更新';
   if (renames.length > 0) {
     message += '，重新命名 ' + renames.length + ' 項';
@@ -268,7 +268,7 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
   var headerRow = data[0];
   var colIndex = -1;
 
-  // 在下拉選單表中，category 對應的欄位名稱是「支出－項目」
+  // In the dropdown table, category corresponds to column name "支出－項目"
   if (itemId === 'category') {
     colIndex = FindHeaderColumn(headerRow, ['支出－項目', '支出-項目', '消費類別', '類別']);
   } else if (itemId === 'payment') {
@@ -281,14 +281,14 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
     return { success: false, message: '找不到對應欄位' };
   }
 
-  // === 新增：拖拽排序功能 ===
+  // === New: drag-and-drop sort feature ===
   if (action === 'reorder') {
-    // 檢查索引參數
+    // Check index parameters
     if (typeof oldIndex !== 'number' || typeof newIndex !== 'number') {
       return { success: false, message: '排序時 oldIndex 和 newIndex 必須是數字' };
     }
 
-    // 收集該欄位的所有值（跳過標題行）
+    // Collect all values in this column (skip header row)
     var values = [];
     for (var r = 1; r < data.length; r++) {
       var val = data[r][colIndex];
@@ -297,23 +297,23 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
       }
     }
 
-    // 檢查索引範圍
+    // Check index range
     if (oldIndex < 0 || oldIndex >= values.length || newIndex < 0 || newIndex >= values.length) {
       return { success: false, message: '索引超出範圍' };
     }
 
-    // 執行排序：將 oldIndex 位置的項移到 newIndex 位置
+    // Execute sort: move item from oldIndex position to newIndex position
     var movedItem = values.splice(oldIndex, 1)[0];
     values.splice(newIndex, 0, movedItem);
 
-    // 更新下拉選單表（從第2行開始寫入）
+    // Update dropdown table (write starting from row 2)
     var writeRow = 2;
     for (var i = 0; i < values.length; i++) {
       dropdownSheet.getRange(writeRow, colIndex + 1).setValue(values[i]);
       writeRow++;
     }
 
-    // 清除後面多餘的單元格
+    // Clear extra cells after
     if (writeRow <= data.length) {
       dropdownSheet.getRange(writeRow, colIndex + 1, data.length - writeRow + 1, 1).clearContent();
     }
@@ -323,28 +323,28 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
 
   var updatedCount = 0;
 
-  // === 新增：只更新下拉選單表 ===
+  // === New: only update dropdown table ===
   if (action === 'add') {
     if (!newValue) {
       return { success: false, message: '新增時 newValue 必填' };
     }
 
-    // 找到該欄位的最後一個有值的行（從下往上找）
-    var lastRowInColumn = 1; // 預設為標題行（索引1，對應第2行）
-    for (var r = data.length - 1; r >= 1; r--) { // 從最後一行往上找，跳過標題行
+    // Find the last row with a value in this column (search from bottom up)
+    var lastRowInColumn = 1; // Default to header row (index 1, corresponds to row 2)
+    for (var r = data.length - 1; r >= 1; r--) { // Search from last row upward, skip header row
       var val = data[r][colIndex];
       if (val !== '' && val !== null && val !== undefined) {
-        lastRowInColumn = r + 1; // 找到最後一個有值的行（+1 因為要轉換為行號）
+        lastRowInColumn = r + 1; // Found last row with value (+1 to convert to row number)
         break;
       }
     }
 
-    // 在該欄位的最後一列的下一個位置新增
+    // Add at the next position after the last row in this column
     dropdownSheet.getRange(lastRowInColumn + 1, colIndex + 1).setValue(newValue);
     return { success: true, message: '已新增到下拉選單', updated: 1 };
   }
 
-  // === 刪除：只更新下拉選單表 ===
+  // === Delete: only update dropdown table ===
   if (action === 'delete') {
     if (!oldValue) {
       return { success: false, message: '刪除時 oldValue 必填（不能是空白）' };
@@ -365,13 +365,13 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
     return { success: true, message: '已從下拉選單刪除', updated: updatedCount };
   }
 
-  // === 編輯（合併）：更新下拉選單表 + 所有月份表格中的歷史資料 ===
+  // === Edit (merge): update dropdown table + historical data in all monthly sheets ===
   if (action === 'edit') {
     if (!oldValue || !newValue || oldValue === newValue) {
       return { success: false, message: '編輯時 oldValue / newValue 不正確（oldValue 不可空白）' };
     }
 
-    // 1. 更新下拉選單表（欄位名稱：支出－項目）
+    // 1. Update dropdown table (column name: 支出－項目)
     for (var r2 = 1; r2 < data.length; r2++) {
       var val2 = data[r2][colIndex];
       if (val2 === oldValue) {
@@ -381,42 +381,42 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
     }
     dropdownSheet.getDataRange().setValues(data);
 
-    // 2. 更新所有月份表格中的歷史資料（只更新 range = 0 的支出記錄的「類別」欄位）
-    // 只有當 itemId === 'category' 時才更新月份表格
+    // 2. Update historical data in all monthly sheets (only update "category" column for expense records with range = 0)
+    // Only update monthly sheets when itemId === 'category'
     if (itemId === 'category') {
       var allSheets = ss.getSheets();
       var monthSheetsUpdated = 0;
       var totalRecordsUpdated = 0;
 
-      // 預算表中，支出記錄從 G 欄開始（索引 6）
-      // G 欄（索引 6）：編號
-      // H 欄（索引 7）：時間
-      // I 欄（索引 8）：類別（category）- 這是我們要更新的欄位
-      var categoryColumnIndex = 8; // I 欄（類別）
-      var expenseStartColumnIndex = 6;  // G 欄（支出記錄的起始欄位，編號）
+      // In budget table, expense records start from column G (index 6)
+      // Column G (index 6): number
+      // Column H (index 7): time
+      // Column I (index 8): category - this is the column we want to update
+      var categoryColumnIndex = 8; // Column I (category)
+      var expenseStartColumnIndex = 6;  // Column G (expense record start column, number)
 
-      for (var s = 2; s < allSheets.length; s++) { // 從索引 2 開始（跳過前兩個 sheet）
+      for (var s = 2; s < allSheets.length; s++) { // Start from index 2 (skip first two sheets)
         var monthSheet = allSheets[s];
         var monthData = monthSheet.getDataRange().getValues();
 
-        if (monthData.length < 2) continue; // 跳過空表格
+        if (monthData.length < 2) continue; // Skip empty sheets
 
         var monthUpdated = false;
 
-        // 從第2行開始（索引1），跳過標題行
+        // Start from row 2 (index 1), skip header row
         for (var row = 1; row < monthData.length; row++) {
-          // 檢查是否為「總計」行或空行
+          // Check if it's "總計" row or empty row
           if (monthData[row][0] === '總計' || monthData[row][0] === '') {
             continue;
           }
 
-          // 只處理 range = 0 的支出記錄（從 G 欄開始的記錄）
-          // 檢查該行的 G 欄是否有值（編號），如果有則表示這是支出記錄
-          var expenseNumber = monthData[row][expenseStartColumnIndex]; // G 欄（編號）
+          // Only process expense records with range = 0 (records starting from column G)
+          // Check if column G has a value (number), if so it's an expense record
+          var expenseNumber = monthData[row][expenseStartColumnIndex]; // Column G (number)
 
-          // 如果 G 欄有值（是支出記錄），才檢查 I 欄的類別
+          // Only check column I category if column G has a value (is expense record)
           if (expenseNumber !== '' && expenseNumber !== null && expenseNumber !== undefined) {
-            var categoryValue = monthData[row][categoryColumnIndex]; // I 欄（類別）
+            var categoryValue = monthData[row][categoryColumnIndex]; // Column I (category)
 
             if (categoryValue === oldValue) {
               monthSheet.getRange(row + 1, categoryColumnIndex + 1).setValue(newValue);
@@ -436,7 +436,7 @@ function UpdateDropdown(action, itemId, oldValue, newValue, oldIndex, newIndex) 
         message: '已合併完成，下拉選單更新：' + updatedCount + ' 筆，月份表格更新：' + totalRecordsUpdated + ' 筆（' + monthSheetsUpdated + ' 個月份）'
       };
     } else {
-      // 如果不是 category，只更新下拉選單表
+      // If it's not category, only update dropdown table
       return {
         success: true,
         message: '已更新下拉選單：' + updatedCount + ' 筆'
@@ -472,8 +472,8 @@ function ShowTabData(sheet) {
   function cleanValues(values) {
     var res = [];
     values.forEach(function(value){
-      // 只要有任何一個欄位不是空的，就保留這一行
-      // 這樣可以確保即使只有編號的行也會被保留
+      // Keep the row if any field is not empty
+      // This ensures even rows with only a number are preserved
       if(!value.every(isEmpty)) {
         res.push(value);
       }
@@ -541,7 +541,7 @@ function CreateNewTab() {
   var range = targetSheet.getRange('G2:L');
   var name = '當月支出預算' + year.toString() + month.toString();
   ss.setNamedRange(name,range);
-  // 清除月份列表快取，確保下次載入時取得最新列表
+  // Clear month list cache to ensure latest list is retrieved on next load
   invalidateTabNamesCache();
   return { success: true, message: 'New tab successfully created: ' + year + month };
 }
@@ -561,23 +561,23 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
   var minute = now.getMinutes();
   var timeOutput = year + '/' + month + '/' + date + ' ' + hour + ':' + minute;
 
-  // ===== 先刪掉舊總計 =====
+  // ===== Delete old total first =====
   RemoveSummaryRow(sheet, startRow, rangeType === 0 ? 7 : 1);
 
-  if (updateRow === undefined) { // 新增
-    if (rangeType === 0) { // 支出
-      column = 6; // 編號~備註
-      totalColumn = 11; // K欄是支出金額總計
+  if (updateRow === undefined) { // Add new
+    if (rangeType === 0) { // Expense
+      column = 6; // Number~Note
+      totalColumn = 11; // Column K is expense amount total
 
-      // 找最後一筆資料列（跳過總計行）
-      // 先從最後一行開始，從後往前找
+      // Find last data row (skip total row)
+      // Start from last row, search backward
       var lastDataRow = sheet.getLastRow();
       if (lastDataRow < startRow) {
-        lastDataRow = startRow - 1; // 沒有資料，從 startRow - 1 開始
+        lastDataRow = startRow - 1; // No data, start from startRow - 1
       } else {
-        // 從後往前找，跳過總計行和空行
+        // Search backward, skip total rows and empty rows
         while (lastDataRow >= startRow) {
-          var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // G欄編號
+          var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // Column G number
           if (cellValue === '總計') {
             lastDataRow--;
             continue;
@@ -585,21 +585,21 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
           if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
             var numValue = Number(cellValue);
             if (!isNaN(numValue) && numValue > 0) {
-              break; // 找到最後一筆資料行
+              break; // Found last data row
             }
           }
           lastDataRow--;
         }
         
         if (lastDataRow < startRow) {
-          lastDataRow = startRow - 1; // 沒有找到有效資料，從 startRow - 1 開始
+          lastDataRow = startRow - 1; // No valid data found, start from startRow - 1
         }
       }
 
-      // 取最後編號
+      // Get last number
       var prev = 0;
       if (lastDataRow >= startRow) {
-        prev = sheet.getRange(lastDataRow, 7).getValue(); // G欄編號
+        prev = sheet.getRange(lastDataRow, 7).getValue(); // Column G number
       }
       var lastNumber = Number(prev);
       if (isNaN(lastNumber) || lastNumber <= 0) {
@@ -607,20 +607,20 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       }
 
       var row = lastDataRow + 1;
-      // 確保 cost 是數字類型
+      // Ensure cost is numeric type
       var costValue = cost;
       if (typeof costValue === 'string') {
         costValue = parseFloat(costValue) || 0;
       } else if (costValue === null || costValue === undefined) {
         costValue = 0;
       }
-      // 確保編號是數字類型
+      // Ensure number is numeric type
       var newNumber = lastNumber + 1;
       if (isNaN(newNumber) || newNumber <= 0) {
         newNumber = 1;
       }
       
-      // 準備要寫入的資料，確保所有值都不為 undefined
+      // Prepare data to write, ensure all values are not undefined
       var values = [
         newNumber,
         timeOutput || '',
@@ -630,26 +630,26 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         note || ''
       ];
       
-      // 確保寫入時編號在第一個位置（G欄），寫入6列
+      // Ensure number is in first position (column G) when writing, write 6 columns
       sheet.getRange(row, 7, 1, column).setValues([values]);
 
-      // 新增總計
+      // Add total
       sheet.getRange(row + 1, 7).setValue('總計');
       sheet.getRange(row + 1, 11).setFormula(`=SUM(K${startRow}:K${row})`);
 
-    } else { // 收入
+    } else { // Income
       column = 5;
-      totalColumn = 4; // D欄是收入金額總計
+      totalColumn = 4; // Column D is income amount total
 
-      // 找最後一筆資料列（跳過總計行）
-      // 先從最後一行開始，從後往前找
+      // Find last data row (skip total row)
+      // Start from last row, search backward
       var lastDataRow = sheet.getLastRow();
       if (lastDataRow < startRow) {
-        lastDataRow = startRow - 1; // 沒有資料，從 startRow - 1 開始
+        lastDataRow = startRow - 1; // No data, start from startRow - 1
       } else {
-        // 從後往前找，跳過總計行和空行
+        // Search backward, skip total rows and empty rows
         while (lastDataRow >= startRow) {
-          var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // A欄編號
+          var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // Column A number
           if (cellValue === '總計') {
             lastDataRow--;
             continue;
@@ -657,21 +657,21 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
           if (cellValue !== '' && cellValue !== null && cellValue !== undefined) {
             var numValue = Number(cellValue);
             if (!isNaN(numValue) && numValue > 0) {
-              break; // 找到最後一筆資料行
+              break; // Found last data row
             }
           }
           lastDataRow--;
         }
         
         if (lastDataRow < startRow) {
-          lastDataRow = startRow - 1; // 沒有找到有效資料，從 startRow - 1 開始
+          lastDataRow = startRow - 1; // No valid data found, start from startRow - 1
         }
       }
 
-      // 取最後編號
+      // Get last number
       var prev = 0;
       if (lastDataRow >= startRow) {
-        prev = sheet.getRange(lastDataRow, 1).getValue(); // A欄編號
+        prev = sheet.getRange(lastDataRow, 1).getValue(); // Column A number
       }
       var lastNumber = Number(prev);
       if (isNaN(lastNumber) || lastNumber <= 0) {
@@ -679,20 +679,20 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
       }
 
       var row = lastDataRow + 1;
-      // 確保 cost 是數字類型
+      // Ensure cost is numeric type
       var costValue = cost;
       if (typeof costValue === 'string') {
         costValue = parseFloat(costValue) || 0;
       } else if (costValue === null || costValue === undefined) {
         costValue = 0;
       }
-      // 確保編號是數字類型
+      // Ensure number is numeric type
       var newNumber = lastNumber + 1;
       if (isNaN(newNumber) || newNumber <= 0) {
         newNumber = 1;
       }
       
-      // 準備要寫入的資料，確保所有值都不為 undefined
+      // Prepare data to write, ensure all values are not undefined
       var values = [
         newNumber,
         timeOutput || '',
@@ -701,30 +701,30 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         note || ''
       ];
       
-      // 確保寫入時編號在第一個位置（A欄），寫入5列
+      // Ensure number is in first position (column A) when writing, write 5 columns
       sheet.getRange(row, 1, 1, column).setValues([values]);
 
-      // 新增總計
+      // Add total
       sheet.getRange(row + 1, 1).setValue('總計');
       sheet.getRange(row + 1, totalColumn).setFormula(`=SUM(D${startRow}:D${row})`);
     }
 
-  } else { // 修改資料
-    if (rangeType === 0) { // 支出
+  } else { // Update data
+    if (rangeType === 0) { // Expense
       column = 6;
-      totalColumn = 11; // K欄是支出金額總計
+      totalColumn = 11; // Column K is expense amount total
       
-      // 先讀取舊值（用於調試）
-      var oldCostValue = sheet.getRange(updateRow, 11).getValue(); // K欄是金額
+      // Read old value first (for debugging)
+      var oldCostValue = sheet.getRange(updateRow, 11).getValue(); // Column K is amount
       var oldCostNum = parseFloat(oldCostValue) || 0;
       
-      // ===== 關鍵：清除舊值，再更新資料，最後重新計算總計 =====
+      // ===== Key: clear old value, then update data, finally recalculate total =====
       // Note: RemoveSummaryRow was already called at the start of UpsertData
       
-      // 1. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
-      sheet.getRange(updateRow, 11).clearContent(); // 清除 K欄金額（重要：先刪除舊值）
+      // 1. First clear the amount field of the old data row (delete entire amount to avoid total formula including old value)
+      sheet.getRange(updateRow, 11).clearContent(); // Clear column K amount (important: delete old value first)
       
-      // 3. 確保 cost 是數字類型
+      // 3. Ensure cost is numeric type
       var costValue = cost;
       if (typeof costValue === 'string') {
         costValue = parseFloat(costValue) || 0;
@@ -732,48 +732,48 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         costValue = 0;
       }
       
-      // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
-      // updateRow = recordNum + 2 (Row1: 類型標題, Row2: 欄位標題), so recordNum = updateRow - 2
+      // 4. Update data (after deleting total row and clearing old value, avoid row number changes and duplicate calculations)
+      // updateRow = recordNum + 2 (Row1: type title, Row2: column title), so recordNum = updateRow - 2
       var values = [updateRow - 2, timeOutput, category, item, costValue, note];
       sheet.getRange(updateRow, 7, 1, column).setValues([values]);
       
-      // 找到最後一筆支出資料行（跳過總計行）
+      // Find last expense data row (skip total row)
       var lastDataRow = sheet.getLastRow();
       while (lastDataRow >= startRow) {
-        var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // G欄
+        var cellValue = sheet.getRange(lastDataRow, 7).getValue(); // Column G
         if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-          // 檢查是否是數字編號（有效的資料行）
+          // Check if it's a numeric number (valid data row)
           var numValue = Number(cellValue);
           if (!isNaN(numValue) && numValue > 0) {
-            break; // 找到最後一筆資料行
+            break; // Found last data row
           }
         }
         lastDataRow--;
       }
       
       if (lastDataRow < startRow) {
-        // 沒有資料就設總計為 0
+        // If no data, set total to 0
         sheet.getRange(startRow, 7).setValue('總計');
         sheet.getRange(startRow, totalColumn).setValue(0);
       } else {
         sheet.getRange(lastDataRow + 1, 7).setValue('總計');
         sheet.getRange(lastDataRow + 1, totalColumn).setFormula(`=SUM(K${startRow}:K${lastDataRow})`);
       }
-    } else { // 收入
+    } else { // Income
       column = 5;
-      totalColumn = 4; // D欄是收入金額總計
+      totalColumn = 4; // Column D is income amount total
       
-      // 先讀取舊值（用於調試）
-      var oldCostValue = sheet.getRange(updateRow, 4).getValue(); // D欄是金額
+      // Read old value first (for debugging)
+      var oldCostValue = sheet.getRange(updateRow, 4).getValue(); // Column D is amount
       var oldCostNum = parseFloat(oldCostValue) || 0;
       
-      // ===== 關鍵：清除舊值，再更新資料，最後重新計算總計 =====
+      // ===== Key: clear old value, then update data, finally recalculate total =====
       // Note: RemoveSummaryRow was already called at the start of UpsertData
       
-      // 1. 先清除舊資料行的金額欄位（把整筆金額刪掉，避免總計公式包含舊值）
-      sheet.getRange(updateRow, 4).clearContent(); // 清除 D欄金額（重要：先刪除舊值）
+      // 1. First clear the amount field of the old data row (delete entire amount to avoid total formula including old value)
+      sheet.getRange(updateRow, 4).clearContent(); // Clear column D amount (important: delete old value first)
       
-      // 3. 確保 cost 是數字類型
+      // 3. Ensure cost is numeric type
       var costValue = cost;
       if (typeof costValue === 'string') {
         costValue = parseFloat(costValue) || 0;
@@ -781,27 +781,27 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
         costValue = 0;
       }
       
-      // 4. 更新資料（在刪除總計行和清除舊值之後，避免行號變化和重複計算）
-      // updateRow = recordNum + 2 (Row1: 類型標題, Row2: 欄位標題), so recordNum = updateRow - 2
+      // 4. Update data (after deleting total row and clearing old value, avoid row number changes and duplicate calculations)
+      // updateRow = recordNum + 2 (Row1: type title, Row2: column title), so recordNum = updateRow - 2
       var values = [updateRow - 2, timeOutput, item, costValue, note];
       sheet.getRange(updateRow, 1, 1, column).setValues([values]);
       
-      // 找到最後一筆收入資料行（跳過總計行）
+      // Find last income data row (skip total row)
       var lastDataRow = sheet.getLastRow();
       while (lastDataRow >= startRow) {
-        var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // A欄
+        var cellValue = sheet.getRange(lastDataRow, 1).getValue(); // Column A
         if (cellValue !== '總計' && cellValue !== '' && cellValue !== null && cellValue !== undefined) {
-          // 檢查是否是數字編號（有效的資料行）
+          // Check if it's a numeric number (valid data row)
           var numValue = Number(cellValue);
           if (!isNaN(numValue) && numValue > 0) {
-            break; // 找到最後一筆資料行
+            break; // Found last data row
           }
         }
         lastDataRow--;
       }
       
       if (lastDataRow < startRow) {
-        // 沒有資料就設總計為 0
+        // If no data, set total to 0
         sheet.getRange(startRow, 1).setValue('總計');
         sheet.getRange(startRow, totalColumn).setValue(0);
       } else {
@@ -817,7 +817,7 @@ function UpsertData(sheetIndex, rangeType, category, item, cost, note, updateRow
   return { success: true, message: '資料已成功新增', data: ShowTabData(sheetIndex), total: GetSummary(sheetIndex) };
 }
 
-// ===== 補充：清除舊總計行（只清除特定區塊的欄位，不刪除整行） =====
+// ===== Supplement: clear old total row (only clear specific block columns, don't delete entire row) =====
 function RemoveSummaryRow(sheet, startRow, labelCol) {
   var lastRow = sheet.getLastRow();
   if (lastRow < startRow) return;
@@ -983,26 +983,26 @@ function GetSummary(sheet){
     // Read both income (A:D) and expense (G:K) in one call
     var data = targetSheet.getRange(1, 1, lastRow, 11).getValues();
 
-    // 從後往前查找，找到最後一個"總計"行（應該是最新的）
+    // Search from back to front, find the last "總計" row (should be the latest)
     for (var i = data.length - 1; i >= 0; i--) {
       // Find income total: look for "總計" in column A, get value from column D
       if (data[i][0] === '總計' && !incomeFound) {
-        // 直接從 D 欄讀取值（索引 3）
-        var incomeCell = targetSheet.getRange(i + 1, 4); // D 欄是第 4 列
+        // Read value directly from column D (index 3)
+        var incomeCell = targetSheet.getRange(i + 1, 4); // Column D is column 4
         var incomeValue = incomeCell.getValue();
         var incomeFormula = incomeCell.getFormula();
         var incomeDisplayValue = incomeCell.getDisplayValue();
         
-        // 調試：記錄讀取到的原始值
+        // Debug: log the raw value read
         Logger.log('[GetSummary] 收入總計行: ' + (i + 1) + ', D欄值: ' + incomeValue + ', 公式: ' + incomeFormula + ', 顯示值: ' + incomeDisplayValue);
         
-        // 如果有公式，強制重新計算並讀取顯示值
+        // If there's a formula, force recalculation and read display value
         if (incomeFormula && incomeFormula.trim() !== '') {
           if (incomeDisplayValue && incomeDisplayValue.trim() !== '') {
             var cleanValue = incomeDisplayValue.replace(/,/g, '').trim();
             incomeValue = parseFloat(cleanValue);
             if (isNaN(incomeValue)) {
-              incomeValue = incomeCell.getValue(); // 回退到 getValue()
+              incomeValue = incomeCell.getValue(); // Fall back to getValue()
             }
             Logger.log('[GetSummary] 從顯示值解析收入: ' + incomeValue);
           } else {
@@ -1011,7 +1011,7 @@ function GetSummary(sheet){
           }
         }
         
-        // 確保值是數字類型
+        // Ensure value is numeric type
         if (typeof incomeValue === 'number' && !isNaN(incomeValue)) {
           income = incomeValue;
           Logger.log('[GetSummary] 收入（數字類型）: ' + income);
@@ -1024,12 +1024,12 @@ function GetSummary(sheet){
           Logger.log('[GetSummary] 收入設為 0（無法解析）');
         }
         
-        // 無論讀取到的值是什麼，都嘗試手動計算收入（確保準確性）
-        // 檢查總計行之前是否有數據行
+        // No matter what value is read, try to manually calculate income (ensure accuracy)
+        // Check if there are data rows before the total row
         if (i + 1 > 2) {
           var hasIncomeData = false;
           for (var checkRow = 2; checkRow < i + 1; checkRow++) {
-            var checkNumber = targetSheet.getRange(checkRow, 1).getValue(); // A欄編號
+            var checkNumber = targetSheet.getRange(checkRow, 1).getValue(); // Column A number
             if (typeof checkNumber === 'number' && checkNumber > 0) {
               hasIncomeData = true;
               if (typeof Logger !== 'undefined') {
@@ -1044,10 +1044,10 @@ function GetSummary(sheet){
             var incomeSum = 0;
             var incomeRowCount = 0;
             for (var r = incomeStartRow; r < i + 1; r++) {
-              var incomeRowData = targetSheet.getRange(r, 1, 1, 5).getValues()[0]; // A 到 E 欄
+              var incomeRowData = targetSheet.getRange(r, 1, 1, 5).getValues()[0]; // Columns A to E
               var rowNumber = incomeRowData[0];
               if (typeof rowNumber === 'number' && rowNumber > 0) {
-                var rowCost = incomeRowData[3]; // D欄是金額（索引 3）
+                var rowCost = incomeRowData[3]; // Column D is amount (index 3)
                 if (typeof Logger !== 'undefined') {
                   Logger.log('[GetSummary] 收入行 ' + r + ': 編號=' + rowNumber + ', 金額=' + rowCost + ' (類型: ' + typeof rowCost + ')');
                 }
@@ -1065,15 +1065,15 @@ function GetSummary(sheet){
               Logger.log('[GetSummary] 手動計算收入總計: ' + incomeSum + ' (共 ' + incomeRowCount + ' 筆記錄)');
               Logger.log('[GetSummary] 讀取到的收入值: ' + income);
             }
-            // 如果手動計算的結果不為 0，優先使用手動計算的結果
-            // 如果手動計算的結果為 0 但讀取到的值不為 0，使用讀取到的值
+            // If manually calculated result is not 0, prioritize using manually calculated result
+            // If manually calculated result is 0 but read value is not 0, use read value
             if (incomeSum !== 0) {
               income = incomeSum;
               if (typeof Logger !== 'undefined') {
                 Logger.log('[GetSummary] 使用手動計算的收入: ' + income);
               }
             } else if (income === 0 && incomeSum === 0 && incomeRowCount > 0) {
-              // 如果有數據行但計算結果為 0，可能是所有金額都是 0，這是正常的
+              // If there are data rows but calculation result is 0, all amounts might be 0, which is normal
               if (typeof Logger !== 'undefined') {
                 Logger.log('[GetSummary] 收入數據行存在但金額總和為 0');
               }
@@ -1089,61 +1089,61 @@ function GetSummary(sheet){
       }
       // Find expense total: look for "總計" in column G, get value from column K
       if (data[i][6] === '總計' && !expenseFound) {
-        // 直接從 K 欄讀取值（索引 10，對應第 11 列）
-        var expenseCell = targetSheet.getRange(i + 1, 11); // K 欄是第 11 列
+        // Read value directly from column K (index 10, corresponds to column 11)
+        var expenseCell = targetSheet.getRange(i + 1, 11); // Column K is column 11
         var expenseValue = expenseCell.getValue();
         var cellFormula = expenseCell.getFormula();
         
-        // 如果有公式，強制重新計算並讀取顯示值
+        // If there's a formula, force recalculation and read display value
         if (cellFormula && cellFormula.trim() !== '') {
-          // 使用 getDisplayValue() 獲取公式計算後的顯示值
+          // Use getDisplayValue() to get the displayed value after formula calculation
           var displayValue = expenseCell.getDisplayValue();
           if (displayValue && displayValue.trim() !== '') {
-            // 移除千分位符號等格式字符
+            // Remove thousand separators and other format characters
             var cleanValue = displayValue.replace(/,/g, '').trim();
             expenseValue = parseFloat(cleanValue);
             if (isNaN(expenseValue)) {
-              expenseValue = expenseCell.getValue(); // 回退到 getValue()
+              expenseValue = expenseCell.getValue(); // Fall back to getValue()
             }
           } else {
-            // 如果顯示值為空，嘗試使用 getValue()
+            // If display value is empty, try using getValue()
             expenseValue = expenseCell.getValue();
           }
         }
         
-        // 確保值是數字類型
+        // Ensure value is numeric type
         if (typeof expenseValue === 'number' && !isNaN(expenseValue)) {
           expense = expenseValue;
         } else if (typeof expenseValue === 'string' && expenseValue.trim() !== '') {
-          // 移除千分位符號等格式字符
+          // Remove thousand separators and other format characters
           var cleanValue = expenseValue.replace(/,/g, '').trim();
           expense = parseFloat(cleanValue) || 0;
         } else {
           expense = 0;
         }
         
-        // 如果讀取到的值是 0 但公式存在，且總計行之前有數據行，嘗試手動計算
+        // If read value is 0 but formula exists, and there are data rows before total row, try manual calculation
         if (expense === 0 && cellFormula && cellFormula.trim() !== '' && i + 1 > 2) {
-          // 檢查是否有支出記錄（從第 2 行開始到總計行之前）
+          // Check if there are expense records (from row 2 to before total row)
           var hasExpenseData = false;
           for (var checkRow = 2; checkRow < i + 1; checkRow++) {
-            var checkNumber = targetSheet.getRange(checkRow, 7).getValue(); // G 欄編號
+            var checkNumber = targetSheet.getRange(checkRow, 7).getValue(); // Column G number
             if (typeof checkNumber === 'number' && checkNumber > 0) {
               hasExpenseData = true;
               break;
             }
           }
           
-          // 如果有支出記錄但總計是 0，手動計算
+          // If there are expense records but total is 0, manually calculate
           if (hasExpenseData) {
-            var expenseStartRow = 2; // 資料從第 2 行開始
+            var expenseStartRow = 2; // Data starts from row 2
             var expenseSum = 0;
             for (var r = expenseStartRow; r < i + 1; r++) {
-              var expenseRowData = targetSheet.getRange(r, 7, 1, 6).getValues()[0]; // G 到 L 欄
-              // 檢查是否是有效的支出記錄（G 欄應該是數字編號）
+              var expenseRowData = targetSheet.getRange(r, 7, 1, 6).getValues()[0]; // Columns G to L
+              // Check if it's a valid expense record (column G should be a numeric number)
               var rowNumber = expenseRowData[0];
               if (typeof rowNumber === 'number' && rowNumber > 0) {
-                // K 欄是金額（索引 4）
+                // Column K is amount (index 4)
                 var rowCost = expenseRowData[4];
                 if (typeof rowCost === 'number' && !isNaN(rowCost)) {
                   expenseSum += rowCost;
@@ -1169,7 +1169,7 @@ function GetSummary(sheet){
   var total = income - expense;
   var result = [income, expense, total];
   
-  // 調試：記錄最終結果（使用 Logger 如果可用，否則使用 console）
+  // Debug: log final result (use Logger if available, otherwise use console)
   if (typeof Logger !== 'undefined') {
     Logger.log('[GetSummary] 最終結果: income=' + income + ', expense=' + expense + ', total=' + total);
     Logger.log('[GetSummary] 結果陣列: [' + result.join(', ') + ']');

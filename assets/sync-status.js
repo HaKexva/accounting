@@ -231,7 +231,7 @@ const SyncStatus = (function() {
   };
 
   const formatTimestamp = (timestamp) => {
-    if (!timestamp) return '從未同步';
+    if (!timestamp) return '從未同步'; // Keep original Chinese text for UI display
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now - date;

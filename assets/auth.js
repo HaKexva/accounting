@@ -206,10 +206,10 @@ async function protectPage() {
       return false;
     }
     
-    // User is authenticated, 將登出按鈕添加到漢堡菜單（所有設備都一樣）
+    // User is authenticated, add logout button to hamburger menu (same for all devices)
     const siteNav = document.querySelector('.site-nav .trigger') || document.querySelector('.site-nav');
     if (siteNav) {
-      // 檢查是否已經添加過登出按鈕
+      // Check if logout button has already been added
       let logoutLink = siteNav.querySelector('.logout-link');
       if (!logoutLink) {
         logoutLink = document.createElement('a');
@@ -225,7 +225,7 @@ async function protectPage() {
       }
     }
     
-    // 隱藏原有的 user-info（不再顯示在右上角）
+    // Hide original user-info (no longer displayed in top right)
     const userInfoEl = document.getElementById('user-info');
     if (userInfoEl) {
       userInfoEl.style.display = 'none';
@@ -237,7 +237,7 @@ async function protectPage() {
   return true;
 }
 
-// 讓 Accounting 標誌連結到首頁
+// Make Accounting logo link to homepage
 function setupHomeLink() {
   const siteTitle = document.querySelector('.site-title');
   if (siteTitle) {
@@ -260,4 +260,4 @@ if (document.readyState === 'loading') {
 // Export for use in other scripts
 window.authManager = authManager;
 window.AUTH_CONFIG = AUTH_CONFIG;
-window.protectPage = protectPage; // 導出 protectPage 函數供其他腳本使用
+window.protectPage = protectPage; // Export protectPage function for use by other scripts

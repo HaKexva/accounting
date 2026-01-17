@@ -110,7 +110,7 @@ function invalidateCache(sheetIndex) {
   cache.remove(getCacheKey('summary', sheetIndex));
 }
 
-// 清除月份列表快取（新增分頁時使用）
+// Clear month list cache (used when adding new tab)
 function invalidateTabNamesCache() {
   var cache = CacheService.getScriptCache();
   cache.remove(getCacheKey('tabNames'));
