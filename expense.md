@@ -2975,17 +2975,41 @@ function showEditModal(record) {
 
   // 填充日期（確保可以編輯）
   if (dateInput) {
-    // 日期格式轉換：將 "YYYY/MM/DD" 或 "YYYY-MM-DD" 轉換為 "YYYY-MM-DD"
+    // 日期格式轉換：將各種日期格式轉換為 "YYYY-MM-DD"
     const dateValue = row[0] || '';
     let formattedDate = '';
     if (dateValue) {
+      // 處理 ISO 格式（包含時間部分，如 "2026-01-16T16:00:00.000Z"）
+      if (dateValue.includes('T') || dateValue.includes('Z')) {
+        const dateObj = new Date(dateValue);
+        if (!isNaN(dateObj.getTime())) {
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          formattedDate = `${year}-${month}-${day}`;
+        }
+      }
       // 處理 "YYYY/MM/DD" 格式
-      if (dateValue.includes('/')) {
-        const [year, month, day] = dateValue.split('/');
-        formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      } else if (dateValue.includes('-')) {
-        // 已經是 "YYYY-MM-DD" 格式
-        formattedDate = dateValue;
+      else if (dateValue.includes('/')) {
+        const parts = dateValue.split('/');
+        if (parts.length >= 3) {
+          const year = parts[0];
+          const month = parts[1].padStart(2, '0');
+          const day = parts[2].padStart(2, '0');
+          formattedDate = `${year}-${month}-${day}`;
+        }
+      }
+      // 處理 "YYYY-MM-DD" 格式（可能包含時間部分）
+      else if (dateValue.includes('-')) {
+        // 提取日期部分（如果包含時間，取前面的日期部分）
+        const datePart = dateValue.split(' ')[0].split('T')[0];
+        const parts = datePart.split('-');
+        if (parts.length >= 3) {
+          const year = parts[0];
+          const month = parts[1].padStart(2, '0');
+          const day = parts[2].padStart(2, '0');
+          formattedDate = `${year}-${month}-${day}`;
+        }
       } else {
         // 嘗試解析其他格式
         const dateObj = new Date(dateValue);
