@@ -1264,7 +1264,7 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
     if (allMonthsData[item.sheetIndex]) {
       loadedCount++;
       if (totalProgress > 0) {
-        updateProgress(baseProgress + loadedCount, totalProgress, `Loading month ${item.name} (from cache)`);
+        updateProgress(baseProgress + loadedCount, totalProgress, `載入月份 ${item.name}（從快取）`);
       }
       continue; // Skip, use existing data
     }
@@ -1279,7 +1279,7 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
       // Update progress bar
       loadedCount++;
       if (totalProgress > 0) {
-        updateProgress(baseProgress + loadedCount, totalProgress, `Loading month ${item.name}`);
+        updateProgress(baseProgress + loadedCount, totalProgress, `載入月份 ${item.name}`);
       }
 
       // If encounter incomplete, exit (show progress bar)
@@ -1288,7 +1288,7 @@ const preloadAllMonthsData = async (baseProgress = 2, totalProgress = 0) => {
       // Update progress even if failed
       loadedCount++;
       if (totalProgress > 0) {
-        updateProgress(baseProgress + loadedCount, totalProgress, `Loading month ${item.name}`);
+        updateProgress(baseProgress + loadedCount, totalProgress, `載入月份 ${item.name}`);
       }
 
       // If error occurs, continue loading next month (don't interrupt)
@@ -1478,7 +1478,7 @@ let progressAnimationStartTime = null;
 let progressAnimationTarget = 99; // Auto animation target percentage (99%)
 
 // Update progress bar (actual progress, overrides auto animation)
-const updateProgress = (current, total, text = 'Loading...') => {
+const updateProgress = (current, total, text = '載入中...') => {
   const progressContainer = document.getElementById('loading-progress');
   if (!progressContainer) return;
 
@@ -1558,7 +1558,7 @@ const showSpinner = (coverHeader = false) => {
   const wrapperDiv = document.createElement('div');
   wrapperDiv.style.cssText = 'width: 300px; text-align: center;';
   const progressText = document.createElement('div');
-  progressText.textContent = 'Loading...';
+  progressText.textContent = '載入中...';
   progressText.style.cssText = 'font-size: 16px; margin-bottom: 15px; color: #333;';
   const bgDiv = document.createElement('div');
   bgDiv.style.cssText = 'width: 100%; height: 8px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden;';
@@ -2148,7 +2148,7 @@ const saveData = async () => {
   } catch (error) {
     alert('儲存失敗: ' + error.message);
     // On exception, restore button state
-    saveButton.textContent = 'Save';
+    saveButton.textContent = '儲存';
     if (hasUnsavedChanges) {
       saveButton.disabled = false;
       saveButton.style.opacity = '1';
@@ -2808,7 +2808,7 @@ const itemTitleInput = document.createElement('input');
 itemTitleInput.id = 'item-input';
 itemTitleInput.name = 'item-input'; // Add name attribute to support autofill
 itemTitleInput.type = 'text';
-itemTitleInput.placeholder = 'Enter item name...';
+itemTitleInput.placeholder = '輸入項目名稱...';
 
 
 itemContainer.appendChild(itemTitleInput);
@@ -2821,7 +2821,7 @@ const div4 = document.createElement('div');
 div4.style.display = 'none';
 
 const saveButton = document.createElement('button');
-saveButton.textContent = 'Save';
+saveButton.textContent = '儲存';
 saveButton.className = 'save-button';
 // Initial state: disabled (gray)
 saveButton.disabled = true;
