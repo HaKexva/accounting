@@ -1690,7 +1690,26 @@ function getFormData(prefix = '') {
 
   if (isCreditCardPayment(spendWay)) {
     creditCard = creditCardPaymentSelect ? creditCardPaymentSelect.value : '';
-    monthIndex = monthPaymentSelect ? monthPaymentSelect.value : '';
+    // Get month payment value - monthPaymentSelect should be the hidden <select> element from createSelectRow
+    // The hidden select element has the ID 'month-payment-select' (or with prefix)
+    const monthSelectElement = monthPaymentSelect || document.getElementById(prefix ? `${prefix}-month-payment-select` : 'month-payment-select');
+    if (monthSelectElement && monthSelectElement.tagName === 'SELECT') {
+      monthIndex = monthSelectElement.value || '';
+      // If value is empty, use default (first option)
+      if (!monthIndex && monthSelectElement.options && monthSelectElement.options.length > 0) {
+        monthIndex = monthSelectElement.options[0].value || '';
+      }
+    } else if (monthSelectElement) {
+      // If it's not a SELECT element, try to find the hidden select inside
+      const hiddenSelect = monthSelectElement.querySelector ? monthSelectElement.querySelector('select') : null;
+      if (hiddenSelect) {
+        monthIndex = hiddenSelect.value || '';
+        // If value is empty, use default (first option)
+        if (!monthIndex && hiddenSelect.options && hiddenSelect.options.length > 0) {
+          monthIndex = hiddenSelect.options[0].value || '';
+        }
+      }
+    }
   } else if (isStoredValuePayment(spendWay)) {
     payment = paymentPlatformSelect ? paymentPlatformSelect.value : '';
   }
@@ -1808,6 +1827,31 @@ const saveData = async () => {
     const monthIndex = currentSheetIndex - 2;
     const currentMonthName = (monthIndex >= 0 && monthIndex < sheetNames.length) ? sheetNames[monthIndex] : '';
     
+    // Validate credit card payment requires month selection
+    if (isCreditCardPayment(formData.spendWay)) {
+      if (!formData.monthIndex || formData.monthIndex.trim() === '') {
+        alert('請選擇「本月支付」或「次月支付」');
+        // Restore button state
+        mainSaveButton.textContent = '儲存';
+        mainSaveButton.disabled = false;
+        mainSaveButton.style.opacity = '1';
+        mainSaveButton.style.cursor = 'pointer';
+        // Restore all inputs
+        if (itemInput) itemInput.disabled = false;
+        if (expenseCategorySelect) expenseCategorySelect.disabled = false;
+        if (paymentMethodSelect) paymentMethodSelect.disabled = false;
+        if (creditCardPaymentSelect) creditCardPaymentSelect.disabled = false;
+        if (monthPaymentSelect) monthPaymentSelect.disabled = false;
+        if (paymentPlatformSelect) paymentPlatformSelect.disabled = false;
+        if (actualCostInput) actualCostInput.disabled = false;
+        if (recordCostInput) recordCostInput.disabled = false;
+        if (noteInput) noteInput.disabled = false;
+        if (historyButton) historyButton.disabled = false;
+        hideSpinner();
+        return;
+      }
+    }
+    
     // Convert monthIndex to month for backend API (backend expects 'month' not 'monthIndex')
     const apiData = {
       name: "Upsert Data",
@@ -1817,12 +1861,23 @@ const saveData = async () => {
       category: formData.category,
       spendWay: formData.spendWay,
       creditCard: formData.creditCard,
-      month: formData.monthIndex, // Backend expects 'month' but frontend uses 'monthIndex'
+      month: formData.monthIndex || '', // Backend expects 'month' but frontend uses 'monthIndex'
       actualCost: formData.actualCost,
       payment: formData.payment,
       recordCost: formData.recordCost,
       note: formData.note
     };
+    
+    // Debug log to check data being sent
+    if (isCreditCardPayment(formData.spendWay)) {
+      console.log('[Expense] Saving credit card expense:', {
+        spendWay: formData.spendWay,
+        creditCard: formData.creditCard,
+        monthIndex: formData.monthIndex,
+        month: apiData.month,
+        apiData: apiData
+      });
+    }
     
     const result = await callAPI(apiData);
 
