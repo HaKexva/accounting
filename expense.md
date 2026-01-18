@@ -2666,40 +2666,65 @@ async function showHistoryModal() {
       }
     }
     
-    // 對於其他格式（可能是Google Sheets返回的日期對象字符串或序列號），
-    // 嘗試解析為日期，但使用本地時區的方法
-    // 如果字符串包含ISO格式（如 "2025-01-15T00:00:00.000Z"），需要特別處理
+    // 對於其他格式（可能是Google Sheets返回的日期對象字符串或序列號）
+    // Google Sheets 返回的日期可能是 ISO 格式字符串（如 "2025-01-15T00:00:00.000Z"）
+    // 或者日期對象字符串
+    
     if (typeof date === 'number') {
-      // 如果是數字（可能是Excel/Sheets序列號），轉換為Date對象
-      // Excel序列號：1 = 1900-01-01，需要轉換
-      // 但Google Sheets返回的通常是Date對象，不會是序列號
-      const dateObj = new Date((date - 25569) * 86400 * 1000); // Excel epoch
-      if (!isNaN(dateObj.getTime()) && dateObj.getFullYear() > 1900 && dateObj.getFullYear() < 2100) {
+      // 如果是數字，可能是時間戳或Excel序列號
+      // 先嘗試作為時間戳
+      const dateObj = new Date(date);
+      if (!isNaN(dateObj.getTime())) {
         const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      }
-      // 如果不是Excel序列號，嘗試作為時間戳
-      const dateObj2 = new Date(date);
-      if (!isNaN(dateObj2.getTime())) {
-        const year = dateObj2.getFullYear();
-        const month = String(dateObj2.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj2.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        if (year >= 1900 && year <= 2100) {
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
       }
     } else {
-      // 對於字符串，嘗試解析
-      // 關鍵：如果字符串包含ISO日期格式，解析時要注意時區
-      // 但最終還是使用本地時間的getDate()等方法來獲取日期部分
+      // 對於字符串，需要特別處理 ISO 格式
+      // 關鍵問題：當字符串是 ISO 格式（如 "2025-01-15T00:00:00.000Z"）時，
+      // new Date() 會將其解析為 UTC 時間，然後使用本地時間方法提取日期
+      // 這可能會導致時區偏移問題
+      
+      // 檢查是否是 ISO 格式（包含 T 和可能的時區標記 Z）
+      const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+      if (isoMatch) {
+        // ISO 格式：YYYY-MM-DDTHH:mm:ss.sssZ 或 YYYY-MM-DDTHH:mm:ss
+        // 重要：當 ISO 字符串以 Z 結尾時，表示 UTC 時間
+        // 例如："2025-01-15T00:00:00.000Z" 是 UTC 時間的 2025-01-15 00:00:00
+        // 在 UTC+8 時區，這對應本地時間 2025-01-15 08:00:00
+        // 所以使用 getDate() 應該返回 15，這是正確的
+        
+        // 但如果有時區標記（如 +08:00 或 Z），需要特別處理
+        const hasTimezone = /[Z+-]/.test(dateStr);
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj.getTime())) {
+          // 關鍵：使用本地時間方法提取日期部分
+          // 即使原始字符串是 UTC 時間，getDate() 也會返回本地時區的日期
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          
+          // 調試：記錄日期轉換
+          console.log('[formatDateToLocalString] ISO date:', dateStr, '->', `${year}-${month}-${day}`, 'hasTimezone:', hasTimezone);
+          
+          return `${year}-${month}-${day}`;
+        }
+      }
+      
+      // 嘗試解析為日期對象（可能是其他格式）
       const dateObj = new Date(dateStr);
       if (!isNaN(dateObj.getTime())) {
-        // 使用本地時間方法，而不是UTC方法
-        // 這樣即使原始字符串是UTC時間，也會轉換為本地時間的日期
         const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        // 檢查日期是否合理（避免解析錯誤）
+        if (year >= 1900 && year <= 2100) {
+          // 使用本地時間方法提取日期部分
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
       }
     }
     
@@ -2715,12 +2740,20 @@ async function showHistoryModal() {
 
     // 應用篩選
     if (filterType === 'date' && filterValue) {
+      // 調試：記錄篩選值
+      console.log('[Date Filter] Filter value:', filterValue, 'Type:', typeof filterValue);
       displayRecords = displayRecords.filter(record => {
         const recordDate = record.row[0] || '';
         // 將日期轉換為可比較的格式（使用本地時間）
         const recordDateStr = formatDateToLocalString(recordDate);
-        return recordDateStr === filterValue;
+        // 調試：記錄日期比較（只記錄前幾個不匹配的，避免日誌過多）
+        const matches = recordDateStr === filterValue;
+        if (!matches && displayRecords.length < 10) {
+          console.log('[Date Filter] Record date:', recordDate, '(type:', typeof recordDate, ') ->', recordDateStr, 'vs Filter:', filterValue, 'Match:', matches);
+        }
+        return matches;
       });
+      console.log('[Date Filter] Filtered records count:', displayRecords.length);
     } else if (filterType === 'category' && filterValue) {
       displayRecords = displayRecords.filter(record => {
         const recordCategory = (record.row[2] || '').trim();
