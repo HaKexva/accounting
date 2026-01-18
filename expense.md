@@ -1752,6 +1752,26 @@ const updateDivVisibility = (forceType = null) => {
   const dateRow = createInputRow('日期：', 'date-input', 'date');
   const dateInput = dateRow.querySelector('#date-input');
   if (dateInput) {
+    // 設置年份限制為四位數（1000-9999年）
+    dateInput.min = '1000-01-01';
+    dateInput.max = '9999-12-31';
+    // 添加事件監聽器來驗證年份為四位數
+    dateInput.addEventListener('input', (e) => {
+      const value = e.target.value;
+      if (value) {
+        const year = parseInt(value.split('-')[0]);
+        if (!isNaN(year) && (year < 1000 || year > 9999)) {
+          const parts = value.split('-');
+          if (parts[0].length > 4) {
+            parts[0] = parts[0].substring(0, 4);
+            const correctedValue = parts.join('-');
+            if (/^\d{4}-\d{2}-\d{2}/.test(correctedValue)) {
+              e.target.value = correctedValue;
+            }
+          }
+        }
+      }
+    });
     // 設置默認值為今天
     const today = new Date();
     const year = today.getFullYear();
@@ -2609,31 +2629,80 @@ async function showHistoryModal() {
 
   // 將日期轉換為本地日期的 YYYY-MM-DD 格式（避免時區偏移問題）
   const formatDateToLocalString = (date) => {
+    if (!date && date !== 0) return '';
+    
+    // 如果是Date對象，直接使用本地時間格式化
     if (date instanceof Date) {
-      // 使用本地時間，而不是 UTC
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
-    const dateStr = String(date);
+    
+    const dateStr = String(date).trim();
+    
+    // 如果已經是 YYYY-MM-DD 格式（不含時間），直接返回
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    
+    // 如果是 YYYY-MM-DD 格式但包含時間部分，只取日期部分
+    const dateOnlyMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateOnlyMatch) {
+      return dateOnlyMatch[1];
+    }
+    
+    // 如果是 YYYY/MM/DD 格式，轉換為 YYYY-MM-DD
     if (dateStr.includes('/')) {
-      // 格式：YYYY/MM/DD 或 YYYY/M/D
-      const [year, month, day] = dateStr.split('/');
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    } else if (dateStr.includes('-')) {
-      // 格式：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS
-      return dateStr.split('T')[0].split(' ')[0];
+      const parts = dateStr.split('/');
+      if (parts.length >= 3) {
+        const year = parts[0].trim();
+        const month = parts[1].trim().padStart(2, '0');
+        const day = parts[2].trim().split(' ')[0].split('T')[0].padStart(2, '0');
+        // 驗證年份是四位數
+        if (year.length === 4 && /^\d{4}$/.test(year)) {
+          return `${year}-${month}-${day}`;
+        }
+      }
+    }
+    
+    // 對於其他格式（可能是Google Sheets返回的日期對象字符串或序列號），
+    // 嘗試解析為日期，但使用本地時區的方法
+    // 如果字符串包含ISO格式（如 "2025-01-15T00:00:00.000Z"），需要特別處理
+    if (typeof date === 'number') {
+      // 如果是數字（可能是Excel/Sheets序列號），轉換為Date對象
+      // Excel序列號：1 = 1900-01-01，需要轉換
+      // 但Google Sheets返回的通常是Date對象，不會是序列號
+      const dateObj = new Date((date - 25569) * 86400 * 1000); // Excel epoch
+      if (!isNaN(dateObj.getTime()) && dateObj.getFullYear() > 1900 && dateObj.getFullYear() < 2100) {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      // 如果不是Excel序列號，嘗試作為時間戳
+      const dateObj2 = new Date(date);
+      if (!isNaN(dateObj2.getTime())) {
+        const year = dateObj2.getFullYear();
+        const month = String(dateObj2.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj2.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
     } else {
-      // 嘗試解析為日期對象，然後使用本地時間格式化
-      const dateObj = new Date(date);
+      // 對於字符串，嘗試解析
+      // 關鍵：如果字符串包含ISO日期格式，解析時要注意時區
+      // 但最終還是使用本地時間的getDate()等方法來獲取日期部分
+      const dateObj = new Date(dateStr);
       if (!isNaN(dateObj.getTime())) {
+        // 使用本地時間方法，而不是UTC方法
+        // 這樣即使原始字符串是UTC時間，也會轉換為本地時間的日期
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const day = String(dateObj.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
     }
+    
     return '';
   };
 
@@ -2972,6 +3041,9 @@ async function showHistoryModal() {
   const filterDateInput = document.createElement('input');
   filterDateInput.type = 'date';
   filterDateInput.id = 'history-filter-date-input';
+  // 設置最小和最大日期來限制年份為四位數（1000-9999年）
+  filterDateInput.min = '1000-01-01';
+  filterDateInput.max = '9999-12-31';
   filterDateInput.style.cssText = `
     padding: 6px 12px;
     border: 1px solid #ddd;
@@ -2982,6 +3054,35 @@ async function showHistoryModal() {
     cursor: pointer;
     min-width: 150px;
   `;
+  // 添加事件監聽器來驗證年份為四位數
+  filterDateInput.addEventListener('input', (e) => {
+    const value = e.target.value;
+    if (value) {
+      const year = parseInt(value.split('-')[0]);
+      // 如果年份不是四位數，清空輸入或保持有效值
+      if (isNaN(year) || year < 1000 || year > 9999) {
+        // 只保留有效部分或清空
+        const match = value.match(/^(\d{4})-\d{2}-\d{2}/);
+        if (match && match[1].length === 4) {
+          // 年份是四位數，保持原值
+          return;
+        } else {
+          // 年份不是四位數，嘗試修正或清空
+          const parts = value.split('-');
+          if (parts[0].length > 4) {
+            // 年份超過四位數，截取前四位
+            parts[0] = parts[0].substring(0, 4);
+            const correctedValue = parts.join('-');
+            if (/^\d{4}-\d{2}-\d{2}/.test(correctedValue)) {
+              e.target.value = correctedValue;
+              filterValue = correctedValue;
+              updateHistoryList(list, currentFilterRecords);
+            }
+          }
+        }
+      }
+    }
+  });
 
   // 類別下拉選單（用於類別篩選）
   const filterValueSelect = document.createElement('select');
@@ -3228,6 +3329,28 @@ function showEditModal(record) {
   // 重新創建表單元素（避免ID衝突）
   // 日期欄位（可編輯）
   const dateRow = createInputRow('日期：', 'edit-date-input', 'date');
+  // 為編輯表單的日期輸入框添加年份限制
+  const editDateInputElement = dateRow.querySelector('#edit-date-input');
+  if (editDateInputElement) {
+    editDateInputElement.min = '1000-01-01';
+    editDateInputElement.max = '9999-12-31';
+    editDateInputElement.addEventListener('input', (e) => {
+      const value = e.target.value;
+      if (value) {
+        const year = parseInt(value.split('-')[0]);
+        if (!isNaN(year) && (year < 1000 || year > 9999)) {
+          const parts = value.split('-');
+          if (parts[0].length > 4) {
+            parts[0] = parts[0].substring(0, 4);
+            const correctedValue = parts.join('-');
+            if (/^\d{4}-\d{2}-\d{2}/.test(correctedValue)) {
+              e.target.value = correctedValue;
+            }
+          }
+        }
+      }
+    });
+  }
   const itemRow = createInputRow('項目：', 'edit-item-input');
   const expenseCategoryRow = createSelectRow('類別：', 'edit-expense-category-select', EXPENSE_CATEGORY_OPTIONS);
 
@@ -3872,6 +3995,26 @@ itemContainer.className = 'item-container';
 const dateRow = createInputRow('日期：', 'date-input', 'date');
 const dateInput = dateRow.querySelector('#date-input');
 if (dateInput) {
+  // 設置年份限制為四位數（1000-9999年）
+  dateInput.min = '1000-01-01';
+  dateInput.max = '9999-12-31';
+  // 添加事件監聽器來驗證年份為四位數
+  dateInput.addEventListener('input', (e) => {
+    const value = e.target.value;
+    if (value) {
+      const year = parseInt(value.split('-')[0]);
+      if (!isNaN(year) && (year < 1000 || year > 9999)) {
+        const parts = value.split('-');
+        if (parts[0].length > 4) {
+          parts[0] = parts[0].substring(0, 4);
+          const correctedValue = parts.join('-');
+          if (/^\d{4}-\d{2}-\d{2}/.test(correctedValue)) {
+            e.target.value = correctedValue;
+          }
+        }
+      }
+    }
+  });
   // 預設帶入今天（YYYY-MM-DD），可以手動修改
   const today = new Date();
   const year = today.getFullYear();
