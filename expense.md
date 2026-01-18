@@ -2592,10 +2592,11 @@ async function showHistoryModal() {
     historyButton.disabled = false; // 重新啟用按鈕
   };
 
-  // 篩選狀態（在函數作用域內，需要保存當前的記錄引用）
+  // 篩選和排序狀態（在函數作用域內，需要保存當前的記錄引用）
   let currentFilterRecords = records; // 保存當前用於篩選的記錄
   let filterType = 'none'; // 'none', 'date', 'category'
   let filterValue = '';
+  let sortType = 'none'; // 'none', 'date', 'category'
 
   // 更新記錄列表顯示的函數（支持篩選）
   const updateHistoryList = (listElement, recordsToShow) => {
@@ -2632,6 +2633,45 @@ async function showHistoryModal() {
       displayRecords = displayRecords.filter(record => {
         const recordCategory = (record.row[2] || '').trim();
         return recordCategory === filterValue;
+      });
+    }
+
+    // 應用排序
+    if (sortType === 'date') {
+      displayRecords.sort((a, b) => {
+        const dateA = a.row[0] || '';
+        const dateB = b.row[0] || '';
+        
+        // 轉換為可比較的日期字符串
+        const getDateString = (date) => {
+          if (date instanceof Date) {
+            return date.toISOString().split('T')[0];
+          }
+          const dateStr = String(date);
+          if (dateStr.includes('/')) {
+            const [year, month, day] = dateStr.split('/');
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          } else if (dateStr.includes('-')) {
+            return dateStr.split('T')[0].split(' ')[0];
+          }
+          const dateObj = new Date(date);
+          if (!isNaN(dateObj.getTime())) {
+            return dateObj.toISOString().split('T')[0];
+          }
+          return '';
+        };
+        
+        const dateStrA = getDateString(dateA);
+        const dateStrB = getDateString(dateB);
+        
+        // 從新到舊排序
+        return dateStrB.localeCompare(dateStrA);
+      });
+    } else if (sortType === 'category') {
+      displayRecords.sort((a, b) => {
+        const categoryA = (a.row[2] || '').trim();
+        const categoryB = (b.row[2] || '').trim();
+        return categoryA.localeCompare(categoryB, 'zh-TW');
       });
     }
 
@@ -2799,6 +2839,8 @@ async function showHistoryModal() {
     filterType = 'none';
     filterValue = '';
     filterTypeSelect.value = 'none';
+    sortType = 'none';
+    sortSelect.value = 'none';
     updateFilterValueOptions(newRecords);
 
     // 更新記錄列表顯示
@@ -2821,16 +2863,15 @@ async function showHistoryModal() {
   headerContainer.appendChild(headerLeftContainer);
   headerContainer.appendChild(closeBtn);
 
-  // 篩選器容器（放在標題下面，頁首裡面）
+  // 篩選器和排序容器（放在標題下面，頁首裡面，不添加分隔線）
   const filterContainer = document.createElement('div');
   filterContainer.style.cssText = `
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px 0;
-    border-top: 1px solid #eee;
-    margin-top: 12px;
+    padding: 8px 0 0 0;
+    flex-wrap: wrap;
   `;
 
   // 左邊：篩選方式選擇
@@ -2889,6 +2930,22 @@ async function showHistoryModal() {
   filterValueLabel.textContent = '篩選值：';
   filterValueLabel.style.cssText = 'font-size: 14px; color: #666; white-space: nowrap;';
 
+  // 日期輸入框（用於日期篩選）
+  const filterDateInput = document.createElement('input');
+  filterDateInput.type = 'date';
+  filterDateInput.id = 'history-filter-date-input';
+  filterDateInput.style.cssText = `
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 150px;
+  `;
+
+  // 類別下拉選單（用於類別篩選）
   const filterValueSelect = document.createElement('select');
   filterValueSelect.id = 'history-filter-value-select';
   filterValueSelect.style.cssText = `
@@ -2912,78 +2969,83 @@ async function showHistoryModal() {
     
     filterValueSelect.innerHTML = '';
     filterValue = '';
+    filterDateInput.value = '';
 
     if (filterType === 'date') {
-      // 日期篩選：獲取所有記錄中的唯一日期
-      const allDates = new Set();
-      currentFilterRecords.filter(r => !isHeaderRecord(r)).forEach(record => {
-        const recordDate = record.row[0] || '';
-        if (recordDate) {
-          let dateStr = '';
-          if (recordDate instanceof Date) {
-            dateStr = recordDate.toISOString().split('T')[0];
-          } else {
-            const dateString = String(recordDate);
-            if (dateString.includes('/')) {
-              const [year, month, day] = dateString.split('/');
-              dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            } else if (dateString.includes('-')) {
-              dateStr = dateString.split('T')[0].split(' ')[0];
-            } else {
-              const dateObj = new Date(recordDate);
-              if (!isNaN(dateObj.getTime())) {
-                dateStr = dateObj.toISOString().split('T')[0];
-              }
-            }
-          }
-          if (dateStr) {
-            allDates.add(dateStr);
-          }
-        }
-      });
-
-      // 排序日期（從新到舊）
-      const sortedDates = Array.from(allDates).sort().reverse();
-
-      sortedDates.forEach(date => {
-        const option = document.createElement('option');
-        option.value = date;
-        // 格式化顯示：YYYY-MM-DD -> YYYY/MM/DD
-        const [year, month, day] = date.split('-');
-        option.textContent = `${year}/${month}/${day}`;
-        filterValueSelect.appendChild(option);
-      });
+      // 日期篩選：顯示日期輸入框
+      filterDateInput.style.display = 'block';
+      filterValueSelect.style.display = 'none';
     } else if (filterType === 'category') {
-      // 消費類別篩選：使用 EXPENSE_CATEGORY_OPTIONS
+      // 消費類別篩選：顯示下拉選單，使用 EXPENSE_CATEGORY_OPTIONS
+      filterDateInput.style.display = 'none';
+      filterValueSelect.style.display = 'block';
       EXPENSE_CATEGORY_OPTIONS.forEach(cat => {
         const option = document.createElement('option');
         option.value = cat.value;
         option.textContent = cat.text;
         filterValueSelect.appendChild(option);
       });
-    }
-
-    // 如果沒有選項，添加一個提示
-    if (filterValueSelect.options.length === 0 && filterType !== 'none') {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = '無可選項';
-      filterValueSelect.appendChild(option);
-    }
-
-    // 隱藏/顯示篩選值容器
-    if (filterType === 'none') {
-      filterValueContainer.style.display = 'none';
     } else {
-      filterValueContainer.style.display = 'flex';
+      // 無篩選：隱藏所有篩選值輸入
+      filterDateInput.style.display = 'none';
+      filterValueSelect.style.display = 'none';
+      filterValueContainer.style.display = 'none';
+      return;
     }
+
+    // 顯示篩選值容器
+    filterValueContainer.style.display = 'flex';
   };
 
   filterValueContainer.appendChild(filterValueLabel);
+  filterValueContainer.appendChild(filterDateInput);
   filterValueContainer.appendChild(filterValueSelect);
+
+  // 排序方式容器
+  const sortContainer = document.createElement('div');
+  sortContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  `;
+
+  const sortLabel = document.createElement('label');
+  sortLabel.textContent = '排序方式：';
+  sortLabel.style.cssText = 'font-size: 14px; color: #666; white-space: nowrap;';
+
+  const sortSelect = document.createElement('select');
+  sortSelect.id = 'history-sort-select';
+  sortSelect.style.cssText = `
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 100px;
+  `;
+
+  const sortOptions = [
+    { value: 'none', text: '無排序' },
+    { value: 'date', text: '依日期' },
+    { value: 'category', text: '依類別' }
+  ];
+
+  sortOptions.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.text;
+    sortSelect.appendChild(option);
+  });
+
+  sortContainer.appendChild(sortLabel);
+  sortContainer.appendChild(sortSelect);
 
   filterContainer.appendChild(filterTypeContainer);
   filterContainer.appendChild(filterValueContainer);
+  filterContainer.appendChild(sortContainer);
 
   // 篩選方式變更事件
   filterTypeSelect.addEventListener('change', () => {
@@ -2993,10 +3055,24 @@ async function showHistoryModal() {
     updateHistoryList(list, currentFilterRecords);
   });
 
-  // 篩選值變更事件
+  // 日期篩選值變更事件
+  filterDateInput.addEventListener('change', () => {
+    filterValue = filterDateInput.value;
+    // 重新應用篩選並更新列表（使用當前記錄）
+    updateHistoryList(list, currentFilterRecords);
+  });
+
+  // 類別篩選值變更事件
   filterValueSelect.addEventListener('change', () => {
     filterValue = filterValueSelect.value;
     // 重新應用篩選並更新列表（使用當前記錄）
+    updateHistoryList(list, currentFilterRecords);
+  });
+
+  // 排序方式變更事件
+  sortSelect.addEventListener('change', () => {
+    sortType = sortSelect.value;
+    // 重新應用篩選和排序並更新列表（使用當前記錄）
     updateHistoryList(list, currentFilterRecords);
   });
 
