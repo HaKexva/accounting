@@ -71,7 +71,7 @@ let EXPENSE_CATEGORY_OPTIONS = [
 ];
 
 // Load latest options from "dropdown" sheet=1
-// API URL (expense table)
+// API URL（支出表）
 const baseExpense = "https://script.google.com/macros/s/AKfycbxpBh0QVSVTjylhh9cj7JG9d6aJi7L7y6pQPW88EbAsNtcd5ckucLagH8XpSAGa8IZt/exec";
 
 async function loadDropdownOptions() {
